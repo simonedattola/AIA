@@ -1,0 +1,82 @@
+[
+  {
+    "id": 1,
+    "data": "2026-05-15",
+    "titolo": "Riunione tecnica obbligatoria",
+    "descrizione": "Analisi video su falli tattici, gestione panchine e collaborazione con assistenti.",
+    "luogo": "Sede AIA Legnano",
+    "tipo": "riunione"
+  },
+  {
+    "id": 2,
+    "data": "2026-05-21",
+    "titolo": "Allenamento al polo atletico",
+    "descrizione": "Seduta dedicata a rapidita, resistenza intermittente e mobilita articolare.",
+    "luogo": "Campo sportivo Via Pace",
+    "tipo": "allenamento"
+  },
+  {
+    "id": 3,
+    "data": "2026-06-03",
+    "titolo": "Open day corso arbitri",
+    "descrizione": "Presentazione del percorso formativo per aspiranti arbitri e famiglie.",
+    "luogo": "Sala conferenze AIA Legnano",
+    "tipo": "corso"
+  },
+  {
+    "id": 4,
+    "data": "2026-06-12",
+    "titolo": "Cena sezionale di fine stagione",
+    "descrizione": "Momento associativo con premiazioni e saluto agli organi tecnici.",
+    "luogo": "Legnano, location convenzionata",
+    "tipo": "sociale"
+  },
+  {
+    "id": 5,
+    "data": "2026-07-01",
+    "titolo": "Raduno giovani arbitri",
+    "descrizione": "Workshop tecnico per arbitri al primo e secondo anno di attivita.",
+    "luogo": "Sede AIA Legnano",
+    "tipo": "raduno"
+  },
+  {
+    "id": 6,
+    "data": "2026-09-05",
+    "titolo": "Raduno precampionato",
+    "descrizione": "Test atletici, quiz regolamentari e disposizioni per la nuova stagione.",
+    "luogo": "Centro sportivo Giovanni Mari",
+    "tipo": "raduno"
+  },
+  {
+    "id": 7,
+    "data": "2026-10-08",
+    "titolo": "Serata con ospite regionale",
+    "descrizione": "Incontro formativo su personalita, prevenzione e lettura della gara.",
+    "luogo": "Sede AIA Legnano",
+    "tipo": "riunione"
+  },
+  {
+    "id": 8,
+    "data": "2025-12-18",
+    "titolo": "Auguri sezionali",
+    "descrizione": "Brindisi associativo e consegna riconoscimenti di fine anno.",
+    "luogo": "Sede AIA Legnano",
+    "tipo": "sociale"
+  },
+  {
+    "id": 9,
+    "data": "2025-11-06",
+    "titolo": "Riunione regolamento 12",
+    "descrizione": "Approfondimento su falli, scorrettezze e provvedimenti disciplinari.",
+    "luogo": "Sede AIA Legnano",
+    "tipo": "riunione"
+  },
+  {
+    "id": 10,
+    "data": "2025-09-13",
+    "titolo": "Raduno sezionale inizio stagione",
+    "descrizione": "Presentazione organici, disposizioni tecniche e prove atletiche.",
+    "luogo": "Centro sportivo Via Pace",
+    "tipo": "raduno"
+  }
+]

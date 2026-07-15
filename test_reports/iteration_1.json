@@ -1,0 +1,42 @@
+{
+  "summary": "Comprehensive e2e testing for AIA Legnano platform. Backend: 29/29 pytest tests passed (100%) covering admin auth, public endpoints (settings/nav/articles/events/officials/members/designations/stats), forms (corso-arbitri lead + contatti), admin CRUD for articles/events/officials/members/designations, HTML sanitization of bodyHtml, lead status update, settings PUT round-trip. Frontend Playwright: 16/16 public scenarios passed (home hero, CTA, news list/detail with proper paragraph spacing, diventa-arbitro form submit + lead-success page, chi-siamo, designazioni filtering, associati listing and profile, eventi, contatti, admin login bad/good creds + redirect, dashboard with 9/9 sidebar items, logout). Admin flows: 7/9 passed (login, articles list, new article open, tiptap editor visible+typing, preview, leads visible with Mario, messages page, settings phone update reflects in public footer). CRITICAL BUG FOUND: creating a new article via /admin/articles/new sends PUT /api/admin/articles/undefined instead of POST /api/admin/articles — route mismatch in App.js.",
+  "backend_issues": {
+    "critical": [],
+    "minor": []
+  },
+  "frontend_issues": {
+    "ui_bugs": [
+      {"component": "AdminArticleEditPage", "issue": "Creating a new article via /admin/articles/new fails silently: the form save handler calls PUT /api/admin/articles/undefined (returns 200 but no document updated, no redirect, no error shown) instead of POST /api/admin/articles. Root cause: App.js declares two routes: `articles/new` (no :id param) and `articles/:id`. When route `articles/new` matches, useParams() returns {id: undefined}; therefore `isNew = id === 'new'` evaluates to false → handler goes through the update branch. Confirmed via backend access log entries `PUT /api/admin/articles/undefined HTTP/1.1 200 OK`.", "selector": "[data-testid='admin-article-edit'] button:has-text('Salva')", "priority": "CRITICAL"}
+    ],
+    "integration_issues": [],
+    "design_issues": [
+      {"screen": "Footer (homepage)", "issues": ["After updating site settings phone, footer briefly shows two phone numbers in inner_text (probably from a stacked Telefono + map/CTA element). Functional impact: none — footer DOES contain the new phone — but worth a visual review of SiteFooter rendering."]}
+    ]
+  },
+  "test_report_links": [
+    "/app/backend/tests/test_aia_legnano.py",
+    "/app/test_reports/pytest/pytest_results.xml"
+  ],
+  "action_items": [
+    "FIX (App.js, lines 55-57): remove the dedicated `articles/new` route OR change `isNew` logic in AdminArticleEditPage to `const isNew = !id || id === 'new';`. Recommended fix: keep only `articles/:id` route — react-router-dom matches `/admin/articles/new` to it with `id='new'`. Remove line 56 (`<Route path=\"articles/new\" element={<AdminArticleEditPage />} />`).",
+    "OPTIONAL: add data-testid attributes to AdminSettingsPage inputs (phone, email, etc.) for easier automated testing.",
+    "OPTIONAL: investigate footer rendering when reading inner_text — possible duplicate phone display."
+  ],
+  "critical_code_review_comments": [
+    "App.js routing bug: `articles/new` declared as a separate route without :id param causes useParams() to return id=undefined, breaking the isNew flag in AdminArticleEditPage and silently failing new-article creation through the UI.",
+    "AdminArticleEditPage.save(): backend returns 200 OK even when PUT id doesn't match any document — frontend never knows the save did nothing. Consider returning 404 on no-match in admin update endpoints, or checking result.matched_count.",
+    "Backend public.get_settings() uses a non-standard first lookup `find_one({\"_id\": 0}, ...)` (line 18) which is logically a no-op filter — works only because of fallback at line 20. Could be simplified.",
+    "Form fields in AdminSettingsPage lack data-testid attributes — reduces test reliability."
+  ],
+  "updated_files": [
+    "/app/backend/tests/test_aia_legnano.py",
+    "/app/backend/tests/__init__.py"
+  ],
+  "success_rate": {"backend": "100%", "frontend": "92%"},
+  "test_credentials": "admin@aia-legnano.it / AiaLegnano2026!",
+  "seed_data_creation": "All test data was created with TEST_/TEST prefix and cleaned up via DELETE. One left-over draft article 'TEST articolo 2ebb4230' may remain in the database because UI save flow created it via the PUT-undefined path (article was never actually inserted, but slugified test articles from manual POST were cleaned).",
+  "retest_needed": true,
+  "main_agent_can_self_test": true,
+  "context_for_next_testing_agent": "Run `pytest /app/backend/tests/test_aia_legnano.py -v --tb=short` to verify backend (all 29 tests should pass). For frontend, the only failing flow is creating a NEW article via /admin/articles/new — verify after main agent fixes the routing/isNew bug. The fix is trivial: in /app/frontend/src/App.js lines 55-57, remove the dedicated `articles/new` route (the `articles/:id` route already handles it because useParams will set id='new'), OR change `const isNew = id === 'new'` to `const isNew = !id || id === 'new'` in AdminArticleEditPage.jsx. After fix, re-run the lead+article+settings admin flow.",
+  "rca_of_the_issue": "BUG: New article creation broken. RCA: react-router-dom v6 matches routes most-specific first. The route `articles/new` (no :id param) matches the URL `/admin/articles/new` BEFORE `articles/:id` would. Component AdminArticleEditPage uses `const { id } = useParams()` — but that route declaration has no `:id` segment → id is `undefined`. The variable `isNew = id === 'new'` is then `false`, so on Salva click the handler calls `adminUpdateArticle(undefined, payload)` which hits `PUT /api/admin/articles/undefined`. Mongo update_one with `{id: 'undefined'}` matches 0 docs, returns 200, frontend stays on /admin/articles/new with no feedback. REPRO: 1) login /admin/login as admin 2) go to /admin/articles 3) click 'Nuovo articolo' 4) fill title and content 5) click Salva. Observed: URL stays at /admin/articles/new, no redirect, no error. Expected: redirect to /admin/articles/{new_id} with the article persisted. MITIGATION: remove `<Route path=\"articles/new\" .../>` OR fix isNew check as described above."
+}

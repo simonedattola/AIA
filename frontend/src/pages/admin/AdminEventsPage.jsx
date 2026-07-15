@@ -1,0 +1,447 @@
+import { useEffect, useState } from "react";
+import { useSearchParams } from "react-router-dom";
+import {
+  adminEvents, adminCreateEvent, adminUpdateEvent, adminDeleteEvent,
+  adminEventTypes, adminAddEventType,
+} from "../../lib/api";
+import { formatEventDateTimeIt } from "../../lib/format";
+import { AttachmentEditor } from "../../components/admin/AttachmentEditor";
+import { MemberMultiSelect } from "../../components/admin/MemberSelect";
+import EventPresenzePanel from "../../components/admin/EventPresenzePanel";
+import { Plus, Pencil, Trash2, UserCheck, Calendar, Users } from "lucide-react";
+import { SITE_ICONS } from "../../lib/siteIcons";
+import { AdminEmptyState, AdminFormModal, AdminPageHeader } from "../../components/admin/admin-ui";
+import { Button } from "@/design-system";
+
+const TIPI_DEFAULT = ["Rto", "Riunione", "Allenamento", "Corso", "Sociale", "Raduno"];
+
+const empty = () => ({
+  date: new Date().toISOString().slice(0, 10),
+  orario: "09:00",
+  titolo: "",
+  descrizione: "",
+  luogo: "",
+  tipo: "Riunione",
+  invitedMemberIds: [],
+  inviteAllMembers: true,
+  portalOnly: false,
+  attachments: [],
+});
+
+function normalizeEvent(e) {
+  const invitedMemberIds = e.invitedMemberIds || e.relatedMemberIds || [];
+  return {
+    ...e,
+    date: (e.date || "").slice(0, 10),
+    orario: (e.orario || "09:00").slice(0, 5),
+    attachments: e.attachments || [],
+    invitedMemberIds,
+    inviteAllMembers: invitedMemberIds.length === 0,
+    portalOnly: !!e.portalOnly,
+  };
+}
+
+const inputCls = "w-full px-3 py-2 border border-slate-300 rounded-md focus:border-navy-600 focus:ring-2 focus:ring-navy-600/20 focus:outline-none text-sm";
+const Field = ({ label, hint, children, className = "" }) => (
+  <label className={`block ${className}`}>
+    <span className="block text-sm font-medium text-slate-700 mb-1.5">{label}</span>
+    {hint && <span className="block text-xs text-slate-400 mb-1">{hint}</span>}
+    {children}
+  </label>
+);
+
+function EventEditForm({
+  editing,
+  setEditing,
+  activeTab,
+  setActiveTab,
+  tipi,
+  newTipo,
+  setNewTipo,
+  onAddTipo,
+  addingTipo,
+}) {
+  return (
+    <div data-testid="admin-event-form">
+      {editing.id && (
+        <div className="flex gap-1 mb-6 border-b border-slate-200">
+          <button
+            type="button"
+            onClick={() => setActiveTab("details")}
+            className={`px-4 py-2 text-sm font-medium border-b-2 -mb-px transition-colors ${
+              activeTab === "details"
+                ? "border-navy-600 text-navy-700"
+                : "border-transparent text-slate-500 hover:text-navy-600"
+            }`}
+          >
+            Dettagli
+          </button>
+          <button
+            type="button"
+            onClick={() => setActiveTab("presenze")}
+            className={`px-4 py-2 text-sm font-medium border-b-2 -mb-px transition-colors inline-flex items-center gap-1.5 ${
+              activeTab === "presenze"
+                ? "border-navy-600 text-navy-700"
+                : "border-transparent text-slate-500 hover:text-navy-600"
+            }`}
+            data-testid="event-tab-presenze"
+          >
+            <UserCheck className="h-4 w-4" /> Presenze
+          </button>
+        </div>
+      )}
+
+      {(activeTab === "details" || !editing.id) && (
+        <div className="space-y-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <Field label="Titolo*">
+              <input
+                data-testid="event-titolo"
+                value={editing.titolo}
+                onChange={(e) => setEditing({ ...editing, titolo: e.target.value })}
+                className={inputCls}
+              />
+            </Field>
+            <Field label="Data*">
+              <input
+                data-testid="event-date"
+                type="date"
+                value={editing.date}
+                onChange={(e) => setEditing({ ...editing, date: e.target.value })}
+                className={inputCls}
+              />
+            </Field>
+            <Field label="Orario*">
+              <input
+                data-testid="event-orario"
+                type="time"
+                value={editing.orario || "09:00"}
+                onChange={(e) => setEditing({ ...editing, orario: e.target.value })}
+                className={inputCls}
+              />
+            </Field>
+            <Field label="Luogo">
+              <input
+                data-testid="event-luogo"
+                value={editing.luogo}
+                onChange={(e) => setEditing({ ...editing, luogo: e.target.value })}
+                className={inputCls}
+              />
+            </Field>
+            <Field label="Tipo" className="md:col-span-2">
+              <select
+                data-testid="event-tipo"
+                value={editing.tipo}
+                onChange={(e) => setEditing({ ...editing, tipo: e.target.value })}
+                className={inputCls}
+              >
+                {tipi.map((t) => (
+                  <option key={t} value={t}>{t}</option>
+                ))}
+                {editing.tipo && !tipi.includes(editing.tipo) && (
+                  <option value={editing.tipo}>{editing.tipo}</option>
+                )}
+              </select>
+              <div className="flex flex-wrap items-center gap-2 mt-2">
+                <input
+                  data-testid="event-new-tipo"
+                  value={newTipo}
+                  onChange={(e) => setNewTipo(e.target.value)}
+                  placeholder="Nuovo tipo…"
+                  className={`${inputCls} flex-1 min-w-[160px]`}
+                />
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={onAddTipo}
+                  disabled={addingTipo || !newTipo.trim()}
+                  data-testid="event-add-tipo"
+                >
+                  {addingTipo ? "Aggiunta…" : "Aggiungi tipo"}
+                </Button>
+              </div>
+              <p className="text-xs text-slate-500 mt-1.5">I tipi restano disponibili per i prossimi eventi.</p>
+            </Field>
+          </div>
+
+          <Field label="Descrizione">
+            <textarea
+              data-testid="event-descrizione"
+              rows={3}
+              value={editing.descrizione}
+              onChange={(e) => setEditing({ ...editing, descrizione: e.target.value })}
+              className={inputCls}
+            />
+          </Field>
+
+          <label className="flex items-center gap-2">
+            <input
+              type="checkbox"
+              checked={!editing.portalOnly}
+              onChange={(e) => setEditing({ ...editing, portalOnly: !e.target.checked })}
+              data-testid="event-public"
+            />
+            <span className="text-sm flex items-center gap-1">
+              Visibile al pubblico
+            </span>
+          </label>
+
+          <div className="mb-4">
+            <label className="flex items-center gap-2 mb-3">
+              <input
+                type="checkbox"
+                checked={!!editing.inviteAllMembers}
+                onChange={(e) => setEditing({
+                  ...editing,
+                  inviteAllMembers: e.target.checked,
+                  invitedMemberIds: e.target.checked ? [] : editing.invitedMemberIds,
+                })}
+                data-testid="event-invite-all"
+              />
+              <span className="text-sm flex items-center gap-1">
+                <Users className="h-4 w-4" /> Tutti gli associati con profilo
+              </span>
+            </label>
+            {!editing.inviteAllMembers && (
+              <MemberMultiSelect
+                value={editing.invitedMemberIds || []}
+                onChange={(invitedMemberIds) => setEditing({ ...editing, invitedMemberIds })}
+                label="Associati invitati"
+                searchOnly
+              />
+            )}
+          </div>
+
+          <AttachmentEditor
+            value={editing.attachments || []}
+            onChange={(attachments) => setEditing({ ...editing, attachments })}
+            label="Allegati evento"
+            accept=".pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.txt,.zip,.jpg,.jpeg,.png,.webp,.gif,.mp4,.webm,.mov"
+            hint="Visibili sul calendario e nella scheda evento. PDF, Office, immagini, ZIP (max 10 MB). Video MP4/WebM/MOV (max 50 MB). Il materiale dedicato per Utility si gestisce da Utility → Materiale eventi."
+          />
+        </div>
+      )}
+
+      {editing.id && activeTab === "presenze" && (
+        <EventPresenzePanel
+          eventId={editing.id}
+          invitedCount={editing.inviteAllMembers ? 0 : (editing.invitedMemberIds || []).length}
+        />
+      )}
+    </div>
+  );
+}
+
+export default function AdminEventsPage() {
+  const [searchParams, setSearchParams] = useSearchParams();
+  const [items, setItems] = useState([]);
+  const [editing, setEditing] = useState(null);
+  const [activeTab, setActiveTab] = useState("details");
+  const [saving, setSaving] = useState(false);
+  const [tipi, setTipi] = useState(TIPI_DEFAULT);
+  const [newTipo, setNewTipo] = useState("");
+  const [addingTipo, setAddingTipo] = useState(false);
+
+  const load = () => adminEvents().then(setItems);
+  const loadTipi = () => adminEventTypes().then((list) => setTipi(list?.length ? list : TIPI_DEFAULT));
+
+  useEffect(() => {
+    load();
+    loadTipi();
+  }, []);
+
+  const openEdit = (e, tab = "details") => {
+    setEditing(normalizeEvent(e));
+    setActiveTab(tab);
+  };
+
+  useEffect(() => {
+    if (searchParams.get("new") === "1") {
+      setEditing(empty());
+      setActiveTab("details");
+      setSearchParams({}, { replace: true });
+      return;
+    }
+    const editId = searchParams.get("edit");
+    if (editId && items.length) {
+      const ev = items.find((e) => e.id === editId);
+      if (ev) {
+        openEdit(ev);
+        setSearchParams({}, { replace: true });
+      }
+    }
+  }, [searchParams, setSearchParams, items]);
+
+  const closeEdit = () => setEditing(null);
+
+  const addTipo = async () => {
+    const name = newTipo.trim();
+    if (!name) return;
+    setAddingTipo(true);
+    try {
+      const updated = await adminAddEventType(name);
+      setTipi(updated);
+      const normalized = name.trim().replace(/\s+/g, " ");
+      const tipo =
+        updated.find((t) => t.toLowerCase() === normalized.toLowerCase())
+        || (normalized.charAt(0).toUpperCase() + normalized.slice(1).toLowerCase());
+      setEditing((prev) => (prev ? { ...prev, tipo } : prev));
+      setNewTipo("");
+    } catch (err) {
+      alert(err?.response?.data?.detail || "Impossibile aggiungere il tipo");
+    } finally {
+      setAddingTipo(false);
+    }
+  };
+
+  const save = async () => {
+    if (!editing?.titolo || !editing?.date) return alert("Titolo e data sono obbligatori");
+    if (!editing.inviteAllMembers && !(editing.invitedMemberIds || []).length) {
+      return alert("Seleziona almeno un associato oppure attiva «Tutti gli associati con profilo».");
+    }
+    setSaving(true);
+    try {
+      const { inviteAllMembers, utilityMaterial: _utilityMaterial, ...rest } = editing;
+      const payload = {
+        ...rest,
+        invitedMemberIds: inviteAllMembers ? [] : (editing.invitedMemberIds || []),
+        portalOnly: !!editing.portalOnly,
+        attachments: editing.attachments || [],
+      };
+      if (editing.id) {
+        await adminUpdateEvent(editing.id, payload);
+        setEditing(normalizeEvent({ ...payload, id: editing.id }));
+        load();
+      } else {
+        const created = await adminCreateEvent(payload);
+        setEditing(normalizeEvent(created));
+        setActiveTab("presenze");
+        load();
+      }
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const remove = async (id, titolo) => {
+    if (!window.confirm(`Eliminare "${titolo}"?`)) return;
+    await adminDeleteEvent(id);
+    if (editing?.id === id) setEditing(null);
+    load();
+  };
+
+  const invitedCount = (e) => (e.invitedMemberIds || e.relatedMemberIds || []).length;
+  const hideFooter = editing?.id && activeTab === "presenze";
+
+  return (
+    <div data-testid="admin-events">
+      <AdminPageHeader
+        title="Eventi"
+        description={`${items.length} eventi in calendario.`}
+      >
+        <Button
+          onClick={() => { setEditing(empty()); setActiveTab("details"); }}
+          variant="primary"
+          data-testid="admin-events-new"
+        >
+          <Plus className="h-4 w-4" /> Nuovo evento
+        </Button>
+      </AdminPageHeader>
+
+      {editing && (
+        <AdminFormModal
+          open
+          title={editing.id ? "Modifica evento" : "Nuovo evento"}
+          onClose={closeEdit}
+          onSave={save}
+          saving={saving}
+          saveLabel={editing.id ? "Salva modifiche" : "Salva evento"}
+          hideFooter={hideFooter}
+          testid="admin-event-modal"
+          maxWidth="max-w-4xl"
+        >
+          <EventEditForm
+            editing={editing}
+            setEditing={setEditing}
+            activeTab={activeTab}
+            setActiveTab={setActiveTab}
+            tipi={tipi}
+            newTipo={newTipo}
+            setNewTipo={setNewTipo}
+            onAddTipo={addTipo}
+            addingTipo={addingTipo}
+          />
+        </AdminFormModal>
+      )}
+
+      <div className="bg-white rounded-lg border border-slate-200 overflow-hidden overflow-x-auto">
+        <table className="w-full min-w-[720px]">
+          <thead>
+            <tr className="bg-slate-50 text-xs uppercase text-slate-500 text-left">
+              <th className="px-4 py-3">Data</th>
+              <th className="px-4 py-3">Titolo</th>
+              <th className="px-4 py-3">Tipo</th>
+              <th className="px-4 py-3">Visibilità</th>
+              <th className="px-4 py-3">Invitati</th>
+              <th className="px-4 py-3">Luogo</th>
+              <th className="px-4 py-3 text-right">Azioni</th>
+            </tr>
+          </thead>
+          <tbody>
+            {items.map((e) => (
+              <tr
+                key={e.id}
+                className="border-t border-slate-100 hover:bg-slate-50"
+                data-testid={`event-row-${e.id}`}
+              >
+                <td className="px-4 py-3 text-sm">{formatEventDateTimeIt(e.date, e.orario)}</td>
+                <td className="px-4 py-3 font-medium text-navy-700">{e.titolo}</td>
+                <td className="px-4 py-3">
+                  <span className="text-xs bg-slate-100 px-2 py-0.5 rounded">{e.tipo}</span>
+                </td>
+                <td className="px-4 py-3 text-sm">
+                  {e.portalOnly ? (
+                    <span className="text-xs bg-amber-50 text-amber-800 px-2 py-0.5 rounded font-medium">Solo associati</span>
+                  ) : (
+                    <span className="text-xs bg-emerald-50 text-emerald-800 px-2 py-0.5 rounded font-medium">Pubblico</span>
+                  )}
+                </td>
+                <td className="px-4 py-3 text-sm text-slate-600">
+                  {invitedCount(e) ? `${invitedCount(e)} selezionati` : "Tutti"}
+                </td>
+                <td className="px-4 py-3 text-sm text-slate-600">{e.luogo || "—"}</td>
+                <td className="px-4 py-3 text-right whitespace-nowrap">
+                  <button
+                    type="button"
+                    onClick={() => openEdit(e, "details")}
+                    className="p-1.5 rounded text-navy-600 hover:bg-navy-50"
+                    data-testid={`event-edit-${e.id}`}
+                    title="Modifica"
+                  >
+                    <Pencil className="h-4 w-4" />
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => remove(e.id, e.titolo)}
+                    className="p-1.5 text-red-600 hover:bg-red-50 rounded ml-1"
+                    data-testid={`event-delete-${e.id}`}
+                  >
+                    <Trash2 className="h-4 w-4" />
+                  </button>
+                </td>
+              </tr>
+            ))}
+            {items.length === 0 && (
+              <tr>
+                <td colSpan={7} className="p-4">
+                  <AdminEmptyState icon={SITE_ICONS.events} title="Nessun evento." />
+                </td>
+              </tr>
+            )}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  );
+}

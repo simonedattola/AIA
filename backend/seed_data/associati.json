@@ -1,0 +1,44 @@
+[
+  {
+    "nome": "Luca",
+    "cognome": "Bianchi",
+    "categoria": "CRA Lombardia",
+    "anno_inizio": 2019
+  },
+  {
+    "nome": "Sara",
+    "cognome": "Riva",
+    "categoria": "Assistente regionale",
+    "anno_inizio": 2018
+  },
+  {
+    "nome": "Francesca",
+    "cognome": "Conti",
+    "categoria": "Organo tecnico nazionale",
+    "anno_inizio": 2016
+  },
+  {
+    "nome": "Andrea",
+    "cognome": "Villa",
+    "categoria": "Osservatore arbitrale",
+    "anno_inizio": 2009
+  },
+  {
+    "nome": "Giovanni",
+    "cognome": "Ferri",
+    "categoria": "Osservatore regionale",
+    "anno_inizio": 2005
+  },
+  {
+    "nome": "Matteo",
+    "cognome": "Colombo",
+    "categoria": "Eccellenza",
+    "anno_inizio": 2014
+  },
+  {
+    "nome": "Irene",
+    "cognome": "Moretti",
+    "categoria": "Settore giovanile",
+    "anno_inizio": 2023
+  }
+]

@@ -1,0 +1,38 @@
+{
+  "summary": "Iteration 2 (block-based CMS) e2e testing. Backend: 15/15 new tests for blocks/pages/testimonials/documents pass + 29/29 iteration 1 regression tests still pass (44/44 total, 100%). Frontend: all critical public + admin block-CMS flows verified - public Home and /diventa-arbitro render blocks correctly from DB (hero, news_slider/events, lead-form, FAQ accordion, CTA), lead form submit shows inline 'Grazie' success, admin login works, /admin/pages lists system+custom pages, Page Builder for /admin/pages/page-home shows 3 tabs (Blocchi(4)/Anteprima/Impostazioni), 4 drag handles via data-testid='block-drag-handle', Save button persists with 'Salvato' feedback, Anteprima renders blocks, /admin/testimonials shows 3 seeded testimonials (Francesca Conti, Matteo Colombo, Elena Sala), /admin/documents shows 3 seeded documents, sidebar contains all 12 admin links.",
+  "backend_issues": {
+    "critical": [],
+    "minor": []
+  },
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": []
+  },
+  "test_report_links": [
+    "/app/backend/tests/test_aia_legnano.py",
+    "/app/backend/tests/test_iter2_blocks.py",
+    "/app/test_reports/pytest/iter2_results.xml"
+  ],
+  "action_items": [
+    "MINOR: Block Library modal (opened by data-testid='page-builder-add-block' on Page Builder) does not expose role=\"dialog\". Add role/data-testid='block-library-modal' on the modal root and data-testid='block-library-option-{type}' on each of the 14 block options for reliable E2E selection. Functionally the button itself is clickable and has the testid; only the modal selection was hard to assert.",
+    "OPTIONAL: Iteration 1 follow-up - confirm the App.js fix for /admin/articles/new isNew flag (previous iteration's CRITICAL bug). Not retested in this iteration."
+  ],
+  "critical_code_review_comments": [
+    "blocks_sanitize.py only sanitizes html/items field paths used in rich_text/text_image/faq/embed. If frontend renderers ever read additional rich html fields (e.g. cta description as HTML), they would NOT be sanitized. Consider centralising 'fields-to-sanitize per block type' via a schema.",
+    "admin/pages PUT endpoint does upsert=True (line 134). This means a PUT against a non-existent id silently CREATES a new page rather than returning 404 — could mask client bugs (cf. iteration 1 ghost-PUT issue).",
+    "public.get_settings() still has the cosmetic find_one({'_id': 0}, ...) first-lookup (no-op filter, harmless fallback). Already noted in iter1.",
+    "BlockRenderer.jsx renders form fields with data-testid='lead-firstName/lastName/email' which is good; ensure same pattern (lead-phone, lead-age, lead-message) for full automation coverage.",
+    "Pagine system list endpoint sets template='system' check via slug whitelist. If admin renames a system page slug, delete protection breaks - consider checking template=='system' OR an immutable 'isSystem' boolean."
+  ],
+  "updated_files": [
+    "/app/backend/tests/test_iter2_blocks.py"
+  ],
+  "success_rate": {"backend": "100%", "frontend": "95%"},
+  "test_credentials": "admin@aia-legnano.it / AiaLegnano2026!",
+  "seed_data_creation": "All test fixtures cleaned via DELETE in fixtures. No leftover TEST_* docs.",
+  "retest_needed": false,
+  "main_agent_can_self_test": true,
+  "context_for_next_testing_agent": "Run `REACT_APP_BACKEND_URL=https://arbitri-platform.preview.emergentagent.com pytest /app/backend/tests/ -v` to validate both iteration_1 (29) and iteration_2 (15) backend suites. For frontend, key data-testids that work: lead-form, lead-firstName, lead-lastName, lead-email, page-builder-add-block, block-drag-handle, admin-page-save. The Block Library modal does NOT yet expose role='dialog'; if you need to interact with the 14-block selection programmatically, ask main agent to add data-testid attributes to BlockLibrary modal & options. System page ids are stable: page-home, page-diventa-arbitro, page-chi-siamo, page-contatti.",
+  "rca_of_the_issue": "No new bugs found. Block library modal selector limitation is a testability issue, not a bug - the modal opens visually (the testid'd Add Block button click registers, but the wrapping element does not use role='dialog' nor a data-testid). Recommended fix: in PageBuilder.jsx, when rendering the BlockLibrary, add data-testid='block-library-modal' on the wrapper and data-testid={`block-option-${type}`} on each block-type button so playwright can click 'block-option-faq' deterministically."
+}

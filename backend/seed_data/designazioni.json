@@ -1,0 +1,65 @@
+[
+  {
+    "id": 1,
+    "data": "2026-05-16",
+    "gara": "Legnano Juniores - Castellanza",
+    "ruolo": "Arbitro",
+    "nominativo": "Luca Bianchi",
+    "email": "arbitro@legnano.it",
+    "luogo": "Centro Sportivo Giovanni Mari"
+  },
+  {
+    "id": 2,
+    "data": "2026-05-17",
+    "gara": "Parabiago - Accademia Bustese",
+    "ruolo": "Assistente",
+    "nominativo": "Sara Riva",
+    "email": "sara.riva@legnano.it",
+    "luogo": "Stadio Libero Ferrario"
+  },
+  {
+    "id": 3,
+    "data": "2026-05-17",
+    "gara": "San Vittore Olona - Canegrate",
+    "ruolo": "Osservatore",
+    "nominativo": "Giovanni Ferri",
+    "email": "giovanni.ferri@legnano.it",
+    "luogo": "Campo Comunale San Vittore"
+  },
+  {
+    "id": 5,
+    "data": "2026-05-24",
+    "gara": "Busto Garolfo - Arconate",
+    "ruolo": "Assistente",
+    "nominativo": "Luca Bianchi",
+    "email": "arbitro@legnano.it",
+    "luogo": "Campo Comunale Busto Garolfo"
+  },
+  {
+    "id": 7,
+    "data": "2026-06-07",
+    "gara": "Rappresentativa Alto Milanese - Selezione Varese",
+    "ruolo": "Assistente",
+    "nominativo": "Francesca Conti",
+    "email": "francesca.conti@legnano.it",
+    "luogo": "Centro Sportivo Cerro Maggiore"
+  },
+  {
+    "id": 8,
+    "data": "2026-06-13",
+    "gara": "Playoff Allievi: Legnano - Magenta",
+    "ruolo": "Osservatore",
+    "nominativo": "Andrea Villa",
+    "email": "andrea.villa@legnano.it",
+    "luogo": "Campo Sportivo Via Parma"
+  },
+  {
+    "id": 9,
+    "data": "2026-07-04",
+    "gara": "Amichevole estiva: Canegrate - Legnano",
+    "ruolo": "Arbitro",
+    "nominativo": "Luca Bianchi",
+    "email": "arbitro@legnano.it",
+    "luogo": "Campo Comunale Canegrate"
+  }
+]

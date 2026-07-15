@@ -1,0 +1,44 @@
+[
+  {
+    "id": 1,
+    "label": "Home",
+    "href": "/",
+    "order": 1,
+    "enabled": true
+  },
+  {
+    "id": 2,
+    "label": "Chi Siamo",
+    "href": "/chi-siamo",
+    "order": 2,
+    "enabled": true
+  },
+  {
+    "id": 3,
+    "label": "Designazioni",
+    "href": "/designazioni",
+    "order": 3,
+    "enabled": true
+  },
+  {
+    "id": 5,
+    "label": "News & Successi",
+    "href": "/news",
+    "order": 5,
+    "enabled": true
+  },
+  {
+    "id": 6,
+    "label": "Eventi",
+    "href": "/eventi",
+    "order": 6,
+    "enabled": true
+  },
+  {
+    "id": 7,
+    "label": "Contatti",
+    "href": "/contatti",
+    "order": 7,
+    "enabled": true
+  }
+]

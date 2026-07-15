@@ -1,0 +1,86 @@
+/**
+ * Classi utility del Design System — importare dopo @tailwind in index.css.
+ */
+
+.ds-page-title {
+    font-family: 'Outfit', system-ui, sans-serif;
+    font-size: var(--ds-text-page);
+    line-height: var(--ds-leading-tight);
+    font-weight: 700;
+    color: var(--ds-color-heading);
+  }
+  @media (min-width: 640px) {
+    .ds-page-title {
+      font-size: var(--ds-text-page-lg);
+    }
+  }
+
+  .ds-section-title {
+    font-family: 'Outfit', system-ui, sans-serif;
+    font-size: var(--ds-text-section);
+    line-height: var(--ds-leading-tight);
+    font-weight: 700;
+    color: var(--ds-color-heading);
+  }
+  @media (min-width: 640px) {
+    .ds-section-title {
+      font-size: var(--ds-text-section-lg);
+    }
+  }
+
+  .ds-subsection-title {
+    font-family: 'Outfit', system-ui, sans-serif;
+    font-size: var(--ds-text-subsection);
+    line-height: var(--ds-leading-snug);
+    font-weight: 700;
+    color: var(--ds-color-heading);
+  }
+
+  .ds-card-title {
+    font-family: 'Outfit', system-ui, sans-serif;
+    font-size: var(--ds-text-card);
+    line-height: var(--ds-leading-snug);
+    font-weight: 600;
+    color: var(--ds-color-heading);
+  }
+
+  .ds-body {
+    font-size: var(--ds-text-body);
+    line-height: var(--ds-leading-body);
+    color: var(--ds-color-body);
+  }
+
+  .ds-small {
+    font-size: var(--ds-text-small);
+    line-height: var(--ds-leading-body);
+    color: var(--ds-color-muted);
+  }
+
+  .ds-caption {
+    font-size: var(--ds-text-caption);
+    line-height: var(--ds-leading-body);
+    color: var(--ds-color-muted);
+  }
+
+  .ds-eyebrow {
+    font-size: var(--ds-text-caption);
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.2em;
+    color: var(--ds-color-eyebrow);
+  }
+
+  .ds-section {
+    padding-top: var(--ds-section-py);
+    padding-bottom: var(--ds-section-py);
+  }
+  @media (min-width: 1024px) {
+    .ds-section {
+      padding-top: var(--ds-section-py-lg);
+      padding-bottom: var(--ds-section-py-lg);
+    }
+  }
+
+.ds-grid-gap {
+  gap: var(--ds-grid-gap);
+}

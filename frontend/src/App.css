@@ -1,0 +1,5 @@
+/* App-specific styles (kept minimal — most styles in index.css). */
+.App {
+  min-height: 100vh;
+  @apply bg-background;
+}

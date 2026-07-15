@@ -1,0 +1,135 @@
+{
+  "theme": "light",
+  "archetype": "4_swiss_high_contrast",
+  "archetype_description": "Authority, clarity, and truth. Institutional aesthetic customized with AIA Legnano official Blu istituzionale (#004587) e blu secondario (#003366) and Gold (#D4AF37).",
+  "colors": {
+    "light": {
+      "background": "#F8FAFC",
+      "foreground": "#0F172A",
+      "card": "#FFFFFF",
+      "card_foreground": "#0F172A",
+      "popover": "#FFFFFF",
+      "popover_foreground": "#0F172A",
+      "primary": "#004587",
+      "primary_foreground": "#FFFFFF",
+      "secondary": "#D4AF37",
+      "secondary_foreground": "#0F172A",
+      "muted": "#F1F5F9",
+      "muted_foreground": "#64748B",
+      "accent": "#F1F5F9",
+      "accent_foreground": "#0F172A",
+      "destructive": "#EF4444",
+      "destructive_foreground": "#FFFFFF",
+      "border": "#E2E8F0",
+      "input": "#E2E8F0",
+      "ring": "#004587"
+    },
+    "dark": {
+      "background": "#020617",
+      "foreground": "#F8FAFC",
+      "card": "#0F172A",
+      "card_foreground": "#F8FAFC",
+      "popover": "#0F172A",
+      "popover_foreground": "#F8FAFC",
+      "primary": "#004587",
+      "primary_foreground": "#FFFFFF",
+      "secondary": "#D4AF37",
+      "secondary_foreground": "#020617",
+      "muted": "#1E293B",
+      "muted_foreground": "#94A3B8",
+      "accent": "#1E293B",
+      "accent_foreground": "#F8FAFC",
+      "destructive": "#7F1D1D",
+      "destructive_foreground": "#F8FAFC",
+      "border": "#1E293B",
+      "input": "#1E293B",
+      "ring": "#004587"
+    }
+  },
+  "typography": {
+    "font_family": {
+      "headings": "Outfit, sans-serif",
+      "body": "IBM Plex Sans, sans-serif",
+      "mono": "JetBrains Mono, monospace"
+    },
+    "scale": {
+      "h1": "text-4xl sm:text-5xl lg:text-6xl tracking-tight font-bold",
+      "h2": "text-2xl sm:text-3xl lg:text-4xl tracking-tight font-semibold",
+      "h3": "text-xl sm:text-2xl tracking-tight font-semibold",
+      "h4": "text-lg sm:text-xl font-medium",
+      "body": "text-base leading-relaxed",
+      "small": "text-sm uppercase tracking-[0.2em] font-medium"
+    },
+    "banned_fonts": ["Inter", "Roboto", "Open Sans", "Lato", "Syne", "Space Grotesk"]
+  },
+  "layout_spacing": {
+    "padding": {
+      "section_y": "py-20 sm:py-24 lg:py-32",
+      "container_x": "px-4 sm:px-6 lg:px-8",
+      "card_inner": "p-6 sm:p-8"
+    },
+    "grids": {
+      "bento_marketing": "grid grid-cols-1 md:grid-cols-8 lg:grid-cols-12 gap-6 lg:gap-8",
+      "dashboard_control": "grid grid-cols-1 md:grid-cols-3 lg:grid-cols-4 gap-4 lg:gap-6"
+    }
+  },
+  "components": {
+    "header": {
+      "style": "Crystal Glassmorphism",
+      "classes": "fixed top-0 w-full z-50 backdrop-blur-xl bg-white/90 border-b border-slate-200 shadow-sm transition-all"
+    },
+    "footer": {
+      "style": "Massive & Dark",
+      "classes": "bg-[#004587] text-white py-20 lg:py-32"
+    },
+    "cards": {
+      "style": "Technical Grid & Flat",
+      "classes": "bg-white border border-slate-200 rounded-md shadow-sm hover:shadow-md hover:-translate-y-1 transition-all duration-300",
+      "interactive_classes": "hover:border-[#004587]"
+    },
+    "buttons": {
+      "primary": "bg-[#004587] text-white hover:bg-[#003366] hover:text-white rounded-md px-6 py-2.5 font-medium transition-colors shadow-sm",
+      "secondary": "bg-[#D4AF37] text-[#0F172A] hover:bg-[#b5952f] rounded-md px-6 py-2.5 font-medium transition-colors shadow-sm",
+      "outline": "border-2 border-[#004587] text-[#004587] hover:bg-[#004587] hover:text-white rounded-md px-6 py-2.5 font-medium transition-colors"
+    },
+    "tiptap_prose_fix": {
+      "description": "Critical fix for TipTap rich text content. Solves the 'paragrafi attaccati' bug.",
+      "css_rules": ".ProseMirror p { margin-bottom: 1.25rem; line-height: 1.75; } .ProseMirror h1, .ProseMirror h2, .ProseMirror h3, .ProseMirror h4 { margin-top: 2rem; margin-bottom: 1rem; font-weight: 600; color: #0f172a; line-height: 1.2; } .ProseMirror ul { list-style-type: disc; padding-left: 1.5rem; margin-bottom: 1.25rem; } .ProseMirror ol { list-style-type: decimal; padding-left: 1.5rem; margin-bottom: 1.25rem; } .ProseMirror blockquote { border-left: 4px solid #004587; padding-left: 1rem; font-style: italic; color: #475569; margin-bottom: 1.25rem; background-color: #f8fafc; padding: 1rem; border-radius: 0 0.375rem 0.375rem 0; } .ProseMirror img { border-radius: 0.375rem; margin-top: 1.5rem; margin-bottom: 1.5rem; width: 100%; height: auto; } .ProseMirror:focus { outline: none; }"
+    }
+  },
+  "media": {
+    "logos": {
+      "aia_legnano": "/brand/logo-aia-legnano.png",
+      "aia_nazionale": "/brand/logo-aia-figc.png"
+    },
+    "images": {
+      "hero_background": "https://images.unsplash.com/photo-1550591901-c036ab7c45f8?q=85&w=2560",
+      "course_cta": "https://images.unsplash.com/photo-1731863920659-261bcafdfef8?q=85&w=1200",
+      "events_background": "https://images.unsplash.com/photo-1604331546936-ba127df7370e?q=85&w=1200",
+      "news_placeholder": "https://images.pexels.com/photos/36862523/pexels-photo-36862523.jpeg?auto=compress&cs=tinysrgb&dpr=2&w=800",
+      "about_referee": "https://images.pexels.com/photos/30726639/pexels-photo-30726639.jpeg?auto=compress&cs=tinysrgb&dpr=2&w=1200"
+    }
+  },
+  "visual_enhancers": {
+    "hero_overlay": "bg-gradient-to-r from-[#0F172A]/90 via-[#004587]/70 to-[#004587]/40",
+    "section_backgrounds": [
+      "bg-white",
+      "bg-slate-50",
+      "bg-[#004587] text-white"
+    ]
+  },
+  "accessibility": {
+    "testing_attributes": "All interactive elements MUST have a data-testid attribute using kebab-case role-based naming (e.g. data-testid='hero-cta-button').",
+    "contrast": "Text over hero images meets minimum 4.5:1 ratio using the defined hero_overlay. The primary blue #004587 against white provides strong contrast."
+  },
+  "instructions_to_main_agent": [
+    "1. Do not use generic fonts like Inter, Roboto, Space Grotesk. Explicitly import and use 'Outfit' for headings and 'IBM Plex Sans' for body from Google Fonts.",
+    "2. Strict usage of the Official Logos provided in the /public/brand/ folder. Do not use text placeholders for logos. Ensure they are sized appropriately (e.g., h-12 to h-16 in header).",
+    "3. Apply the 'tiptap_prose_fix.css_rules' directly into your index.css or a dedicated editor.css to ensure user-generated articles have proper spacing, fixing the 'paragrafi attaccati' bug.",
+    "4. Ensure the Admin UI is visually distinct but conceptually aligned: use a sidebar layout, crisp borders, solid table structures. Maintain the navy blue primary color for active states.",
+    "5. Follow the Bento Grid protocol for public pages: asymmetrical where marketing, dense and structured for tabular data (Associates/Designations).",
+    "6. Hero section overlay must be a gradient from deep navy to transparent, never a flat #000000 overlay. Refer to visual_enhancers.hero_overlay.",
+    "7. Do NOT invent colors (NO purples, NO teals). Stick strictly to Blu istituzionale (#004587) e blu secondario (#003366), Gold (#D4AF37), White, and Slate variations.",
+    "8. Emojis as icons are BANNED. Use lucide-react exclusively."
+  ]
+}

@@ -1,0 +1,39 @@
+/** Percorsi UI admin — prefisso `/amministrazione`. */
+export const ADMIN_ROUTES = {
+  root: "/amministrazione",
+  login: "/amministrazione/login",
+  dashboard: "/amministrazione",
+  anagrafica: "/amministrazione/anagrafica",
+  designazioni: "/amministrazione/designazioni",
+  comunicazioniInterne: "/amministrazione/comunicazioni-interne",
+  eventi: "/amministrazione/eventi",
+  articoli: "/amministrazione/articoli",
+  articolo: (id) => `/amministrazione/articoli/${id}`,
+  articoloNuovo: "/amministrazione/articoli/new",
+  messaggiSito: "/amministrazione/messaggi-sito",
+  candidature: "/amministrazione/candidature",
+  galleria: "/amministrazione/galleria",
+  testimonianze: "/amministrazione/testimonianze",
+  documenti: "/amministrazione/documenti",
+  utility: "/amministrazione/utility",
+  utilityEvento: (eventId) => `/amministrazione/utility/evento/${eventId}`,
+  pagine: "/amministrazione/pagine",
+  pagina: (id) => `/amministrazione/pagine/${id}`,
+  impostazioni: "/amministrazione/impostazioni",
+};
+
+/** Percorsi area associati — prefisso `/area-associati`. */
+export const PORTAL_ROUTES = {
+  root: "/area-associati",
+  login: "/area-associati/login",
+  comunicazioniInterne: "/area-associati/comunicazioni-interne",
+  calendario: "/area-associati/calendario",
+  storicoArbitrale: "/area-associati/storico-arbitrale",
+  documenti: "/area-associati/documenti",
+  utility: "/area-associati/utility",
+  galleria: "/area-associati/galleria",
+  premiEMenzioni: "/area-associati/premi-e-menzioni",
+  messaggi: "/area-associati/messaggi",
+  profilo: "/area-associati/profilo",
+  comunicazione: (id) => `/area-associati/comunicazioni-interne?id=${id}`,
+};

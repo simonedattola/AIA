@@ -1,0 +1,102 @@
+[
+  {
+    "domanda": "Quando un arbitro deve ammonire un calciatore per comportamento antisportivo?",
+    "opzioni": [
+      "Solo se interrompe una chiara occasione da rete",
+      "Quando simula, trattiene o agisce in modo contrario allo spirito del gioco",
+      "Solo dopo il secondo richiamo verbale",
+      "Mai durante una ripresa di gioco"
+    ],
+    "risposta_corretta": 1
+  },
+  {
+    "domanda": "Su calcio di rigore, il portiere deve avere almeno parte di un piede:",
+    "opzioni": [
+      "Sulla linea di porta o in linea con essa al momento del tiro",
+      "Dietro la linea di porta",
+      "Fuori dall'area di porta",
+      "Sulla linea dell'area di rigore"
+    ],
+    "risposta_corretta": 0
+  },
+  {
+    "domanda": "Una rete puo essere convalidata direttamente da rimessa laterale?",
+    "opzioni": [
+      "Si, se il pallone tocca il terreno",
+      "Si, sempre",
+      "No, il gioco riprende secondo il caso previsto dal regolamento",
+      "Solo nelle gare giovanili"
+    ],
+    "risposta_corretta": 2
+  },
+  {
+    "domanda": "Il vantaggio deve essere applicato quando:",
+    "opzioni": [
+      "La squadra che subisce il fallo ne trae un beneficio immediato e concreto",
+      "Il pubblico lo chiede",
+      "Il fallo e sempre lieve",
+      "Mancano meno di cinque minuti alla fine"
+    ],
+    "risposta_corretta": 0
+  },
+  {
+    "domanda": "Un assistente segnala il fuorigioco quando il calciatore in posizione irregolare:",
+    "opzioni": [
+      "Si trova nella meta campo avversaria",
+      "Interferisce con il gioco, con un avversario o trae vantaggio dalla posizione",
+      "Riceve il pallone da rimessa laterale",
+      "E semplicemente oltre il penultimo difendente"
+    ],
+    "risposta_corretta": 1
+  },
+  {
+    "domanda": "Il calcio d'inizio puo essere battuto:",
+    "opzioni": [
+      "Solo in avanti",
+      "In qualsiasi direzione",
+      "Solo all'indietro",
+      "Solo dal capitano"
+    ],
+    "risposta_corretta": 1
+  },
+  {
+    "domanda": "Se il pallone tocca l'arbitro e avvia un attacco promettente, il gioco riprende con:",
+    "opzioni": [
+      "Calcio di punizione diretto",
+      "Rimessa dell'arbitro",
+      "Calcio d'angolo",
+      "Rimessa laterale"
+    ],
+    "risposta_corretta": 1
+  },
+  {
+    "domanda": "Una sostituzione e completata quando il subentrante:",
+    "opzioni": [
+      "Si scalda a bordo campo",
+      "Riceve il permesso dell'allenatore",
+      "Entra sul terreno di gioco dopo il permesso dell'arbitro",
+      "Indossa la pettorina"
+    ],
+    "risposta_corretta": 2
+  },
+  {
+    "domanda": "Il capitano di una squadra ha diritto a decisioni speciali?",
+    "opzioni": [
+      "Si, puo annullare una decisione tecnica",
+      "No, ha solo un grado di responsabilita sul comportamento della squadra",
+      "Si, puo chiedere il VAR in ogni gara",
+      "Si, puo scegliere il tempo di recupero"
+    ],
+    "risposta_corretta": 1
+  },
+  {
+    "domanda": "La distanza regolamentare su calcio di punizione e:",
+    "opzioni": [
+      "7,15 metri",
+      "8 metri",
+      "9,15 metri",
+      "10 metri"
+    ],
+    "risposta_corretta": 2
+  }
+]

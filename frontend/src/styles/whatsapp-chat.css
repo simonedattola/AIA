@@ -1,0 +1,39 @@
+/* Area messaggistica — look & feel WhatsApp (solo UI) */
+.wa-chat-root {
+  font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial,
+    sans-serif;
+}
+
+.wa-chat-shell {
+  box-shadow: 0 1px 3px rgba(11, 20, 26, 0.08);
+}
+
+@media (max-width: 767px) {
+  .wa-chat-list-panel {
+    transition: transform 0.28s cubic-bezier(0.4, 0, 0.2, 1);
+    will-change: transform;
+  }
+
+  .wa-chat-list-panel--hidden {
+    transform: translateX(-100%);
+    pointer-events: none;
+  }
+
+  .wa-chat-window-panel {
+    transition: transform 0.28s cubic-bezier(0.4, 0, 0.2, 1);
+    will-change: transform;
+  }
+
+  .wa-chat-window-panel--hidden {
+    transform: translateX(100%);
+    pointer-events: none;
+  }
+}
+
+.wa-bubble-tail-out {
+  border-top-right-radius: 4px;
+}
+
+.wa-bubble-tail-in {
+  border-top-left-radius: 4px;
+}

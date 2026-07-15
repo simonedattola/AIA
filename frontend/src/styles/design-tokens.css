@@ -1,0 +1,62 @@
+/**
+ * AIA Legnano — Design System tokens (CSS custom properties).
+ * Consumati da Tailwind (theme.extend) e da @layer components.
+ */
+
+:root {
+  /* Typography — font sizes */
+  --ds-text-page: 2.25rem;       /* 36px */
+  --ds-text-page-lg: 2.5rem;     /* 40px */
+  --ds-text-hero: 2.25rem;       /* 36px — text-4xl */
+  --ds-text-hero-sm: 3rem;       /* 48px — text-5xl */
+  --ds-text-hero-lg: 3.75rem;    /* 60px — text-6xl */
+  --ds-text-cta: 1.875rem;       /* 30px — text-3xl */
+  --ds-text-cta-md: 2.25rem;     /* 36px — text-4xl */
+  --ds-text-cta-lg: 3rem;        /* 48px — text-5xl */
+  --ds-text-section: 1.875rem;   /* 30px — text-3xl (CMS) */
+  --ds-text-section-lg: 2.25rem; /* 36px — text-4xl */
+  --ds-text-subsection: 1.5rem;  /* 24px */
+  --ds-text-card: 1.25rem;       /* 20px */
+  --ds-text-body: 1rem;          /* 16px */
+  --ds-text-small: 0.875rem;     /* 14px */
+  --ds-text-caption: 0.75rem;    /* 12px */
+
+  /* Typography — line heights */
+  --ds-leading-tight: 1.15;
+  --ds-leading-snug: 1.35;
+  --ds-leading-body: 1.6;
+  --ds-leading-relaxed: 1.75;
+
+  /* Spacing */
+  --ds-section-py: 3rem;         /* 48px */
+  --ds-section-py-lg: 4rem;    /* 64px */
+  --ds-card-padding: 1.25rem;  /* 20px */
+  --ds-card-padding-lg: 1.5rem;/* 24px */
+  --ds-grid-gap: 1.5rem;       /* 24px */
+
+  /* Buttons */
+  --ds-btn-height: 2.75rem;    /* 44px */
+  --ds-btn-height-sm: 2.25rem; /* 36px */
+  --ds-btn-height-xs: 2rem;    /* 32px */
+  --ds-btn-px: 1.25rem;        /* 20px */
+  --ds-btn-px-sm: 1rem;        /* 16px */
+
+  /* Radius */
+  --ds-radius-sm: 0.25rem;     /* 4px */
+  --ds-radius-md: 0.375rem;    /* 6px */
+  --ds-radius-lg: 0.5rem;      /* 8px */
+  --ds-radius-xl: 0.75rem;     /* 12px */
+
+  /* Shadows */
+  --ds-shadow-sm: 0 1px 2px 0 rgb(15 23 42 / 0.05);
+  --ds-shadow-md: 0 4px 12px -2px rgb(15 23 42 / 0.08);
+  --ds-shadow-lift: 0 18px 40px -20px rgb(15 23 42 / 0.18);
+  --ds-shadow-primary: 0 4px 12px -2px rgb(0 69 135 / 0.4);
+  --ds-shadow-primary-hover: 0 8px 20px -4px rgb(0 69 135 / 0.5);
+
+  /* Colors — semantic aliases (brand già in Tailwind navy/gold) */
+  --ds-color-heading: #003366;   /* navy-700 */
+  --ds-color-body: #1f2937;    /* slate-800-ish */
+  --ds-color-muted: #64748b;   /* slate-500 */
+  --ds-color-eyebrow: #004587; /* navy-600 */
+}
