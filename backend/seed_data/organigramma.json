@@ -1,1 +1,16 @@
-[]
+[
+  {"nome": "Ignazio", "cognome": "Ziino Colanino", "ruolo": "Presidente", "foto": ""},
+  {"nome": "Giuseppe", "cognome": "Lattuada", "ruolo": "Vice presidente - Area Tecnica", "foto": ""},
+  {"nome": "Luciano", "cognome": "Canavesi", "ruolo": "Vice presidente Vicario", "foto": ""},
+  {"nome": "Fabrizio", "cognome": "Carsenzuola", "ruolo": "Consigliere - Competenze tecniche", "foto": ""},
+  {"nome": "Stefano", "cognome": "Re Depaolini", "ruolo": "Consigliere - Competenze tecniche", "foto": ""},
+  {"nome": "Fabio", "cognome": "Talpone", "ruolo": "Segretario", "foto": ""},
+  {"nome": "Antonino", "cognome": "Zottarelli", "ruolo": "Cassiere", "foto": ""},
+  {"nome": "Antonio", "cognome": "Galli", "ruolo": "Designatore", "foto": ""},
+  {"nome": "Stefano", "cognome": "Zambon", "ruolo": "Designatore", "foto": ""},
+  {"nome": "Ivan", "cognome": "Cucco", "ruolo": "Referente osservatori arbitrali", "foto": ""},
+  {"nome": "Gaetano", "cognome": "Pignataro", "ruolo": "Referente atletico", "foto": ""},
+  {"nome": "Giovanni", "cognome": "Negri", "ruolo": "Referente corso arbitri", "foto": ""},
+  {"nome": "Rosario", "cognome": "Barberi", "ruolo": "Collegio revisori", "foto": ""},
+  {"nome": "Gianluca", "cognome": "Facchetti", "ruolo": "Collegio revisori", "foto": ""}
+]

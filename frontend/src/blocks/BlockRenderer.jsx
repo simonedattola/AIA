@@ -22,6 +22,7 @@ import {
 } from "./DynamicPageBlocks";
 import { SECTION_LOGO_CLASS, resolveSectionLogo } from "../lib/brand";
 import { parseInstagramPostEmbed, instagramPostEmbedSrc } from "../lib/instagram-embed";
+import { mediaUrl } from "../lib/media";
 import MediaImage from "../components/MediaImage";
 
 /** Link CTA: route interne, anchor (#form) e scroll con offset header fisso. */
@@ -80,7 +81,7 @@ export function HeroBlock({ config: c, stats }) {
     <section className={`relative ${heightCls} flex items-center overflow-hidden`} data-testid="hero-block">
       {c.backgroundImage && (
         <div className="absolute inset-0 z-0">
-          <img src={c.backgroundImage} alt="" className="w-full h-full object-cover" />
+          <img src={mediaUrl(c.backgroundImage)} alt="" className="w-full h-full object-cover" />
           <div className={`absolute inset-0 ${overlayClass}`} />
         </div>
       )}
@@ -296,7 +297,7 @@ export function CTABlock({ config: c }) {
     <section id={c.anchor || undefined} className={`relative site-section overflow-hidden scroll-mt-20 max-[1139px]:scroll-mt-[4.5rem] ${styles[c.style] || styles.navy}`} data-testid="cta-block">
       {c.backgroundImage && c.style !== "white" && (
         <div className="absolute inset-0 z-0 opacity-25">
-          <img src={c.backgroundImage} alt="" className="w-full h-full object-cover"/>
+          <img src={mediaUrl(c.backgroundImage)} alt="" className="w-full h-full object-cover"/>
         </div>
       )}
       <div className="relative z-10 max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 text-center">

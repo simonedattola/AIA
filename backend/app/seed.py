@@ -31,6 +31,14 @@ DEMO_MEMBER_SLUGS = frozenset({
     "marco-rossi",
     "elena-sala",
     "davide-villa",
+    # seed associati.json (placeholder, non reali)
+    "luca-bianchi",
+    "sara-riva",
+    "francesca-conti",
+    "andrea-villa",
+    "giovanni-ferri",
+    "matteo-colombo",
+    "irene-moretti",
 })
 
 DEMO_MEMBER_NAMES = frozenset({
@@ -41,6 +49,13 @@ DEMO_MEMBER_NAMES = frozenset({
     "Marco Rossi",
     "Elena Sala",
     "Davide Villa",
+    "Luca Bianchi",
+    "Sara Riva",
+    "Francesca Conti",
+    "Andrea Villa",
+    "Giovanni Ferri",
+    "Matteo Colombo",
+    "Irene Moretti",
 })
 
 
