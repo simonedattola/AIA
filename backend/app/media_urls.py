@@ -2,10 +2,12 @@
 import os
 import re
 from pathlib import Path
+from urllib.parse import urlparse
 
 from .paths import UPLOAD_DIR
 
 _UPLOAD_PATH_RE = re.compile(r"^/api/uploads/")
+_LOCAL_HOSTS = {"localhost", "127.0.0.1", "0.0.0.0", "::1"}
 
 
 def format_file_size_label(size: int) -> str:
@@ -42,13 +44,33 @@ def public_api_base() -> str:
     return (os.environ.get("PUBLIC_API_URL") or os.environ.get("REACT_APP_BACKEND_URL") or "").rstrip("/")
 
 
+def _local_absolute_upload_path(url: str) -> str | None:
+    """If url is an absolute localhost upload URL, return its path (/api/uploads/...)."""
+    try:
+        parsed = urlparse(url)
+    except Exception:
+        return None
+    if parsed.scheme not in ("http", "https"):
+        return None
+    host = (parsed.hostname or "").lower()
+    if host not in _LOCAL_HOSTS:
+        return None
+    path = parsed.path or ""
+    if path.startswith("/api/uploads/") or path.startswith("/uploads/"):
+        return path if path.startswith("/api/") else f"/api{path}"
+    return None
+
+
 def resolve_media_url(url: str | None) -> str:
     if not url or not str(url).strip():
         return ""
     url = str(url).strip()
+    base = public_api_base()
+    local_path = _local_absolute_upload_path(url)
+    if local_path:
+        return f"{base}{local_path}" if base else local_path
     if url.startswith("http://") or url.startswith("https://"):
         return url
-    base = public_api_base()
     if not base:
         return url
     if url.startswith("/"):

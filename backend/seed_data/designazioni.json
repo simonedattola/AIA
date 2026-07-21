@@ -1,7 +1,7 @@
 [
   {
     "id": 1,
-    "data": "2026-05-16",
+    "data": "2026-07-18",
     "gara": "Legnano Juniores - Castellanza",
     "ruolo": "Arbitro",
     "nominativo": "Luca Bianchi",
@@ -10,7 +10,7 @@
   },
   {
     "id": 2,
-    "data": "2026-05-17",
+    "data": "2026-07-19",
     "gara": "Parabiago - Accademia Bustese",
     "ruolo": "Assistente",
     "nominativo": "Sara Riva",
@@ -19,7 +19,7 @@
   },
   {
     "id": 3,
-    "data": "2026-05-17",
+    "data": "2026-07-19",
     "gara": "San Vittore Olona - Canegrate",
     "ruolo": "Osservatore",
     "nominativo": "Giovanni Ferri",
@@ -28,7 +28,7 @@
   },
   {
     "id": 5,
-    "data": "2026-05-24",
+    "data": "2026-07-20",
     "gara": "Busto Garolfo - Arconate",
     "ruolo": "Assistente",
     "nominativo": "Luca Bianchi",
@@ -37,7 +37,7 @@
   },
   {
     "id": 7,
-    "data": "2026-06-07",
+    "data": "2026-07-22",
     "gara": "Rappresentativa Alto Milanese - Selezione Varese",
     "ruolo": "Assistente",
     "nominativo": "Francesca Conti",
@@ -46,7 +46,7 @@
   },
   {
     "id": 8,
-    "data": "2026-06-13",
+    "data": "2026-07-24",
     "gara": "Playoff Allievi: Legnano - Magenta",
     "ruolo": "Osservatore",
     "nominativo": "Andrea Villa",
@@ -55,7 +55,7 @@
   },
   {
     "id": 9,
-    "data": "2026-07-04",
+    "data": "2026-07-25",
     "gara": "Amichevole estiva: Canegrate - Legnano",
     "ruolo": "Arbitro",
     "nominativo": "Luca Bianchi",

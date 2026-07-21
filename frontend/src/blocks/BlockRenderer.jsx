@@ -22,6 +22,7 @@ import {
 } from "./DynamicPageBlocks";
 import { SECTION_LOGO_CLASS, resolveSectionLogo } from "../lib/brand";
 import { parseInstagramPostEmbed, instagramPostEmbedSrc } from "../lib/instagram-embed";
+import MediaImage from "../components/MediaImage";
 
 /** Link CTA: route interne, anchor (#form) e scroll con offset header fisso. */
 function CtaLink({ href = "/", variant = "primary", className, children, ...rest }) {
@@ -492,7 +493,7 @@ export function GalleryBlock({ config: c }) {
         <div className={`grid grid-cols-1 ${cols} gap-4`}>
           {(c.images || []).map((img, i) => (
             <Card key={i} as="button" type="button" onClick={() => setLightbox(img)} interactive padding="none" className="aspect-[4/3] overflow-hidden bg-slate-100">
-              <img src={img.url} alt={img.caption || ""} className="w-full h-full object-cover" loading="lazy"/>
+              <MediaImage src={img.url} alt={img.caption || ""} className="w-full h-full object-cover" loading="lazy"/>
             </Card>
           ))}
         </div>
@@ -500,7 +501,7 @@ export function GalleryBlock({ config: c }) {
       {lightbox && (
         <div onClick={() => setLightbox(null)} className="fixed inset-0 z-50 bg-black/90 flex items-center justify-center p-4 cursor-zoom-out">
           <button onClick={() => setLightbox(null)} className="absolute top-4 right-4 text-white p-2"><X className="h-6 w-6"/></button>
-          <img src={lightbox.url} alt="" className="max-w-full max-h-full rounded"/>
+          <MediaImage src={lightbox.url} alt="" className="max-w-full max-h-full rounded"/>
           {lightbox.caption && <div className="absolute bottom-6 text-white">{lightbox.caption}</div>}
         </div>
       )}
