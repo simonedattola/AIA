@@ -77,9 +77,9 @@ export function DesignationsTableBlock({ config: c }) {
     <section className="site-section bg-background" data-testid="designations-table-block">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <SectionIntro eyebrow={c.eyebrow} title={c.title} intro={c.intro} />
-        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-8 pb-6 border-b border-slate-200">
+        <div className="flex flex-col gap-4 mb-6 md:mb-8 pb-5 md:pb-6 border-b border-slate-200 md:flex-row md:items-center md:justify-between">
           <div className="flex items-center gap-2 flex-wrap">
-            <Filter className="h-4 w-4 text-slate-400 mr-1" />
+            <Filter className="h-4 w-4 text-slate-400 mr-1 shrink-0" aria-hidden />
             {ROLE_FILTERS_DES.map((r) => (
               <FilterPill key={r.value || "all"} active={filterRole === r.value} onClick={() => setFilterRole(r.value)}>
                 {r.label}
@@ -87,8 +87,13 @@ export function DesignationsTableBlock({ config: c }) {
             ))}
           </div>
           <div className="relative w-full md:w-72">
-            <input value={search} onChange={(e) => setSearch(e.target.value)} placeholder={c.searchPlaceholder || "Cerca gara o nominativo…"} className="w-full pl-4 pr-9 py-2 border border-slate-300 rounded-md text-sm focus:border-navy-600 focus:ring-2 focus:ring-navy-600/20 focus:outline-none" />
-            {search && <button type="button" onClick={() => setSearch("")} className="absolute right-2 top-1/2 -translate-y-1/2 text-slate-400"><X className="h-4 w-4" /></button>}
+            <input
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              placeholder={c.searchPlaceholder || "Cerca gara o nominativo…"}
+              className="w-full min-h-[44px] pl-4 pr-9 py-2.5 border border-slate-300 rounded-md text-base md:text-sm focus:border-navy-600 focus:ring-2 focus:ring-navy-600/20 focus:outline-none"
+            />
+            {search && <button type="button" onClick={() => setSearch("")} className="absolute right-2 top-1/2 -translate-y-1/2 p-1.5 text-slate-400" aria-label="Cancella ricerca"><X className="h-4 w-4" /></button>}
           </div>
         </div>
         {loading ? <p className="text-slate-500">Caricamento…</p> : error ? <p className="text-red-600">{error}</p> : filtered.length === 0 ? <p className="text-slate-500">Nessuna designazione corrispondente.</p> : (

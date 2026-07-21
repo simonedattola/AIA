@@ -1,4 +1,5 @@
 import DesignationsTableBody from "./DesignationsTableBody";
+import DesignationsMobileList from "./DesignationsMobileList";
 
 export default function DesignationsDataTable({
   designations = [],
@@ -17,21 +18,39 @@ export default function DesignationsDataTable({
 
   return (
     <div
-      className={`border border-slate-200 rounded-xl overflow-hidden shadow-sm ${className}`}
+      className={className}
       data-testid={tableTestId === "designations-data-table" ? "designations-data-table" : undefined}
     >
+      <div className="md:hidden" data-testid="designations-mobile">
+        <div
+          className={scrollable ? "overflow-y-auto pr-0.5" : undefined}
+          style={scrollMaxHeight ? { maxHeight: `${scrollMaxHeight}px` } : undefined}
+          data-testid={scrollable ? "designations-scroll-mobile" : undefined}
+        >
+          <DesignationsMobileList
+            designations={designations}
+            showNominativo={showNominativo}
+            rowTestIdPrefix={rowTestIdPrefix}
+          />
+        </div>
+      </div>
+
       <div
-        className={scrollable ? "overflow-y-auto overflow-x-auto" : "overflow-x-auto"}
-        style={scrollMaxHeight ? { maxHeight: `${scrollMaxHeight}px` } : undefined}
-        data-testid={scrollable ? "designations-scroll" : undefined}
+        className={`hidden md:block border border-slate-200 rounded-xl overflow-hidden shadow-sm`}
       >
-        <DesignationsTableBody
-          designations={designations}
-          showNominativo={showNominativo}
-          tableTestId={tableTestId}
-          rowTestIdPrefix={rowTestIdPrefix}
-          stickyHeader={scrollable}
-        />
+        <div
+          className={scrollable ? "overflow-y-auto overflow-x-auto" : "overflow-x-auto"}
+          style={scrollMaxHeight ? { maxHeight: `${scrollMaxHeight}px` } : undefined}
+          data-testid={scrollable ? "designations-scroll" : undefined}
+        >
+          <DesignationsTableBody
+            designations={designations}
+            showNominativo={showNominativo}
+            tableTestId={tableTestId}
+            rowTestIdPrefix={rowTestIdPrefix}
+            stickyHeader={scrollable}
+          />
+        </div>
       </div>
     </div>
   );
