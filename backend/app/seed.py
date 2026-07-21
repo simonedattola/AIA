@@ -1354,13 +1354,17 @@ async def seed_officials():
         if await db.members.find_one({"slug": slug}, {"_id": 0, "id": 1}):
             continue
         ruolo = o["ruolo"]
+        bt = ruolo.lower()
+        is_pres = "presidente di sezione" in bt or bt.strip() == "presidente"
+        if "vice" in bt or "revisione" in bt or "revisori" in bt:
+            is_pres = False
         member = Member(
             slug=slug,
             firstName=o["nome"],
             lastName=o["cognome"],
             memberRole="consiglio_direttivo",
             boardTitle=ruolo,
-            isPresident=ruolo.lower() == "presidente",
+            isPresident=is_pres,
             photoUrl=o.get("foto") or OFFICIAL_PHOTOS[i % len(OFFICIAL_PHOTOS)],
         )
         await db.members.insert_one(member.model_dump().copy())
