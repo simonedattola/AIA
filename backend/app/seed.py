@@ -1393,6 +1393,7 @@ async def seed_members():
             observerType=observer_type,
             category=cat,
             yearStart=a.get("anno_inizio"),
+            boardTitle=(a.get("boardTitle") or "").strip(),
         )
         await db.members.insert_one(member.model_dump().copy())
     await _set_seed_flag("associati")

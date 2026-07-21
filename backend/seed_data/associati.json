@@ -1,1 +1,9 @@
-[]
+[
+  {
+    "nome": "Simone",
+    "cognome": "Dattola",
+    "categoria": "Terza Categoria",
+    "anno_inizio": 2024,
+    "boardTitle": "Area Informatica"
+  }
+]
