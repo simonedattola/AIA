@@ -66,8 +66,16 @@ def normalize_member(doc: dict) -> dict:
             doc["boardTitle"] = legacy
     if doc["memberRole"] == "consiglio_direttivo":
         bt = (doc.get("boardTitle") or "").lower()
-        if "presidente" in bt and "vice" not in bt:
+        # Solo Presidente di Sezione (non Vice, non Organo di Revisione)
+        if (
+            "presidente" in bt
+            and "vice" not in bt
+            and "revisione" not in bt
+            and "revisori" not in bt
+        ):
             doc["isPresident"] = True
+        elif doc.get("isPresident") and ("revisione" in bt or "revisori" in bt or "vice" in bt):
+            doc["isPresident"] = False
     bio = (doc.get("bio") or "").strip()
     if not bio and doc.get("bioHtml"):
         doc["bio"] = _strip_html(doc.get("bioHtml") or "")
