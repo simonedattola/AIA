@@ -1445,7 +1445,11 @@ async def ensure_aia_download_documents():
     from .scrapers.aia_downloads import import_aia_downloads
 
     db = get_db()
-    result = await import_aia_downloads(db, download_files=True, replace_existing=True)
+    try:
+        result = await import_aia_downloads(db, download_files=True, replace_existing=True)
+    except Exception as exc:
+        logger.warning("Import documenti AIA FIGC saltato (rete/remoto): %s", exc)
+        return 0
     await _set_seed_flag("aia_download_documents")
     return result.get("imported", 0)
 
@@ -1469,7 +1473,11 @@ async def ensure_aia_legnano_download_documents():
     from .scrapers.aia_legnano_downloads import import_legnano_downloads
 
     db = get_db()
-    result = await import_legnano_downloads(db, download_files=True, replace_existing=True)
+    try:
+        result = await import_legnano_downloads(db, download_files=True, replace_existing=True)
+    except Exception as exc:
+        logger.warning("Import documenti AIA Legnano saltato (rete/remoto): %s", exc)
+        return 0
     await _set_seed_flag("aia_legnano_download_documents")
     return result.get("imported", 0)
 
@@ -1534,14 +1542,18 @@ async def ensure_instagram_gallery_sync() -> dict | None:
     from .instagram_gallery import sync_instagram_gallery
 
     db = get_db()
-    settings = await db.settings.find_one({"_id": "site"}, {"_id": 0, "instagramUrl": 1}) or {}
-    result = await sync_instagram_gallery(
-        db,
-        username=settings.get("instagramUrl") or "https://www.instagram.com/aia_legnano/",
-        session_id=session_id,
-        since_year=2021,
-        limit=0,
-    )
+    settings = await db.site_settings.find_one({"id": "site-settings"}, {"_id": 0, "instagramUrl": 1}) or {}
+    try:
+        result = await sync_instagram_gallery(
+            db,
+            username=settings.get("instagramUrl") or "https://www.instagram.com/aia_legnano/",
+            session_id=session_id,
+            since_year=2021,
+            limit=0,
+        )
+    except Exception as exc:
+        logger.warning("Sync Instagram galleria saltato: %s", exc)
+        return None
     if result.get("added"):
         logger.info("Instagram galleria: importate %s immagini", result["added"])
     return result

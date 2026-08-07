@@ -27,4 +27,10 @@ def test_legacy_related_member_ids():
 def test_public_visibility():
     assert event_visible_on_public_site({"portalOnly": False}) is True
     assert event_visible_on_public_site({"portalOnly": True}) is False
-    assert public_events_query() == {"portalOnly": {"$ne": True}}
+    # Default includes current football season window
+    q = public_events_query()
+    assert q.get("portalOnly") == {"$ne": True} or (
+        "$and" in q and {"portalOnly": {"$ne": True}} in q["$and"]
+    )
+    q_all = public_events_query(current_season=False)
+    assert q_all == {"portalOnly": {"$ne": True}}
