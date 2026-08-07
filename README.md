@@ -48,6 +48,14 @@ REACT_APP_BACKEND_URL=http://localhost:8000
 
 Per i test di integrazione backend, esporta le stesse credenziali admin (`ADMIN_PASSWORD`, opzionalmente `ADMIN_EMAIL`) prima di `pytest`.
 
+### GitHub Actions secrets (CI/CD)
+
+I secret di pipeline **non** vanno nel codice: vanno creati in GitHub
+(**Settings → Secrets and variables → Actions**).
+
+Elenco completo, generazione, checklist e procedura di rotazione:
+[`.github/SECRETS.md`](.github/SECRETS.md).
+
 ## Area riservata associati (integrata, porta 3000)
 
 - URL: `http://localhost:3000/area-riservata/login`
