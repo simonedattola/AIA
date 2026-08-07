@@ -1,4 +1,4 @@
-import { render, screen } from "@testing-library/react";
+import { render, screen, fireEvent } from "@testing-library/react";
 import SiteHeader from "../SiteHeader";
 
 jest.mock("../../lib/site-context", () => ({
@@ -13,30 +13,43 @@ jest.mock("../../lib/site-context", () => ({
   }),
 }));
 
+function mockMatchMedia(matchesInline) {
+  window.matchMedia = jest.fn().mockImplementation((query) => ({
+    matches: matchesInline,
+    media: query,
+    onchange: null,
+    addListener: jest.fn(),
+    removeListener: jest.fn(),
+    addEventListener: jest.fn(),
+    removeEventListener: jest.fn(),
+    dispatchEvent: jest.fn(),
+  }));
+}
+
 describe("SiteHeader", () => {
-  beforeEach(() => {
-    window.matchMedia = jest.fn().mockImplementation((query) => ({
-      matches: false,
-      media: query,
-      onchange: null,
-      addListener: jest.fn(),
-      removeListener: jest.fn(),
-      addEventListener: jest.fn(),
-      removeEventListener: jest.fn(),
-      dispatchEvent: jest.fn(),
-    }));
-  });
-
-  it("renders brand and Area Associati CTA", () => {
+  it("mobile: hamburger only (no inline CTA buttons until menu opens)", () => {
+    mockMatchMedia(false);
     render(<SiteHeader />);
-    expect(screen.getByTestId("site-header")).toBeInTheDocument();
-    expect(screen.getByAltText(/AIA Legnano/i)).toBeInTheDocument();
-    expect(screen.getByTestId("nav-link-area-associati")).toBeInTheDocument();
-    expect(screen.getByText(/Area Associati/i)).toBeInTheDocument();
-  });
+    expect(screen.getByTestId("site-header")).toHaveAttribute("data-nav-mode", "compact");
+    expect(screen.getByTestId("header-mobile-toggle")).toBeInTheDocument();
+    expect(screen.queryByTestId("mobile-menu")).not.toBeInTheDocument();
+    // CTAs not visible until menu opens
+    expect(screen.queryByTestId("header-cta-diventa-arbitro")).not.toBeInTheDocument();
+    expect(screen.queryByTestId("nav-link-area-associati")).not.toBeInTheDocument();
 
-  it("renders Diventa Arbitro CTA", () => {
-    render(<SiteHeader />);
+    fireEvent.click(screen.getByTestId("header-mobile-toggle"));
+    expect(screen.getByTestId("mobile-menu")).toBeInTheDocument();
     expect(screen.getByTestId("header-cta-diventa-arbitro")).toBeInTheDocument();
+    expect(screen.getByTestId("nav-link-area-associati")).toBeInTheDocument();
+    expect(screen.getByText("Chi Siamo")).toBeInTheDocument();
+  });
+
+  it("desktop: shows CTA buttons inline", () => {
+    mockMatchMedia(true);
+    render(<SiteHeader />);
+    expect(screen.getByTestId("site-header")).toHaveAttribute("data-nav-mode", "inline");
+    expect(screen.queryByTestId("header-mobile-toggle")).not.toBeInTheDocument();
+    expect(screen.getByTestId("header-cta-diventa-arbitro")).toBeInTheDocument();
+    expect(screen.getByTestId("nav-link-area-associati")).toBeInTheDocument();
   });
 });

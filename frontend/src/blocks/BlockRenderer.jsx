@@ -20,7 +20,7 @@ import {
   DesignationsTableBlock, MembersGridBlock, NewsGridBlock, EventsCalendarBlock,
   ContactSectionBlock, OrganigrammaBlock, MemberProfileBlock, PortalLoginBlock,
 } from "./DynamicPageBlocks";
-import { SECTION_LOGO_CLASS, resolveSectionLogo } from "../lib/brand";
+import { SECTION_LOGO_CLASS, NATIONAL_LOGO, NATIONAL_LOGO_CLASS, resolveSectionLogo } from "../lib/brand";
 import { parseInstagramPostEmbed, instagramPostEmbedSrc } from "../lib/instagram-embed";
 
 /** Link CTA: route interne, anchor (#form) e scroll con offset header fisso. */
@@ -86,14 +86,21 @@ export function HeroBlock({ config: c, stats }) {
       <div className="relative z-10 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-20 grid grid-cols-1 lg:grid-cols-12 gap-12 items-center w-full text-white">
         <div className={c.showStats ? "lg:col-span-7" : "lg:col-span-12"}>
           {(c.badgeLogoUrl || c.eyebrow) && (
-            <div className="inline-flex items-center gap-3 mb-6 px-4 py-2 rounded-full bg-white/10 backdrop-blur-md border border-white/20">
+            <div className="inline-flex items-center gap-2.5 sm:gap-3 mb-6 px-3 sm:px-4 py-2 rounded-full bg-white/10 backdrop-blur-md border border-white/20">
               {c.badgeLogoUrl && (
                 <img
                   src={resolveSectionLogo(c.badgeLogoUrl)}
                   alt="AIA Legnano"
                   className={SECTION_LOGO_CLASS.badge}
+                  data-testid="hero-section-logo"
                 />
               )}
+              <img
+                src={NATIONAL_LOGO}
+                alt="AIA Nazionale"
+                className={NATIONAL_LOGO_CLASS.sm}
+                data-testid="hero-national-logo"
+              />
               {c.eyebrow && <Eyebrow className="tracking-[0.22em] font-medium text-white">{c.eyebrow}</Eyebrow>}
             </div>
           )}

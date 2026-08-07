@@ -17,11 +17,11 @@ export const SECTION_LOGO_CLASS = {
   badge: circleLogo("h-8 w-8"),
 };
 
-/** Classi per il badge AIA Nazionale (sfondo trasparente / navy già nel PNG). */
+/** Classi per il badge AIA Nazionale (PNG circolare). */
 export const NATIONAL_LOGO_CLASS = {
-  sm: "h-10 w-10 rounded-full object-contain shrink-0",
-  md: "h-12 w-12 rounded-full object-contain shrink-0",
-  footer: "h-11 w-11 sm:h-12 sm:w-12 rounded-full object-contain shrink-0",
+  sm: "h-8 w-8 rounded-full object-contain shrink-0 bg-transparent",
+  md: "h-10 w-10 rounded-full object-contain shrink-0 bg-transparent",
+  footer: "h-10 w-10 sm:h-11 sm:w-11 rounded-full object-contain shrink-0 bg-transparent",
 };
 
 const LEGACY_NATIONAL_PATH = "/brand/logo-aia-figc.png";
