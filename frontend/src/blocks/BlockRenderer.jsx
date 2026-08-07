@@ -21,6 +21,7 @@ import {
   ContactSectionBlock, OrganigrammaBlock, MemberProfileBlock, PortalLoginBlock,
 } from "./DynamicPageBlocks";
 import { SECTION_LOGO_CLASS, NATIONAL_LOGO, NATIONAL_LOGO_CLASS, resolveSectionLogo } from "../lib/brand";
+// SECTION_LOGO_CLASS.pair / NATIONAL_LOGO_CLASS.pair: stesso diametro in hero
 import { parseInstagramPostEmbed, instagramPostEmbedSrc } from "../lib/instagram-embed";
 
 /** Link CTA: route interne, anchor (#form) e scroll con offset header fisso. */
@@ -87,19 +88,23 @@ export function HeroBlock({ config: c, stats }) {
         <div className={c.showStats ? "lg:col-span-7" : "lg:col-span-12"}>
           {(c.badgeLogoUrl || c.eyebrow) && (
             <div className="mb-6 sm:mb-8" data-testid="hero-brand-stack">
-              <div className="flex items-center gap-3 sm:gap-4 mb-3">
+              <div className="flex items-center gap-3 mb-3" data-testid="hero-logo-pair">
                 {c.badgeLogoUrl && (
                   <img
                     src={resolveSectionLogo(c.badgeLogoUrl)}
                     alt="AIA Legnano"
-                    className={`${SECTION_LOGO_CLASS.md} ring-2 ring-white/30`}
+                    className={SECTION_LOGO_CLASS.pair}
+                    width={48}
+                    height={48}
                     data-testid="hero-section-logo"
                   />
                 )}
                 <img
                   src={NATIONAL_LOGO}
                   alt="AIA Nazionale"
-                  className={NATIONAL_LOGO_CLASS.md}
+                  className={NATIONAL_LOGO_CLASS.pair}
+                  width={48}
+                  height={48}
                   data-testid="hero-national-logo"
                 />
               </div>

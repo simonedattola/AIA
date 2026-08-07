@@ -114,12 +114,21 @@ export default function SiteFooter() {
         </div>
 
         <div className="border-t border-white/10 mt-12 pt-8 flex flex-col md:flex-row items-center justify-between gap-4">
-          <div className="flex items-center gap-3 sm:gap-4">
-            <img src={SECTION_LOGO} alt="AIA Legnano" className={SECTION_LOGO_CLASS.sm} data-testid="footer-section-logo" />
+          <div className="flex items-center gap-3">
+            <img
+              src={SECTION_LOGO}
+              alt="AIA Legnano"
+              className={SECTION_LOGO_CLASS.pair}
+              width={48}
+              height={48}
+              data-testid="footer-section-logo"
+            />
             <img
               src={NATIONAL_LOGO}
               alt="AIA Nazionale"
-              className={NATIONAL_LOGO_CLASS.footer}
+              className={NATIONAL_LOGO_CLASS.pair}
+              width={48}
+              height={48}
               data-testid="footer-aia-nazionale-logo"
             />
             <div className="text-xs text-slate-400">
