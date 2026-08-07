@@ -99,7 +99,7 @@ export function HeroBlock({ config: c, stats }) {
                 <img
                   src={NATIONAL_LOGO}
                   alt="AIA Nazionale"
-                  className={`${NATIONAL_LOGO_CLASS.md} ring-2 ring-white/30`}
+                  className={NATIONAL_LOGO_CLASS.md}
                   data-testid="hero-national-logo"
                 />
               </div>
