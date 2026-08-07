@@ -1,4 +1,5 @@
 """Sincronizza un associato Mongo verso l'area riservata Next.js (account portale)."""
+
 import logging
 import os
 from typing import Any, Optional
@@ -35,7 +36,9 @@ async def sync_member_to_portal(member: dict[str, Any]) -> Optional[dict]:
         "email": member.get("email") or "",
         "telefono": member.get("phone") or "",
         "categoria": member.get("category") or "",
-        "memberRole": _map_role(member.get("memberRole") or member.get("kind") or "arbitro"),
+        "memberRole": _map_role(
+            member.get("memberRole") or member.get("kind") or "arbitro"
+        ),
         "foto": member.get("photoUrl") or "",
     }
 
@@ -47,7 +50,9 @@ async def sync_member_to_portal(member: dict[str, Any]) -> Optional[dict]:
                 headers={"X-Portal-Sync-Secret": PORTAL_SYNC_SECRET},
             )
             if r.status_code >= 400:
-                logger.warning("Sync portale fallita %s: %s", r.status_code, r.text[:200])
+                logger.warning(
+                    "Sync portale fallita %s: %s", r.status_code, r.text[:200]
+                )
                 return None
             return r.json()
     except Exception as e:

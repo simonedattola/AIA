@@ -1,4 +1,5 @@
 """Aggiornamento automatico categoria arbitro da storico designazioni."""
+
 from __future__ import annotations
 
 from datetime import datetime, timezone

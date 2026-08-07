@@ -1,4 +1,5 @@
 """Tipi/categorie evento configurabili dall'admin."""
+
 from __future__ import annotations
 
 from datetime import datetime, timezone
@@ -48,7 +49,9 @@ def merge_event_types(*lists: list[str]) -> list[str]:
 
 
 async def get_configured_event_types(db) -> list[str]:
-    settings = await db.site_settings.find_one({"id": "site-settings"}, {"_id": 0, "eventTypes": 1})
+    settings = await db.site_settings.find_one(
+        {"id": "site-settings"}, {"_id": 0, "eventTypes": 1}
+    )
     stored = (settings or {}).get("eventTypes") or []
     if stored:
         return merge_event_types(stored)
@@ -106,7 +109,9 @@ async def migrate_event_tipos(db) -> int:
 
 async def ensure_event_types_seed(db) -> None:
     await migrate_event_tipos(db)
-    settings = await db.site_settings.find_one({"id": "site-settings"}, {"_id": 0, "eventTypes": 1})
+    settings = await db.site_settings.find_one(
+        {"id": "site-settings"}, {"_id": 0, "eventTypes": 1}
+    )
     from_events = await db.events.distinct("tipo")
     if not settings:
         return

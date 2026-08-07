@@ -1,10 +1,15 @@
 """Normalize designation documents for API responses."""
+
 from __future__ import annotations
 
 import re
 
 from .designations_sync import _normalize_name
-from .member_roles import has_designations, is_observer_designation_role, normalize_member
+from .member_roles import (
+    has_designations,
+    is_observer_designation_role,
+    normalize_member,
+)
 
 _GIRONE_RE = re.compile(r"girone\s+([^\s·|,;]+)", re.I)
 _GIORNATA_RE = re.compile(r"giornat[a]?\s+([^\s·|,;]+)", re.I)

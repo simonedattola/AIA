@@ -1,13 +1,17 @@
 """Iteration 2 backend tests - Block-based CMS (Pages, Testimonials, Documents)."""
+
 import os
 import uuid
+
 import pytest
 import requests
 
+pytestmark = pytest.mark.integration
+
 BASE_URL = os.environ.get("REACT_APP_BACKEND_URL", "").rstrip("/")
 API = f"{BASE_URL}/api"
-ADMIN_EMAIL = "admin@aia-legnano.it"
-ADMIN_PASSWORD = "AiaLegnano2026!"
+ADMIN_EMAIL = os.environ.get("ADMIN_EMAIL", "admin@aia-legnano.it")
+ADMIN_PASSWORD = os.environ.get("ADMIN_PASSWORD", "")
 
 
 @pytest.fixture(scope="session")
@@ -19,7 +23,11 @@ def session():
 
 @pytest.fixture(scope="session")
 def admin_headers(session):
-    r = session.post(f"{API}/admin/login", json={"email": ADMIN_EMAIL, "password": ADMIN_PASSWORD}, timeout=15)
+    r = session.post(
+        f"{API}/admin/login",
+        json={"email": ADMIN_EMAIL, "password": ADMIN_PASSWORD},
+        timeout=15,
+    )
     assert r.status_code == 200, r.text
     token = r.json()["token"]
     return {"Authorization": f"Bearer {token}", "Content-Type": "application/json"}
@@ -45,7 +53,15 @@ class TestPublicPagesBlocks:
         body = r.json()
         assert body["slug"] == "diventa-arbitro"
         types = [b["type"] for b in body["blocks"]]
-        for t in ["hero", "text_image", "stats", "timeline", "testimonials", "cta", "faq"]:
+        for t in [
+            "hero",
+            "text_image",
+            "stats",
+            "timeline",
+            "testimonials",
+            "cta",
+            "faq",
+        ]:
             assert t in types, f"diventa-arbitro blocks missing {t}: {types}"
         assert len(body["blocks"]) == 7
 
@@ -86,7 +102,9 @@ class TestAdminPages:
         assert isinstance(body["blocks"], list)
         assert len(body["blocks"]) == 4
 
-    def test_update_page_modifies_block_and_reflects_public(self, session, admin_headers):
+    def test_update_page_modifies_block_and_reflects_public(
+        self, session, admin_headers
+    ):
         r = session.get(f"{API}/admin/pages", headers=admin_headers)
         home = next(p for p in r.json() if p["slug"] == "home")
         page_id = home["id"]
@@ -95,7 +113,9 @@ class TestAdminPages:
         original_title = full["blocks"][0].get("config", {}).get("title", "")
         new_title = f"TEST Hero {uuid.uuid4().hex[:6]}"
         full["blocks"][0].setdefault("config", {})["title"] = new_title
-        r2 = session.put(f"{API}/admin/pages/{page_id}", headers=admin_headers, json=full)
+        r2 = session.put(
+            f"{API}/admin/pages/{page_id}", headers=admin_headers, json=full
+        )
         assert r2.status_code == 200, r2.text
         # Public reflects
         r3 = session.get(f"{API}/public/pages/home")
@@ -112,11 +132,15 @@ class TestAdminPages:
         original_order = [b["type"] for b in full["blocks"]]
         reversed_blocks = list(reversed(full["blocks"]))
         full["blocks"] = reversed_blocks
-        r2 = session.put(f"{API}/admin/pages/{page_id}", headers=admin_headers, json=full)
+        r2 = session.put(
+            f"{API}/admin/pages/{page_id}", headers=admin_headers, json=full
+        )
         assert r2.status_code == 200
         r3 = session.get(f"{API}/public/pages/home")
         new_order = [b["type"] for b in r3.json()["blocks"]]
-        assert new_order == list(reversed(original_order)), f"expected reversed; got {new_order}"
+        assert new_order == list(
+            reversed(original_order)
+        ), f"expected reversed; got {new_order}"
         # Restore
         full["blocks"] = list(reversed(reversed_blocks))
         session.put(f"{API}/admin/pages/{page_id}", headers=admin_headers, json=full)
@@ -128,8 +152,11 @@ class TestAdminPages:
             "slug": f"test-rt-{unique}",
             "title": f"TEST RT {unique}",
             "blocks": [
-                {"id": "b1", "type": "rich_text",
-                 "config": {"html": "<p>ok</p><script>alert(1)</script>"}}
+                {
+                    "id": "b1",
+                    "type": "rich_text",
+                    "config": {"html": "<p>ok</p><script>alert(1)</script>"},
+                }
             ],
         }
         r = session.post(f"{API}/admin/pages", headers=admin_headers, json=payload)
@@ -171,7 +198,11 @@ class TestAdminPages:
 
     def test_delete_custom_page_ok(self, session, admin_headers):
         unique = uuid.uuid4().hex[:6]
-        payload = {"slug": f"test-del-{unique}", "title": f"TEST Del {unique}", "blocks": []}
+        payload = {
+            "slug": f"test-del-{unique}",
+            "title": f"TEST Del {unique}",
+            "blocks": [],
+        }
         r = session.post(f"{API}/admin/pages", headers=admin_headers, json=payload)
         pid = r.json()["id"]
         r2 = session.delete(f"{API}/admin/pages/{pid}", headers=admin_headers)
@@ -241,7 +272,9 @@ class TestAdminTestimonials:
             "quote": "frase di test",
             "sortOrder": 50,
         }
-        r = session.post(f"{API}/admin/testimonials", headers=admin_headers, json=payload)
+        r = session.post(
+            f"{API}/admin/testimonials", headers=admin_headers, json=payload
+        )
         assert r.status_code == 200, r.text
         t = r.json()
         tid = t["id"]

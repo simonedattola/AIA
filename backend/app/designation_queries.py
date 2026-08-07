@@ -1,4 +1,5 @@
 """Query designazioni collegate a un profilo membro."""
+
 from __future__ import annotations
 
 import re
@@ -27,14 +28,20 @@ def member_designations_query(
     if slug:
         link_clauses.append({"memberSlug": slug})
     if full_name:
-        link_clauses.append({"memberName": {"$regex": f"^{re.escape(full_name)}$", "$options": "i"}})
+        link_clauses.append(
+            {"memberName": {"$regex": f"^{re.escape(full_name)}$", "$options": "i"}}
+        )
 
     if not link_clauses:
         return None
 
     from .designation_filters import match_date_in_season_clause
 
-    status_clause = {"status": {"$in": ["published", "pending_approval"]}} if include_pending else {"status": "published"}
+    status_clause = (
+        {"status": {"$in": ["published", "pending_approval"]}}
+        if include_pending
+        else {"status": "published"}
+    )
     clauses: list[dict] = [
         status_clause,
         {"role": {"$not": {"$regex": "osservatore", "$options": "i"}}},
@@ -62,7 +69,12 @@ async def find_next_member_designation(db, member: dict) -> dict | None:
     if not des_q:
         return None
     upcoming_q = {"$and": [des_q, upcoming_match_date_clause()]}
-    rows = await db.designations.find(upcoming_q, {"_id": 0}).sort("matchDate", 1).limit(1).to_list(1)
+    rows = (
+        await db.designations.find(upcoming_q, {"_id": 0})
+        .sort("matchDate", 1)
+        .limit(1)
+        .to_list(1)
+    )
     if not rows:
         return None
     from .designation_enrich import enrich_designation, build_member_lookups

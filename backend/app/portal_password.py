@@ -1,4 +1,5 @@
 """Password portale associati: nome.cognome iniziale."""
+
 from __future__ import annotations
 
 

@@ -1,4 +1,5 @@
 """Visibilità eventi e inviti associati."""
+
 from __future__ import annotations
 
 from typing import Any
@@ -22,7 +23,9 @@ def event_visible_on_public_site(event: dict[str, Any]) -> bool:
     return not bool(event.get("portalOnly"))
 
 
-def public_events_query(*, upcoming: bool = False, today: str = "", current_season: bool = True) -> dict:
+def public_events_query(
+    *, upcoming: bool = False, today: str = "", current_season: bool = True
+) -> dict:
     from .designation_filters import event_date_in_season_clause, merge_mongo_queries
 
     q: dict[str, Any] = {"portalOnly": {"$ne": True}}

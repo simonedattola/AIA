@@ -32,6 +32,22 @@ let webpackConfig = {
       },
     },
   },
+  jest: {
+    configure: (jestConfig) => {
+      const external = require("./jest.config.js");
+      jestConfig.setupFilesAfterEnv = Array.from(
+        new Set([
+          ...(jestConfig.setupFilesAfterEnv || []),
+          ...(external.setupFilesAfterEnv || []),
+        ])
+      );
+      jestConfig.moduleNameMapper = {
+        ...(jestConfig.moduleNameMapper || {}),
+        ...(external.moduleNameMapper || {}),
+      };
+      return jestConfig;
+    },
+  },
   webpack: {
     alias: {
       '@': path.resolve(__dirname, 'src'),

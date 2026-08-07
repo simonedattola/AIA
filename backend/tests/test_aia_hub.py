@@ -1,4 +1,5 @@
 """Tests hub discovery designazioni AIA."""
+
 from app.scrapers.aia_hub import (
     DESIGNAZIONI_ROOT,
     discover_designazioni_hubs,
@@ -45,7 +46,7 @@ def test_discover_hubs_from_fixture_html():
 def test_section_index_urls_from_lombardia_fixture():
     from pathlib import Path
 
-    html = (Path(__file__).parent / "fixtures" / "lombardia_hub.html")
+    html = Path(__file__).parent / "fixtures" / "lombardia_hub.html"
     if not html.exists():
         return
     text = html.read_text(encoding="utf-8")

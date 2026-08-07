@@ -39,7 +39,11 @@ def test_collect_article_gallery_images_cover_and_body():
     ]
     images = collect_article_gallery_images(articles)
     urls = [i["url"] for i in images]
-    assert urls == ["/api/uploads/cover.jpg", "/api/uploads/inline.jpg", "/api/uploads/other.jpg"]
+    assert urls == [
+        "/api/uploads/cover.jpg",
+        "/api/uploads/inline.jpg",
+        "/api/uploads/other.jpg",
+    ]
     assert images[0]["caption"] == "Primo articolo"
     assert images[1]["caption"] == "In pagina"
     assert images[2]["source"] == "article_cover"

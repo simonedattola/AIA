@@ -97,6 +97,10 @@ Variabili in `backend/.env`:
 
 Per disattivare: `DESIGNATIONS_AUTO_SYNC=false`
 
+## Testing
+
+See [`backend/TESTING.md`](backend/TESTING.md) for pytest markers (unit vs integration) and frontend Jest commands.
+
 ## Test backend
 
 ```bash

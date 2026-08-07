@@ -8,16 +8,28 @@ from typing import Any
 from .chi_siamo_content import CHI_SIAMO_BODY_HTML
 
 # Intestazione da campi pagina (eyebrow/heading/summary), non da blocco Hero.
-COMPACT_HEADER_SLUGS = frozenset({
-    "chi-siamo", "designazioni", "arbitri", "news", "eventi", "contatti",
-})
+COMPACT_HEADER_SLUGS = frozenset(
+    {
+        "chi-siamo",
+        "designazioni",
+        "arbitri",
+        "news",
+        "eventi",
+        "contatti",
+    }
+)
 
 # Non gestite dal CMS admin.
 FIXED_LAYOUT_SLUGS = frozenset({"area-associati", "arbitro-profilo"})
 
 
 def _block(block_type: str, config: dict, enabled: bool = True) -> dict:
-    return {"id": str(uuid.uuid4()), "type": block_type, "config": config, "enabled": enabled}
+    return {
+        "id": str(uuid.uuid4()),
+        "type": block_type,
+        "config": config,
+        "enabled": enabled,
+    }
 
 
 def _rich(eyebrow: str, title: str, html: str, background: str = "white") -> dict:

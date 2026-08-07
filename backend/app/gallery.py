@@ -1,4 +1,5 @@
 """Galleria pubblica: immagini approvate, upload associati in attesa."""
+
 from __future__ import annotations
 
 import hashlib
@@ -121,14 +122,16 @@ def collect_article_gallery_candidates(article: dict[str, Any]) -> list[dict[str
     cover = (article.get("coverUrl") or "").strip()
     if cover:
         seen.add(cover)
-        candidates.append({
-            "url": cover,
-            "caption": title,
-            "category": category,
-            "photoDate": photo_date,
-            "articleId": article_id,
-            "source": "article_cover",
-        })
+        candidates.append(
+            {
+                "url": cover,
+                "caption": title,
+                "category": category,
+                "photoDate": photo_date,
+                "articleId": article_id,
+                "source": "article_cover",
+            }
+        )
 
     body = normalize_article_body_html(article.get("bodyHtml") or "")
     for img in extract_body_images(body):
@@ -136,14 +139,16 @@ def collect_article_gallery_candidates(article: dict[str, Any]) -> list[dict[str
         if url in seen:
             continue
         seen.add(url)
-        candidates.append({
-            "url": url,
-            "caption": (img.get("alt") or "").strip() or title,
-            "category": category,
-            "photoDate": photo_date,
-            "articleId": article_id,
-            "source": "article_body",
-        })
+        candidates.append(
+            {
+                "url": url,
+                "caption": (img.get("alt") or "").strip() or title,
+                "category": category,
+                "photoDate": photo_date,
+                "articleId": article_id,
+                "source": "article_body",
+            }
+        )
 
     return candidates
 
@@ -158,14 +163,16 @@ def collect_article_gallery_images(articles: list[dict[str, Any]]) -> list[dict]
             if url in seen:
                 continue
             seen.add(url)
-            images.append({
-                "id": _gallery_item_id(url),
-                "url": url,
-                "path": url,
-                "caption": cand["caption"],
-                "articleId": cand["articleId"],
-                "source": cand["source"],
-            })
+            images.append(
+                {
+                    "id": _gallery_item_id(url),
+                    "url": url,
+                    "path": url,
+                    "caption": cand["caption"],
+                    "articleId": cand["articleId"],
+                    "source": cand["source"],
+                }
+            )
     return images
 
 
@@ -173,10 +180,14 @@ async def list_public_gallery(db) -> list[dict]:
     """Immagini approvate per il carosello in home."""
     from .media_urls import resolve_media_fields
 
-    items = await db.gallery_images.find(
-        {"status": "approved"},
-        {"_id": 0},
-    ).sort([("sortOrder", 1), ("createdAt", -1)]).to_list(500)
+    items = (
+        await db.gallery_images.find(
+            {"status": "approved"},
+            {"_id": 0},
+        )
+        .sort([("sortOrder", 1), ("createdAt", -1)])
+        .to_list(500)
+    )
     for item in items:
         resolve_media_fields(item)
     return items
@@ -190,7 +201,9 @@ async def _mark_existing_crop_edits(db) -> int:
         {"_id": 0, "id": 1, "url": 1, "sourceUrl": 1},
     ).to_list(5000)
     for item in items:
-        if _normalize_gallery_url(item.get("url") or "") != _normalize_gallery_url(item.get("sourceUrl") or ""):
+        if _normalize_gallery_url(item.get("url") or "") != _normalize_gallery_url(
+            item.get("sourceUrl") or ""
+        ):
             await db.gallery_images.update_one(
                 {"id": item["id"]},
                 {"$set": {"cropEdited": True, "updatedAt": _ts()}},
@@ -208,12 +221,18 @@ async def ensure_gallery_metadata(db) -> None:
     )
     await db.gallery_images.update_many(
         {
-            "$or": [{"sourceUrl": {"$exists": False}}, {"sourceUrl": ""}, {"sourceUrl": None}],
+            "$or": [
+                {"sourceUrl": {"$exists": False}},
+                {"sourceUrl": ""},
+                {"sourceUrl": None},
+            ],
             "cropEdited": {"$ne": True},
         },
         [{"$set": {"sourceUrl": "$url"}}],
     )
-    await db.gallery_images.update_many({}, {"$unset": {"focalX": "", "focalY": "", "displayAreas": ""}})
+    await db.gallery_images.update_many(
+        {}, {"$unset": {"focalX": "", "focalY": "", "displayAreas": ""}}
+    )
 
     removed = await dedupe_gallery_images(db)
     if removed:
@@ -232,7 +251,10 @@ async def ensure_gallery_metadata(db) -> None:
         if not article:
             continue
         upd: dict[str, str] = {}
-        if not (img.get("category") or "").strip() and (article.get("category") or "").strip():
+        if (
+            not (img.get("category") or "").strip()
+            and (article.get("category") or "").strip()
+        ):
             upd["category"] = article["category"].strip()
         if not (img.get("photoDate") or "").strip():
             photo_date = _article_photo_date(article)
@@ -283,20 +305,27 @@ async def _insert_curated_gallery_image(
 
 async def rebuild_curated_gallery_from_articles(db) -> int:
     """Importa da tutti gli articoli pubblici con selezione automatica."""
-    from .gallery_curation import build_dedup_state_from_existing, select_curated_candidates
+    from .gallery_curation import (
+        build_dedup_state_from_existing,
+        select_curated_candidates,
+    )
 
-    articles = await db.articles.find(
-        {"status": "published", "portalOnly": {"$ne": True}},
-        {
-            "_id": 0,
-            "id": 1,
-            "title": 1,
-            "coverUrl": 1,
-            "bodyHtml": 1,
-            "category": 1,
-            "publishedAt": 1,
-        },
-    ).sort("publishedAt", -1).to_list(1000)
+    articles = (
+        await db.articles.find(
+            {"status": "published", "portalOnly": {"$ne": True}},
+            {
+                "_id": 0,
+                "id": 1,
+                "title": 1,
+                "coverUrl": 1,
+                "bodyHtml": 1,
+                "category": 1,
+                "publishedAt": 1,
+            },
+        )
+        .sort("publishedAt", -1)
+        .to_list(1000)
+    )
 
     # Mantieni upload admin/associati e ritagli manuali; rigenera solo immagini da articoli non modificate
     preserved = await db.gallery_images.find(
@@ -352,7 +381,11 @@ async def backfill_gallery_from_articles(db) -> int:
 
 async def sync_article_gallery(db, article: dict[str, Any]) -> None:
     """Aggiorna le immagini galleria di un singolo articolo (curate)."""
-    from .gallery_curation import analyze_candidate, build_dedup_state_from_existing, select_curated_candidates
+    from .gallery_curation import (
+        analyze_candidate,
+        build_dedup_state_from_existing,
+        select_curated_candidates,
+    )
 
     article_id = (article.get("id") or "").strip()
     if not article_id:
@@ -376,7 +409,9 @@ async def sync_article_gallery(db, article: dict[str, Any]) -> None:
     state = build_dedup_state_from_existing(others)
 
     candidates = collect_article_gallery_candidates(article)
-    selected = await select_curated_candidates(candidates, state, max_total=MAX_PER_ARTICLE_SYNC)
+    selected = await select_curated_candidates(
+        candidates, state, max_total=MAX_PER_ARTICLE_SYNC
+    )
 
     base_order = await db.gallery_images.count_documents({})
     for idx, item in enumerate(selected):

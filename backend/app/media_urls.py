@@ -1,4 +1,5 @@
 """Resolve uploaded media paths to absolute URLs for browsers."""
+
 import os
 import re
 from pathlib import Path
@@ -39,7 +40,11 @@ def file_size_label_for_media_url(url: str | None) -> str:
 
 
 def public_api_base() -> str:
-    return (os.environ.get("PUBLIC_API_URL") or os.environ.get("REACT_APP_BACKEND_URL") or "").rstrip("/")
+    return (
+        os.environ.get("PUBLIC_API_URL")
+        or os.environ.get("REACT_APP_BACKEND_URL")
+        or ""
+    ).rstrip("/")
 
 
 def resolve_media_url(url: str | None) -> str:
@@ -75,7 +80,9 @@ def resolve_attachments(items: list | None) -> list:
     return out
 
 
-def resolve_media_fields(doc: dict, fields: tuple[str, ...] = ("photoUrl", "coverUrl", "url")) -> dict:
+def resolve_media_fields(
+    doc: dict, fields: tuple[str, ...] = ("photoUrl", "coverUrl", "url")
+) -> dict:
     for key in fields:
         if key in doc and doc[key]:
             doc[key] = resolve_media_url(doc[key])
@@ -98,7 +105,7 @@ def resolve_html_media_urls(html: str) -> str:
         return html or ""
 
     def repl_src(match):
-        return f'{match.group(1)}{base}{match.group(2)}{match.group(3)}'
+        return f"{match.group(1)}{base}{match.group(2)}{match.group(3)}"
 
     html = re.sub(
         r'(src=["\'])(/api/uploads/[^"\']+)(["\'])',

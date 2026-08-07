@@ -1,4 +1,5 @@
 """Import anagrafica associati da file eterogenei (CSV, Excel, PDF, Word)."""
+
 from __future__ import annotations
 
 import re
@@ -19,10 +20,30 @@ SOURCE = "file-import"
 FIELD_KEYWORDS: dict[str, list[str]] = {
     "firstName": ["nome", "firstname", "first name", "nome proprio"],
     "lastName": ["cognome", "lastname", "last name", "surname"],
-    "fullName": ["nominativo", "nome cognome", "nome e cognome", "anagrafica", "arbitro", "associato"],
+    "fullName": [
+        "nominativo",
+        "nome cognome",
+        "nome e cognome",
+        "anagrafica",
+        "arbitro",
+        "associato",
+    ],
     "memberRole": ["ruolo", "role", "qualifica", "tipo", "incarico sezionale"],
-    "category": ["categoria", "category", "campionato", "livello", "categoria sportiva"],
-    "meccanografico": ["meccanografico", "matricola", "codice", "cod", "mec", "codice aia"],
+    "category": [
+        "categoria",
+        "category",
+        "campionato",
+        "livello",
+        "categoria sportiva",
+    ],
+    "meccanografico": [
+        "meccanografico",
+        "matricola",
+        "codice",
+        "cod",
+        "mec",
+        "codice aia",
+    ],
     "email": ["email", "e-mail", "mail", "posta"],
     "phone": ["telefono", "phone", "cellulare", "mobile", "tel"],
     "yearStart": ["anno", "year", "anno inizio", "yearstart", "dal", "iscritto dal"],
@@ -112,8 +133,15 @@ def _looks_like_role(value: str) -> bool:
     return any(
         tok in key
         for tok in (
-            "arbitro", "assistente", "consiglio", "osservatore", "presidente",
-            "segretario", "oa", "ot", "tutor",
+            "arbitro",
+            "assistente",
+            "consiglio",
+            "osservatore",
+            "presidente",
+            "segretario",
+            "oa",
+            "ot",
+            "tutor",
         )
     )
 
@@ -141,7 +169,11 @@ def _content_score(values: list[str], field: str) -> float:
         hits = sum(1 for v in sample if _looks_like_role(v))
         return hits / len(sample)
     if field == "category":
-        hits = sum(1 for v in sample if v and not _looks_like_role(v) and not _looks_like_person(v))
+        hits = sum(
+            1
+            for v in sample
+            if v and not _looks_like_role(v) and not _looks_like_person(v)
+        )
         return (hits / len(sample)) * 0.5
     if field in ("bio", "notes", "boardTitle"):
         hits = sum(1 for v in sample if len(v) > 8)
@@ -230,14 +262,21 @@ def _normalize_member_role(raw: str, category: str = "") -> tuple[str, str, str]
     observer_type = ""
     board_title = ""
 
-    if "consiglio" in text or "presidente" in text or "segretario" in text or "vice" in text:
+    if (
+        "consiglio" in text
+        or "presidente" in text
+        or "segretario" in text
+        or "vice" in text
+    ):
         role = "consiglio_direttivo"
         board_title = _cell_str(raw)
         if "presidente" in text and "vice" not in text:
             board_title = board_title or "Presidente"
     elif "osservatore" in text or text in ("oa", "ot") or "organo tecnico" in cat:
         role = "osservatore"
-        observer_type = "ot" if text == "ot" or "organo tecnico" in cat or "ot" in text else "oa"
+        observer_type = (
+            "ot" if text == "ot" or "organo tecnico" in cat or "ot" in text else "oa"
+        )
     elif "assistente" in text or "tutor" in text:
         role = "assistente"
     else:
@@ -261,7 +300,9 @@ def _parse_year(value: str) -> Optional[int]:
     return None
 
 
-def _row_from_mapped(row: dict[str, Any], line: int, warnings: list[str]) -> Optional[dict]:
+def _row_from_mapped(
+    row: dict[str, Any], line: int, warnings: list[str]
+) -> Optional[dict]:
     first = row.get("firstName", "")
     last = row.get("lastName", "")
     full = row.get("fullName", "")
@@ -296,7 +337,9 @@ def _row_from_mapped(row: dict[str, Any], line: int, warnings: list[str]) -> Opt
         "memberRole": member_role,
         "observerType": observer_type,
         "boardTitle": board_title,
-        "isPresident": member_role == "consiglio_direttivo" and "presidente" in _normalize_name_key(board_title or role_raw) and "vice" not in _normalize_name_key(board_title or role_raw),
+        "isPresident": member_role == "consiglio_direttivo"
+        and "presidente" in _normalize_name_key(board_title or role_raw)
+        and "vice" not in _normalize_name_key(board_title or role_raw),
         "category": category,
         "meccanografico": _cell_str(row.get("meccanografico", "")),
         "email": email,
@@ -331,7 +374,9 @@ def _dedupe_rows(rows: list[dict]) -> tuple[list[dict], int]:
     return out, skipped
 
 
-def parse_members_file(content: bytes, filename: str) -> tuple[list[dict], list[str], dict]:
+def parse_members_file(
+    content: bytes, filename: str
+) -> tuple[list[dict], list[str], dict]:
     tables, file_type = extract_raw_tables(content, filename)
     warnings: list[str] = []
     mappings: list[dict] = []
@@ -400,7 +445,12 @@ async def _find_existing_member(db, row: dict) -> Optional[dict]:
     ).to_list(20)
     target = _normalize_name_key(f"{fn} {ln}")
     for cand in candidates:
-        if _normalize_name_key(f"{cand.get('firstName', '')} {cand.get('lastName', '')}") == target:
+        if (
+            _normalize_name_key(
+                f"{cand.get('firstName', '')} {cand.get('lastName', '')}"
+            )
+            == target
+        ):
             return cand
     return None
 

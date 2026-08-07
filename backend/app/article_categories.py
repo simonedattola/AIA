@@ -1,4 +1,5 @@
 """Categorie articoli configurabili dall'admin."""
+
 from __future__ import annotations
 
 from datetime import datetime, timezone
@@ -38,7 +39,9 @@ def merge_categories(*lists: list[str]) -> list[str]:
 
 
 async def get_configured_categories(db) -> list[str]:
-    settings = await db.site_settings.find_one({"id": "site-settings"}, {"_id": 0, "articleCategories": 1})
+    settings = await db.site_settings.find_one(
+        {"id": "site-settings"}, {"_id": 0, "articleCategories": 1}
+    )
     stored = (settings or {}).get("articleCategories") or []
     if stored:
         return merge_categories(stored)
@@ -116,7 +119,9 @@ async def validate_member_category_choice(db, name: str) -> str:
 
 async def ensure_article_categories_seed(db) -> None:
     """Inizializza o integra le categorie su DB esistenti."""
-    settings = await db.site_settings.find_one({"id": "site-settings"}, {"_id": 0, "articleCategories": 1})
+    settings = await db.site_settings.find_one(
+        {"id": "site-settings"}, {"_id": 0, "articleCategories": 1}
+    )
     from_articles = await db.articles.distinct("category")
     if not settings:
         return

@@ -1,4 +1,5 @@
 """Scheduler promemoria email eventi."""
+
 from __future__ import annotations
 
 import asyncio
@@ -53,7 +54,9 @@ async def run_event_reminders(trigger: str = "scheduled") -> dict | None:
 async def _scheduler_loop() -> None:
     interval = _interval_seconds()
     delay = _startup_delay_seconds()
-    logger.info("Event reminders: first run in %.0fs, then every %.1f min", delay, interval / 60)
+    logger.info(
+        "Event reminders: first run in %.0fs, then every %.1f min", delay, interval / 60
+    )
     await asyncio.sleep(delay)
     await run_event_reminders(trigger="startup")
     while True:
