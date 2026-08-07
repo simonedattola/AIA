@@ -1,5 +1,4 @@
 """Selezione automatica immagini galleria da articoli: qualità, dedup, orientamento."""
-
 from __future__ import annotations
 
 import hashlib
@@ -13,8 +12,6 @@ from typing import Any
 
 import httpx
 from PIL import Image, ImageOps
-
-from .paths import UPLOAD_DIR
 
 logger = logging.getLogger(__name__)
 
@@ -134,10 +131,9 @@ async def load_image_bytes(url: str) -> bytes | None:
     def _read_local(name: str) -> bytes | None:
         if not name:
             return None
-        path = UPLOAD_DIR / name
-        if path.is_file():
-            return path.read_bytes()
-        return None
+        from . import storage as upload_storage
+
+        return upload_storage.read_bytes(name)
 
     if "/api/uploads/" in u:
         data = _read_local(u.split("/")[-1])
@@ -196,12 +192,11 @@ def process_gallery_image(data: bytes, aspect: str) -> tuple[bytes, str]:
 
 
 def save_curated_upload(data: bytes) -> tuple[str, str]:
+    from . import storage as upload_storage
     from .media_urls import resolve_media_url
 
-    UPLOAD_DIR.mkdir(parents=True, exist_ok=True)
     name = f"gallery-curated-{uuid.uuid4().hex[:12]}.jpg"
-    rel = f"/api/uploads/{name}"
-    (UPLOAD_DIR / name).write_bytes(data)
+    rel = upload_storage.save_bytes(name, data, content_type="image/jpeg")
     return rel, resolve_media_url(rel)
 
 
@@ -251,37 +246,19 @@ def _article_limits_ok(article_id: str, is_cover: bool, state: DedupState) -> bo
     return state.per_article_body.get(article_id, 0) < MAX_BODY_PER_ARTICLE
 
 
-def _mark_accepted(
-    analysis: ImageAnalysis,
-    url_key: str,
-    article_id: str,
-    is_cover: bool,
-    state: DedupState,
-) -> None:
+def _mark_accepted(analysis: ImageAnalysis, url_key: str, article_id: str, is_cover: bool, state: DedupState) -> None:
     state.urls.add(url_key)
     state.content_hashes.add(analysis.content_hash)
     state.phashes.append(analysis.phash)
     if article_id:
         if is_cover:
-            state.per_article_cover[article_id] = (
-                state.per_article_cover.get(article_id, 0) + 1
-            )
+            state.per_article_cover[article_id] = state.per_article_cover.get(article_id, 0) + 1
         else:
-            state.per_article_body[article_id] = (
-                state.per_article_body.get(article_id, 0) + 1
-            )
+            state.per_article_body[article_id] = state.per_article_body.get(article_id, 0) + 1
 
 
-def build_dedup_state_from_existing(
-    items: list[dict], *, include_phash: bool = True
-) -> DedupState:
-    state = DedupState(
-        urls=set(),
-        content_hashes=set(),
-        phashes=[],
-        per_article_cover={},
-        per_article_body={},
-    )
+def build_dedup_state_from_existing(items: list[dict], *, include_phash: bool = True) -> DedupState:
+    state = DedupState(urls=set(), content_hashes=set(), phashes=[], per_article_cover={}, per_article_body={})
     for item in items:
         url_key = _normalize_url_key(item.get("sourceUrl") or item.get("url") or "")
         if url_key:

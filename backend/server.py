@@ -1,6 +1,7 @@
 """FastAPI entrypoint for AIA Legnano platform."""
-from fastapi import FastAPI, APIRouter
-from fastapi.responses import PlainTextResponse, JSONResponse
+from fastapi import FastAPI, APIRouter, HTTPException
+from fastapi.openapi.utils import get_openapi
+from fastapi.responses import PlainTextResponse, JSONResponse, RedirectResponse, Response
 from fastapi.staticfiles import StaticFiles
 from starlette.middleware.cors import CORSMiddleware
 from dotenv import load_dotenv
@@ -18,7 +19,7 @@ from app.logging_config import configure_logging, log_event
 configure_logging()
 
 from app.db import get_db, close_db
-from app.paths import UPLOAD_DIR
+from app.paths import UPLOAD_DIR, use_object_storage
 from app.routes.public import router as public_router
 from app.routes.admin import router as admin_router
 from app.routes.portal import router as portal_router
@@ -34,7 +35,28 @@ from app.event_reminders_scheduler import (
 
 logger = logging.getLogger(__name__)
 
-app = FastAPI(title="AIA Legnano API", version="1.0")
+API_DESCRIPTION = """
+Platform API for Arbitri AIA Legnano (**public**, **admin**, **portal**).
+
+## Authentication
+
+- **Admin** (`/api/admin/*` except `POST /api/admin/login`): JWT Bearer token from admin login.
+- **Portal** (`/api/portal/*` except `POST /api/portal/login`): JWT Bearer token from member login.
+- **Public** (`/api/public/*`): no auth (forms are rate-limited where configured).
+
+Use **Authorize** in Swagger UI after obtaining a token.
+
+Swagger UI: `/docs` · ReDoc: `/redoc` · Schema: `/openapi.json`
+""".strip()
+
+app = FastAPI(
+    title="AIA Legnano API",
+    version="1.0.0",
+    description=API_DESCRIPTION,
+    docs_url="/docs",
+    redoc_url="/redoc",
+    openapi_url="/openapi.json",
+)
 
 _STARTED_AT = time.time()
 
@@ -44,7 +66,11 @@ api_router = APIRouter(prefix="/api", tags=["health"])
 
 @api_router.get("/")
 async def root():
-    """Legacy health-ish root used by older clients."""
+    """
+    Health check for the AIA Legnano API.
+
+    - **Returns:** `{status, service}` confirming the service is up.
+    """
     return {"status": "ok", "service": "AIA Legnano API"}
 
 
@@ -96,7 +122,6 @@ app.include_router(portal_router)
 async def metrics():
     """Minimal Prometheus-style metrics for uptime scrapers (Datadog/New Relic/etc.)."""
     uptime = max(0.0, time.time() - _STARTED_AT)
-    # Best-effort DB probe for gauge (0/1)
     db_up = 0
     try:
         await get_db().command("ping")
@@ -118,9 +143,25 @@ async def metrics():
     return "\n".join(lines)
 
 
-# Uploads static
-UPLOAD_DIR.mkdir(parents=True, exist_ok=True)
-app.mount("/api/uploads", StaticFiles(directory=str(UPLOAD_DIR)), name="uploads")
+# Uploads: local StaticFiles, or S3/R2 proxy (CDN when configured)
+if use_object_storage():
+    from app import storage as upload_storage
+
+    @app.get("/api/uploads/{name:path}")
+    async def serve_object_upload(name: str):
+        cdn = upload_storage.public_cdn_url(name)
+        if cdn:
+            return RedirectResponse(cdn, status_code=302)
+        data = upload_storage.read_bytes(name)
+        if data is None:
+            raise HTTPException(404, "File non trovato")
+        import mimetypes
+
+        ctype = mimetypes.guess_type(name)[0] or "application/octet-stream"
+        return Response(content=data, media_type=ctype)
+else:
+    UPLOAD_DIR.mkdir(parents=True, exist_ok=True)
+    app.mount("/api/uploads", StaticFiles(directory=str(UPLOAD_DIR)), name="uploads")
 
 app.add_middleware(
     CORSMiddleware,
@@ -129,6 +170,44 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+
+def custom_openapi():
+    """Build OpenAPI schema with JWT Bearer security scheme for Swagger UI."""
+    if app.openapi_schema:
+        return app.openapi_schema
+    openapi_schema = get_openapi(
+        title="AIA Legnano API",
+        version="1.0.0",
+        description=API_DESCRIPTION,
+        routes=app.routes,
+    )
+    openapi_schema.setdefault("components", {}).setdefault("securitySchemes", {})
+    openapi_schema["components"]["securitySchemes"]["HTTPBearer"] = {
+        "type": "http",
+        "scheme": "bearer",
+        "bearerFormat": "JWT",
+        "description": (
+            "JWT from `POST /api/admin/login` (admin) or "
+            "`POST /api/portal/login` (member). "
+            "Header: `Authorization: Bearer <token>`."
+        ),
+    }
+    for path, methods in (openapi_schema.get("paths") or {}).items():
+        if not isinstance(methods, dict):
+            continue
+        needs_auth = path.startswith("/api/admin/") or path.startswith("/api/portal/")
+        is_login = path in {"/api/admin/login", "/api/portal/login"}
+        if needs_auth and not is_login:
+            for method, op in methods.items():
+                if method.startswith("x-") or not isinstance(op, dict):
+                    continue
+                op.setdefault("security", [{"HTTPBearer": []}])
+    app.openapi_schema = openapi_schema
+    return app.openapi_schema
+
+
+app.openapi = custom_openapi
 
 
 @app.on_event("startup")
@@ -156,6 +235,14 @@ async def on_startup():
             error=str(e),
         )
         logger.exception("Seed failed: %s", e)
+
+    try:
+        from app.db_indexes import create_indexes
+
+        await create_indexes()
+    except Exception as e:
+        logger.exception("Index creation failed: %s", e)
+
     start_designations_scheduler()
     start_event_reminders_scheduler()
     log_event(logger, "app_startup", phase="ready", outcome="success")

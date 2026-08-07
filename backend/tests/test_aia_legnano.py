@@ -25,14 +25,11 @@ API = f"{BASE_URL}/api"
 
 ADMIN_EMAIL = os.environ.get("ADMIN_EMAIL", "admin@aia-legnano.it")
 ADMIN_PASSWORD = os.environ.get("ADMIN_PASSWORD", "")
-<<<<<<< HEAD
 if not ADMIN_PASSWORD:
     raise RuntimeError(
         "ADMIN_PASSWORD non impostato: esporta la variabile (o carica backend/.env) "
         "prima di eseguire i test di integrazione."
     )
-=======
->>>>>>> origin/cursor/testing-infrastructure-8535
 
 
 # ---------- Fixtures ----------

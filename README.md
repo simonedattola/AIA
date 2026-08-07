@@ -149,29 +149,99 @@ Variabili in `backend/.env`:
 
 Per disattivare: `DESIGNATIONS_AUTO_SYNC=false`
 
+## API documentation (Swagger)
+
+With the backend running:
+
+| URL | Description |
+|-----|-------------|
+| http://localhost:8000/docs | Swagger UI (try endpoints, Authorize with JWT) |
+| http://localhost:8000/redoc | ReDoc |
+| http://localhost:8000/openapi.json | OpenAPI schema |
+
+Admin: `POST /api/admin/login` → paste token in **Authorize**. Portal: `POST /api/portal/login`.
+
+## Documentation
+
+| Doc | Description |
+|-----|-------------|
+| [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md) | System diagram and data flows |
+| [`docs/DEPLOYMENT.md`](docs/DEPLOYMENT.md) | Development, staging, production |
+| [`docs/BACKUP.md`](docs/BACKUP.md) | Mongo + uploads backup / DR |
+| [`docs/CONTRIBUTING.md`](docs/CONTRIBUTING.md) | Local workflow and PR guidelines |
+| [`docs/VERIFICATION.md`](docs/VERIFICATION.md) | Phase 9 production-readiness checklist |
+| [`.github/SECRETS.md`](.github/SECRETS.md) | GitHub Actions secrets |
+| [`.github/CI.md`](.github/CI.md) | CI workflows and branch protection |
+
+## Production URLs
+
+| Surface | URL |
+|---------|-----|
+| Frontend (Vercel) | `https://aia-legnano.vercel.app` _(replace with custom domain when ready)_ |
+| Backend API | _TBD — custom infra; see [`docs/DEPLOYMENT.md`](docs/DEPLOYMENT.md)_ |
+| Local frontend | `http://localhost:3000` |
+| Local API | `http://localhost:8000` |
+
 ## Testing
 
 See [`backend/TESTING.md`](backend/TESTING.md) for pytest markers (unit vs integration) and frontend Jest commands.
 
-## Test backend
-
 ```bash
-cd backend
-REACT_APP_BACKEND_URL=http://localhost:8000 pytest tests/ -v
+# Backend unit tests (CI-equivalent)
+cd backend && pytest tests/ -m "not integration" -q
+
+# Frontend
+cd frontend && npm test -- --watchAll=false
 ```
 
-(I test di integrazione richiedono il server in esecuzione e MongoDB configurato.)
+Integration tests require a running API + `ADMIN_PASSWORD` and are excluded from CI.
 
 ## Area riservata associati
 
 - Nel menu pubblico: voce **Area riservata** (o `/area/riservata`)
 - Nel pannello admin: link **Area riservata** nella sidebar
-- Portale: `http://localhost:3001` (con `docker compose up` include il servizio `area-riservata`)
-- Login: **codice meccanografico** + password iniziale `nome.cognome` (es. Mario Rossi → codice assegnato / `mario.rossi`)
-- In Admin → Associati imposta il codice meccanografico: all’aggiornamento viene creato/sincronizzato l’account portale
+- Portale integrato: `http://localhost:3000/area-riservata/login` (API `/api/portal/*`)
+- Login: **codice meccanografico** + password iniziale `nome.cognome`
+- La cartella `area-riservata/` (Next.js) è deprecata
 
 ## Credenziali admin (seed)
 
 - Email: valore di `ADMIN_EMAIL` in `.env` / `backend/.env`
 - Password: valore di `ADMIN_PASSWORD` (obbligatorio; senza default in codice)
 - All'avvio il seed sincronizza l'hash della password admin dall'env
+
+## Status & Roadmap
+
+### v1.0 (Current — integrated on verification branch)
+
+- [x] Public site + admin panel
+- [x] Member portal
+- [x] Designations sync (AIA FIGC)
+- [x] Mobile-first responsive UI (PR #6)
+- [x] Security hardening (PR #5 / #7)
+- [x] CI workflows + unit tests (PR #8 / #10)
+- [x] OpenAPI / Swagger (PR #9)
+- [x] Health + JSON logs + metrics (PR #11)
+- [x] DB indexes + backup docs + S3 adapter (PR #12)
+- [x] Architecture / deployment docs (PR #13)
+
+### v1.1 (Ops follow-ups)
+
+- [ ] Merge PRs #5–#13 to `main` and enable branch protection (`verify`)
+- [ ] Configure GitHub Actions secrets in the repo UI
+- [ ] Rotate `JWT_SECRET` / `ADMIN_PASSWORD` (history still contains old defaults)
+- [ ] E2E testing (Playwright)
+- [ ] Scheduled backup automation in production
+- [ ] Vercel re-deploy + backend URL go-live
+
+---
+
+## Contributing
+
+See [`docs/CONTRIBUTING.md`](docs/CONTRIBUTING.md) for local development, testing, and PR guidelines.
+
+---
+
+## License
+
+© 2026 AIA Legnano. All rights reserved.

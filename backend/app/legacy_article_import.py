@@ -1,5 +1,4 @@
 """Import articoli dal sito WordPress legacy (aia-legnano.it)."""
-
 from __future__ import annotations
 
 import hashlib
@@ -16,16 +15,11 @@ import httpx
 from bs4 import BeautifulSoup
 from slugify import slugify
 
-from .article_categories import (
-    ensure_category_exists,
-    save_configured_categories,
-    get_configured_categories,
-    merge_categories,
-)
+from .article_categories import ensure_category_exists, save_configured_categories, get_configured_categories, merge_categories
 from .article_cleanup import is_weekly_designations_article, repair_body_html
 from .article_member_match import match_members_by_full_name
 from .models import Article, _now
-from .paths import UPLOAD_DIR
+from . import storage as upload_storage
 
 logger = logging.getLogger(__name__)
 
@@ -41,16 +35,7 @@ LEGACY_ALLOWED_ATTRS = {
     **BASE_ATTRS,
     "a": ["href", "title", "target", "rel"],
     "img": ["src", "alt", "title", "width", "height", "loading", "class"],
-    "iframe": [
-        "src",
-        "width",
-        "height",
-        "frameborder",
-        "allow",
-        "allowfullscreen",
-        "style",
-        "scrolling",
-    ],
+    "iframe": ["src", "width", "height", "frameborder", "allow", "allowfullscreen", "style", "scrolling"],
     "p": ["style", "class"],
     "span": ["style", "class"],
     "div": ["class", "role", "id", "style"],
@@ -61,9 +46,7 @@ LEGACY_ALLOWED_ATTRS = {
 def _strip_text(html: str) -> str:
     if not html:
         return ""
-    return re.sub(
-        r"\s+", " ", BeautifulSoup(html, "lxml").get_text(" ", strip=True)
-    ).strip()
+    return re.sub(r"\s+", " ", BeautifulSoup(html, "lxml").get_text(" ", strip=True)).strip()
 
 
 def _clean_legacy_html(raw: str) -> str:
@@ -96,59 +79,24 @@ def _format_tag(name: str) -> str:
     return n[0].upper() + n[1:] if n else n
 
 
-def _infer_category(
-    title: str, wp_category_names: list[str], tag_names: list[str]
-) -> str:
+def _infer_category(title: str, wp_category_names: list[str], tag_names: list[str]) -> str:
     t = title.lower()
     tags_l = " ".join(tag_names).lower()
     cats_l = " ".join(wp_category_names).lower()
 
-    if any(
-        k in t
-        for k in (
-            "corso arbitri",
-            "corso per arbitri",
-            "iscrizioni al corso",
-            "nuovo corso",
-        )
-    ):
+    if any(k in t for k in ("corso arbitri", "corso per arbitri", "iscrizioni al corso", "nuovo corso")):
         return "Corso arbitri"
-    if any(
-        k in tags_l
-        for k in ("corsoarbitri", "corso arbitri", "nuoviarbitri", "reclutamento")
-    ):
+    if any(k in tags_l for k in ("corsoarbitri", "corso arbitri", "nuoviarbitri", "reclutamento")):
         return "Corso arbitri"
-    if any(
-        k in t
-        for k in (
-            "promoz",
-            "promoss",
-            "serie a",
-            "serie b",
-            "eccellenza",
-            "can ",
-            "c.a.n",
-        )
-    ):
+    if any(k in t for k in ("promoz", "promoss", "serie a", "serie b", "eccellenza", "can ", "c.a.n")):
         return "Successi"
     if any(k in tags_l for k in ("cra", "premiazione", "talent")):
         return "Successi"
-    if any(
-        k in t
-        for k in (
-            "regolamento",
-            "riunione tecnica",
-            "dogso",
-            "ifab",
-            "protesta disciplinare",
-        )
-    ):
+    if any(k in t for k in ("regolamento", "riunione tecnica", "dogso", "ifab", "protesta disciplinare")):
         return "Regolamento"
     if "regolamento" in tags_l:
         return "Regolamento"
-    if any(
-        k in t for k in ("cordoglio", "scomparsa", "ciao,", "commemor", "benemerito")
-    ):
+    if any(k in t for k in ("cordoglio", "scomparsa", "ciao,", "commemor", "benemerito")):
         return "Vita sezionale"
     if any(k in t for k in ("raduno", "raduni")):
         return "Raduni"
@@ -173,17 +121,13 @@ class LegacyArticleImporter:
 
     async def _load_taxonomies(self, client: httpx.AsyncClient) -> None:
         for page in range(1, 20):
-            r = await client.get(
-                f"{WP_API}/categories", params={"per_page": 100, "page": page}
-            )
+            r = await client.get(f"{WP_API}/categories", params={"per_page": 100, "page": page})
             if r.status_code != 200 or not r.json():
                 break
             for c in r.json():
                 self._wp_categories[c["id"]] = c.get("name") or c.get("slug", "")
         for page in range(1, 20):
-            r = await client.get(
-                f"{WP_API}/tags", params={"per_page": 100, "page": page}
-            )
+            r = await client.get(f"{WP_API}/tags", params={"per_page": 100, "page": page})
             if r.status_code != 200 or not r.json():
                 break
             for t in r.json():
@@ -201,9 +145,7 @@ class LegacyArticleImporter:
             return ext
         return ".jpg"
 
-    async def _mirror_url(
-        self, client: httpx.AsyncClient, url: str, wp_post_id: int
-    ) -> str:
+    async def _mirror_url(self, client: httpx.AsyncClient, url: str, wp_post_id: int) -> str:
         url = (url or "").strip()
         if not url:
             return ""
@@ -229,16 +171,12 @@ class LegacyArticleImporter:
         ext = self._ext_from_url(url)
         digest = hashlib.md5(url.encode()).hexdigest()[:10]
         name = f"legacy-wp{wp_post_id}-{digest}{ext}"
-        target = UPLOAD_DIR / name
-        UPLOAD_DIR.mkdir(parents=True, exist_ok=True)
-        target.write_bytes(resp.content)
+        upload_storage.save_bytes(name, resp.content)
         local = f"/api/uploads/{name}"
         self._image_cache[url] = local
         return local
 
-    async def _mirror_html_images(
-        self, client: httpx.AsyncClient, html: str, wp_post_id: int
-    ) -> str:
+    async def _mirror_html_images(self, client: httpx.AsyncClient, html: str, wp_post_id: int) -> str:
         if not html:
             return ""
         soup = BeautifulSoup(html, "lxml")
@@ -305,35 +243,22 @@ class LegacyArticleImporter:
             page += 1
         return posts
 
-    async def import_post(
-        self, client: httpx.AsyncClient, post: dict
-    ) -> dict[str, Any]:
+    async def import_post(self, client: httpx.AsyncClient, post: dict) -> dict[str, Any]:
         wp_id = int(post["id"])
         title = html_lib.unescape(post.get("title", {}).get("rendered") or "").strip()
         slug = (post.get("slug") or slugify(title)).strip()
         date_raw = post.get("date_gmt") or post.get("date") or ""
         published_at = date_raw
         if published_at and not published_at.endswith("Z") and "+" not in published_at:
-            published_at = (
-                f"{published_at}+00:00"
-                if "T" in published_at
-                else f"{published_at}T12:00:00+00:00"
-            )
+            published_at = f"{published_at}+00:00" if "T" in published_at else f"{published_at}T12:00:00+00:00"
 
         cat_names, _tag_names = self._extract_terms(post)
         category = _infer_category(title, cat_names, [])
 
         raw_html = post.get("content", {}).get("rendered") or ""
         body_html = repair_body_html(_clean_legacy_html(raw_html))
-        if is_weekly_designations_article(
-            {"title": title, "slug": slug, "bodyHtml": body_html}
-        ):
-            return {
-                "action": "skipped",
-                "slug": slug,
-                "title": title,
-                "reason": "designazioni",
-            }
+        if is_weekly_designations_article({"title": title, "slug": slug, "bodyHtml": body_html}):
+            return {"action": "skipped", "slug": slug, "title": title, "reason": "designazioni"}
         if self.download_images and not self.dry_run:
             body_html = await self._mirror_html_images(client, body_html, wp_id)
 
@@ -353,9 +278,7 @@ class LegacyArticleImporter:
         excerpt_html = post.get("excerpt", {}).get("rendered") or ""
         excerpt = _strip_text(excerpt_html) or _strip_text(body_html)[:280]
 
-        related_ids = match_members_by_full_name(
-            title, body_html, self._members, excerpt=excerpt
-        )
+        related_ids = match_members_by_full_name(title, body_html, self._members, excerpt=excerpt)
 
         existing = await self.db.articles.find_one(
             {"$or": [{"legacyWpId": wp_id}, {"slug": slug}]},
@@ -381,12 +304,7 @@ class LegacyArticleImporter:
         payload["updatedAt"] = _now()
 
         if self.dry_run:
-            return {
-                "action": "dry-run",
-                "slug": slug,
-                "title": title,
-                "category": category,
-            }
+            return {"action": "dry-run", "slug": slug, "title": title, "category": category}
 
         if existing:
             payload["id"] = existing["id"]
@@ -398,16 +316,10 @@ class LegacyArticleImporter:
         return {"action": "created", "slug": slug, "title": title}
 
     async def run(self) -> dict[str, Any]:
-        UPLOAD_DIR.mkdir(parents=True, exist_ok=True)
+        upload_storage.ensure_local_dir()
         await self._load_members()
 
-        stats = {
-            "created": 0,
-            "updated": 0,
-            "errors": 0,
-            "categories": set(),
-            "dry_run": self.dry_run,
-        }
+        stats = {"created": 0, "updated": 0, "errors": 0, "categories": set(), "dry_run": self.dry_run}
         imported_categories: list[str] = []
 
         async with httpx.AsyncClient(
@@ -445,10 +357,6 @@ class LegacyArticleImporter:
         return stats
 
 
-async def run_legacy_article_import(
-    db, *, dry_run: bool = False, download_images: bool = True
-) -> dict[str, Any]:
-    importer = LegacyArticleImporter(
-        db, dry_run=dry_run, download_images=download_images
-    )
+async def run_legacy_article_import(db, *, dry_run: bool = False, download_images: bool = True) -> dict[str, Any]:
+    importer = LegacyArticleImporter(db, dry_run=dry_run, download_images=download_images)
     return await importer.run()
