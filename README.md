@@ -24,6 +24,57 @@ Modifica `backend/.env` (almeno `MONGO_URL`, `DB_NAME`, `JWT_SECRET`, credenzial
 REACT_APP_BACKEND_URL=http://localhost:8000
 ```
 
+
+## API Documentation
+
+Interactive OpenAPI docs (served by FastAPI when the backend is running):
+
+- **Swagger UI:** `http://localhost:8000/docs`
+- **ReDoc:** `http://localhost:8000/redoc`
+- **OpenAPI JSON:** `http://localhost:8000/openapi.json`
+
+### Authentication
+
+#### Admin (`/api/admin/*`)
+
+All admin endpoints except login require a JWT Bearer token:
+
+```http
+Authorization: Bearer <jwt_token>
+```
+
+Obtain a token via:
+
+```http
+POST /api/admin/login
+Content-Type: application/json
+
+{
+  "email": "admin@aia-legnano.it",
+  "password": "<ADMIN_PASSWORD from your .env>"
+}
+```
+
+Response includes `token` — paste it into Swagger UI **Authorize**.
+
+#### Portal / area riservata (`/api/portal/*`)
+
+Member endpoints (except login) use the same Bearer scheme with a **member** JWT from:
+
+```http
+POST /api/portal/login
+Content-Type: application/json
+
+{
+  "codice": "<meccanografico>",
+  "password": "<password>"
+}
+```
+
+#### Public (`/api/public/*`)
+
+No authentication. Read endpoints and public forms (`/forms/corso-arbitri`, `/forms/contatti`).
+
 ## Area riservata associati (integrata, porta 3000)
 
 - URL: `http://localhost:3000/area-riservata/login`

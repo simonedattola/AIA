@@ -147,6 +147,13 @@ async def _upsert_presenza(db, event_id: str, member_id: str, stato: str, update
 # ---- Auth associato ----
 @router.post("/login")
 async def portal_login(payload: PortalLoginRequest):
+    """
+    Authenticate a member with codice meccanografico and password; issue a member JWT.
+    
+    - **Body:** `{ "codice": "<meccanografico>", "password": "..." }`
+    - **Returns:** `{token, member}` or 401/403.
+    - Use the token as `Authorization: Bearer <jwt_token>` on `/api/portal/*`.
+    """
     db = get_db()
     codice = (payload.codice or "").strip()
     if not codice:
@@ -175,6 +182,11 @@ async def portal_login(payload: PortalLoginRequest):
 
 @router.get("/me")
 async def portal_me(auth=Depends(require_member)):
+    """
+    Return the authenticated member's public profile.
+    
+    Requires JWT Bearer (member).
+    """
     db = get_db()
     m = await _get_member(db, auth["memberId"])
     resolve_media_fields(m)
@@ -201,6 +213,13 @@ class TestimonialSubmit(BaseModel):
 
 @router.put("/me")
 async def portal_update_me(payload: ProfileUpdate, auth=Depends(require_member)):
+    """Update me.
+
+`PUT /me`
+
+Params: **payload**, **auth**.
+
+Requires JWT Bearer (member)."""
     db = get_db()
     m = await _get_member(db, auth["memberId"])
     lead = payload.emailNotifyEventLeadHours
@@ -266,6 +285,11 @@ async def _portal_events_for_member(
 
 @router.get("/dashboard")
 async def portal_dashboard(auth=Depends(require_member)):
+    """
+    Portal home widgets: next invited event, next designation, unread comunicazioni/messaggi.
+    
+    Requires JWT Bearer (member).
+    """
     db = get_db()
     mid = auth["memberId"]
     m = await db.members.find_one({"id": mid}, {"_id": 0})
@@ -324,6 +348,13 @@ async def portal_dashboard(auth=Depends(require_member)):
 # ---- Calendario & presenze (self-service) ----
 @router.get("/calendario")
 async def portal_calendario(auth=Depends(require_member)):
+    """Calendario.
+
+`GET /calendario`
+
+Params: **auth**.
+
+Requires JWT Bearer (member)."""
     db = get_db()
     mid = auth["memberId"]
     today = datetime.now(timezone.utc).strftime("%Y-%m-%d")
@@ -347,6 +378,13 @@ class SelfPresenzaBody(BaseModel):
 
 @router.put("/calendario/{event_id}/presenza")
 async def portal_set_presenza(event_id: str, body: SelfPresenzaBody, auth=Depends(require_member)):
+    """Set presenza.
+
+`PUT /calendario/{event_id}/presenza`
+
+Params: **event_id**, **body**, **auth**.
+
+Requires JWT Bearer (member)."""
     stato = (body.stato or "").upper()
     if stato not in ("PRESENTE", "ASSENTE", "IN_DUBBIO"):
         raise HTTPException(status_code=400, detail="Stato non valido")
@@ -375,6 +413,13 @@ async def portal_set_presenza(event_id: str, body: SelfPresenzaBody, auth=Depend
 # ---- Storico arbitrale ----
 @router.get("/storico")
 async def portal_storico(season: Optional[str] = None, auth=Depends(require_member)):
+    """Storico.
+
+`GET /storico`
+
+Params: **season**, **auth**.
+
+Requires JWT Bearer (member)."""
     db = get_db()
     mid = auth["memberId"]
     m = await _get_member(db, mid)
@@ -416,6 +461,13 @@ async def portal_storico(season: Optional[str] = None, auth=Depends(require_memb
 # ---- Utility (materiale eventi, polo, link utili) ----
 @router.get("/utility")
 async def portal_utility(auth=Depends(require_member)):
+    """Utility.
+
+`GET /utility`
+
+Params: **auth**.
+
+Requires JWT Bearer (member)."""
     from ..media_urls import resolve_media_url, resolve_attachments
     from ..event_access import member_invited_to_event
 
@@ -473,6 +525,13 @@ async def portal_utility(auth=Depends(require_member)):
 # ---- Area tecnica (documenti reali) ----
 @router.get("/documenti")
 async def portal_documenti(category: Optional[str] = None, auth=Depends(require_member)):
+    """Documenti.
+
+`GET /documenti`
+
+Params: **category**, **auth**.
+
+Requires JWT Bearer (member)."""
     db = get_db()
     q = {}
     if category:
@@ -507,6 +566,13 @@ async def _comunicazione_letta(db, comm_id: str, member_id: str) -> bool:
 
 @router.get("/comunicazioni")
 async def portal_comunicazioni(auth=Depends(require_member)):
+    """Comunicazioni.
+
+`GET /comunicazioni`
+
+Params: **auth**.
+
+Requires JWT Bearer (member)."""
     db = get_db()
     mid = auth["memberId"]
     q = merge_mongo_queries(
@@ -532,6 +598,13 @@ async def portal_comunicazioni(auth=Depends(require_member)):
 
 @router.get("/comunicazioni/{comm_id}")
 async def portal_comunicazione_detail(comm_id: str, auth=Depends(require_member)):
+    """Comunicazione detail.
+
+`GET /comunicazioni/{comm_id}`
+
+Params: **comm_id**, **auth**.
+
+Requires JWT Bearer (member)."""
     db = get_db()
     mid = auth["memberId"]
     c = await db.comunicazioni_interne.find_one({"id": comm_id}, {"_id": 0})
@@ -561,6 +634,13 @@ async def portal_comunicazione_detail(comm_id: str, auth=Depends(require_member)
 
 @router.put("/comunicazioni/{comm_id}/letta")
 async def portal_comunicazione_letta(comm_id: str, auth=Depends(require_member)):
+    """Comunicazione letta.
+
+`PUT /comunicazioni/{comm_id}/letta`
+
+Params: **comm_id**, **auth**.
+
+Requires JWT Bearer (member)."""
     db = get_db()
     mid = auth["memberId"]
     c = await db.comunicazioni_interne.find_one({"id": comm_id}, {"_id": 0, "id": 1})
@@ -579,6 +659,13 @@ async def portal_comunicazione_letta(comm_id: str, auth=Depends(require_member))
 async def portal_comunicazione_risposta(
     comm_id: str, payload: ComunicazioneRispostaCreate, auth=Depends(require_member)
 ):
+    """Comunicazione risposta.
+
+`POST /comunicazioni/{comm_id}/risposte`
+
+Params: **comm_id**, **payload**, **auth**.
+
+Requires JWT Bearer (member)."""
     testo = (payload.testo or "").strip()
     if len(testo) < 2:
         raise HTTPException(status_code=400, detail="Risposta troppo corta")
@@ -606,12 +693,26 @@ async def portal_comunicazione_risposta(
 
 @router.get("/news")
 async def portal_news(auth=Depends(require_member)):
+    """News.
+
+`GET /news`
+
+Params: **auth**.
+
+Requires JWT Bearer (member)."""
     return await portal_comunicazioni(auth)
 
 
 # ---- Premi ----
 @router.get("/premi")
 async def portal_premi(auth=Depends(require_member)):
+    """Premi.
+
+`GET /premi`
+
+Params: **auth**.
+
+Requires JWT Bearer (member)."""
     db = get_db()
     mid = auth["memberId"]
     m = await _get_member(db, mid)
@@ -629,6 +730,13 @@ async def portal_premi(auth=Depends(require_member)):
 # ---- Media (foto carosello con tag associato) ----
 @router.get("/media")
 async def portal_media(auth=Depends(require_member)):
+    """Media.
+
+`GET /media`
+
+Params: **auth**.
+
+Requires JWT Bearer (member)."""
     from ..media_urls import resolve_media_fields
 
     db = get_db()
@@ -645,21 +753,49 @@ async def portal_media(auth=Depends(require_member)):
 # ---- Messaggi interni (chat dirette + gruppi) ----
 @router.get("/messaggi/conversazioni")
 async def portal_conversazioni(auth=Depends(require_member)):
+    """Conversazioni.
+
+`GET /messaggi/conversazioni`
+
+Params: **auth**.
+
+Requires JWT Bearer (member)."""
     return await list_conversations(get_db(), auth["memberId"])
 
 
 @router.get("/messaggi/conversazioni/{chat_id}")
 async def portal_conversazione(chat_id: str, auth=Depends(require_member)):
+    """Conversazione.
+
+`GET /messaggi/conversazioni/{chat_id}`
+
+Params: **chat_id**, **auth**.
+
+Requires JWT Bearer (member)."""
     return await get_conversation(get_db(), chat_id, auth["memberId"], _now())
 
 
 @router.delete("/messaggi/conversazioni/{chat_id}")
 async def portal_elimina_conversazione(chat_id: str, auth=Depends(require_member)):
+    """Elimina conversazione.
+
+`DELETE /messaggi/conversazioni/{chat_id}`
+
+Params: **chat_id**, **auth**.
+
+Requires JWT Bearer (member)."""
     return await delete_conversation_for_member(get_db(), chat_id, auth["memberId"], _now())
 
 
 @router.get("/messaggi/conversazioni/{chat_id}/contatto")
 async def portal_contatto_chat(chat_id: str, auth=Depends(require_member)):
+    """Contatto chat.
+
+`GET /messaggi/conversazioni/{chat_id}/contatto`
+
+Params: **chat_id**, **auth**.
+
+Requires JWT Bearer (member)."""
     kind, target_id = parse_chat_id(chat_id)
     if kind != "direct":
         raise HTTPException(status_code=400, detail="Disponibile solo per chat private")
@@ -668,6 +804,13 @@ async def portal_contatto_chat(chat_id: str, auth=Depends(require_member)):
 
 @router.get("/messaggi/conversazioni/{chat_id}/gruppo")
 async def portal_info_gruppo(chat_id: str, auth=Depends(require_member)):
+    """Info gruppo.
+
+`GET /messaggi/conversazioni/{chat_id}/gruppo`
+
+Params: **chat_id**, **auth**.
+
+Requires JWT Bearer (member)."""
     return await get_group_info(get_db(), chat_id, auth["memberId"])
 
 
@@ -675,6 +818,13 @@ async def portal_info_gruppo(chat_id: str, auth=Depends(require_member)):
 async def portal_invia_in_conversazione(
     chat_id: str, payload: MessaggioInternoCreate, auth=Depends(require_member)
 ):
+    """Invia in conversazione.
+
+`POST /messaggi/conversazioni/{chat_id}`
+
+Params: **chat_id**, **payload**, **auth**.
+
+Requires JWT Bearer (member)."""
     return await send_message(
         get_db(), chat_id, auth["memberId"], payload.model_dump(), _now(), _get_member
     )
@@ -682,6 +832,13 @@ async def portal_invia_in_conversazione(
 
 @router.post("/messaggi/allegati")
 async def portal_upload_allegato(file: UploadFile = File(...), auth=Depends(require_member)):
+    """Upload allegato.
+
+`POST /messaggi/allegati`
+
+Params: **auth**.
+
+Requires JWT Bearer (member)."""
     allowed = {
         ".jpg", ".jpeg", ".png", ".webp", ".gif",
         ".pdf", ".doc", ".docx", ".xls", ".xlsx", ".ppt", ".pptx", ".txt", ".zip",
@@ -712,11 +869,25 @@ async def portal_upload_allegato(file: UploadFile = File(...), auth=Depends(requ
 async def portal_modifica_messaggio(
     msg_id: str, payload: MessaggioModificaBody, auth=Depends(require_member)
 ):
+    """Modifica messaggio.
+
+`PUT /messaggi/{msg_id}`
+
+Params: **msg_id**, **payload**, **auth**.
+
+Requires JWT Bearer (member)."""
     return await edit_message(get_db(), msg_id, auth["memberId"], payload.testo, _now())
 
 
 @router.delete("/messaggi/{msg_id}")
 async def portal_elimina_messaggio(msg_id: str, auth=Depends(require_member)):
+    """Elimina messaggio.
+
+`DELETE /messaggi/{msg_id}`
+
+Params: **msg_id**, **auth**.
+
+Requires JWT Bearer (member)."""
     return await delete_message(get_db(), msg_id, auth["memberId"], _now())
 
 
@@ -724,6 +895,13 @@ async def portal_elimina_messaggio(msg_id: str, auth=Depends(require_member)):
 async def portal_reazione_messaggio(
     msg_id: str, payload: MessaggioReazioneBody, auth=Depends(require_member)
 ):
+    """Reazione messaggio.
+
+`POST /messaggi/{msg_id}/reazioni`
+
+Params: **msg_id**, **payload**, **auth**.
+
+Requires JWT Bearer (member)."""
     return await toggle_reaction(
         get_db(), msg_id, auth["memberId"], payload.emoji, _now(), _get_member
     )
@@ -731,6 +909,13 @@ async def portal_reazione_messaggio(
 
 @router.post("/messaggi/gruppi")
 async def portal_crea_gruppo(payload: GruppoChatCreate, auth=Depends(require_member)):
+    """Crea gruppo.
+
+`POST /messaggi/gruppi`
+
+Params: **payload**, **auth**.
+
+Requires JWT Bearer (member)."""
     g = await create_group(
         get_db(),
         auth["memberId"],
@@ -747,17 +932,38 @@ async def portal_crea_gruppo(payload: GruppoChatCreate, auth=Depends(require_mem
 async def portal_aggiorna_gruppo(
     gruppo_id: str, payload: GruppoChatUpdate, auth=Depends(require_member)
 ):
+    """Aggiorna gruppo.
+
+`PUT /messaggi/gruppi/{gruppo_id}`
+
+Params: **gruppo_id**, **payload**, **auth**.
+
+Requires JWT Bearer (member)."""
     data = payload.model_dump(exclude_unset=True)
     return await update_group(get_db(), gruppo_id, auth["memberId"], data, _now())
 
 
 @router.post("/messaggi/gruppi/{gruppo_id}/esci")
 async def portal_esci_gruppo(gruppo_id: str, auth=Depends(require_member)):
+    """Esci gruppo.
+
+`POST /messaggi/gruppi/{gruppo_id}/esci`
+
+Params: **gruppo_id**, **auth**.
+
+Requires JWT Bearer (member)."""
     return await leave_group(get_db(), gruppo_id, auth["memberId"], _now())
 
 
 @router.get("/messaggi")
 async def portal_messaggi(auth=Depends(require_member)):
+    """Messaggi.
+
+`GET /messaggi`
+
+Params: **auth**.
+
+Requires JWT Bearer (member)."""
     return await portal_conversazioni(auth)
 
 
@@ -789,6 +995,13 @@ async def portal_lista_associati(auth=Depends(require_member)):
 
 @router.get("/gallery/mine")
 async def portal_gallery_mine(auth=Depends(require_member)):
+    """Gallery mine.
+
+`GET /gallery/mine`
+
+Params: **auth**.
+
+Requires JWT Bearer (member)."""
     db = get_db()
     return await (
         db.gallery_images.find({"memberId": auth["memberId"]}, {"_id": 0})
@@ -799,6 +1012,13 @@ async def portal_gallery_mine(auth=Depends(require_member)):
 
 @router.get("/gallery/categories")
 async def portal_gallery_categories(auth=Depends(require_member)):
+    """Gallery categories.
+
+`GET /gallery/categories`
+
+Params: **auth**.
+
+Requires JWT Bearer (member)."""
     from ..article_categories import get_public_article_categories
 
     db = get_db()
@@ -812,6 +1032,13 @@ async def portal_gallery_upload(
     category: str = Form(""),
     auth=Depends(require_member),
 ):
+    """Gallery upload.
+
+`POST /gallery/upload`
+
+Params: **caption**, **category**, **auth**.
+
+Requires JWT Bearer (member)."""
     ext = Path(file.filename or "").suffix.lower() or ".bin"
     if ext not in {".jpg", ".jpeg", ".png", ".webp", ".gif"}:
         raise HTTPException(status_code=400, detail="Formato non supportato")
@@ -849,6 +1076,13 @@ async def portal_gallery_upload(
 
 @router.post("/upload-foto")
 async def portal_upload_foto(file: UploadFile = File(...), auth=Depends(require_member)):
+    """Upload foto.
+
+`POST /upload-foto`
+
+Params: **auth**.
+
+Requires JWT Bearer (member)."""
     ext = Path(file.filename or "").suffix.lower() or ".bin"
     if ext not in {".jpg", ".jpeg", ".png", ".webp", ".gif"}:
         raise HTTPException(status_code=400, detail="Formato non supportato")
@@ -871,6 +1105,13 @@ async def portal_upload_foto(file: UploadFile = File(...), auth=Depends(require_
 
 @router.delete("/upload-foto")
 async def portal_delete_foto(auth=Depends(require_member)):
+    """Delete foto.
+
+`DELETE /upload-foto`
+
+Params: **auth**.
+
+Requires JWT Bearer (member)."""
     db = get_db()
     m = await _get_member(db, auth["memberId"])
     old = (m.get("photoUrl") or "").strip()
@@ -888,6 +1129,13 @@ async def portal_delete_foto(auth=Depends(require_member)):
 
 @router.post("/testimonianza")
 async def portal_submit_testimonial(payload: TestimonialSubmit, auth=Depends(require_member)):
+    """Submit testimonial.
+
+`POST /testimonianza`
+
+Params: **payload**, **auth**.
+
+Requires JWT Bearer (member)."""
     quote = (payload.quote or "").strip()
     if len(quote) < 20:
         raise HTTPException(status_code=400, detail="Testimonianza troppo corta")
@@ -912,12 +1160,26 @@ async def portal_submit_testimonial(payload: TestimonialSubmit, auth=Depends(req
 # ---- Preferiti ----
 @router.get("/preferiti")
 async def portal_preferiti(auth=Depends(require_member)):
+    """Preferiti.
+
+`GET /preferiti`
+
+Params: **auth**.
+
+Requires JWT Bearer (member)."""
     db = get_db()
     return await db.preferiti.find({"memberId": auth["memberId"]}, {"_id": 0}).to_list(500)
 
 
 @router.post("/preferiti")
 async def portal_add_preferito(payload: PreferitoCreate, auth=Depends(require_member)):
+    """Add preferito.
+
+`POST /preferiti`
+
+Params: **payload**, **auth**.
+
+Requires JWT Bearer (member)."""
     db = get_db()
     doc = {
         "id": str(uuid.uuid4()),
@@ -938,6 +1200,13 @@ async def portal_add_preferito(payload: PreferitoCreate, auth=Depends(require_me
 
 @router.delete("/preferiti/{pref_id}")
 async def portal_del_preferito(pref_id: str, auth=Depends(require_member)):
+    """Del preferito.
+
+`DELETE /preferiti/{pref_id}`
+
+Params: **pref_id**, **auth**.
+
+Requires JWT Bearer (member)."""
     db = get_db()
     await db.preferiti.delete_one({"id": pref_id, "memberId": auth["memberId"]})
     return {"ok": True}
@@ -946,6 +1215,13 @@ async def portal_del_preferito(pref_id: str, auth=Depends(require_member)):
 # ========== Admin portale (JWT admin) ==========
 @router.get("/admin/presenze/associati/{member_id}")
 async def admin_presenze_associato(member_id: str, admin=Depends(require_admin)):
+    """Presenze associato.
+
+`GET /admin/presenze/associati/{member_id}`
+
+Params: **member_id**.
+
+Requires JWT Bearer (admin)."""
     db = get_db()
     from ..event_access import member_invited_to_event
 
@@ -971,6 +1247,13 @@ async def admin_presenze_associato(member_id: str, admin=Depends(require_admin))
 
 @router.get("/admin/presenze/eventi/{event_id}")
 async def admin_presenze_evento_detail(event_id: str, admin=Depends(require_admin)):
+    """Presenze evento detail.
+
+`GET /admin/presenze/eventi/{event_id}`
+
+Params: **event_id**.
+
+Requires JWT Bearer (admin)."""
     db = get_db()
     ev = await db.events.find_one({"id": event_id}, {"_id": 0})
     if not ev:
@@ -999,6 +1282,13 @@ async def admin_presenze_evento_detail(event_id: str, admin=Depends(require_admi
 
 @router.put("/admin/presenze/eventi/{event_id}")
 async def admin_presenze_evento_update(event_id: str, updates: List[PresenzaEventoUpdate], admin=Depends(require_admin)):
+    """Presenze evento update.
+
+`PUT /admin/presenze/eventi/{event_id}`
+
+Params: **event_id**, **updates**.
+
+Requires JWT Bearer (admin)."""
     db = get_db()
     ev = await db.events.find_one({"id": event_id}, {"_id": 0, "id": 1})
     if not ev:
@@ -1013,6 +1303,11 @@ async def admin_presenze_evento_update(event_id: str, updates: List[PresenzaEven
 
 @router.get("/admin/comunicazioni")
 async def admin_list_comunicazioni(admin=Depends(require_admin)):
+    """List comunicazioni.
+
+`GET /admin/comunicazioni`
+
+Requires JWT Bearer (admin)."""
     db = get_db()
     q = iso_datetime_in_season_clause("createdAt") or {}
     items = await db.comunicazioni_interne.find(q, {"_id": 0}).sort("createdAt", -1).to_list(200)
@@ -1028,6 +1323,13 @@ async def admin_list_comunicazioni(admin=Depends(require_admin)):
 
 @router.get("/admin/comunicazioni/{comm_id}/letture")
 async def admin_comunicazione_letture(comm_id: str, admin=Depends(require_admin)):
+    """Comunicazione letture.
+
+`GET /admin/comunicazioni/{comm_id}/letture`
+
+Params: **comm_id**.
+
+Requires JWT Bearer (admin)."""
     db = get_db()
     c = await db.comunicazioni_interne.find_one({"id": comm_id}, {"_id": 0})
     if not c:
@@ -1037,6 +1339,13 @@ async def admin_comunicazione_letture(comm_id: str, admin=Depends(require_admin)
 
 @router.post("/admin/comunicazioni")
 async def admin_crea_comunicazione(payload: ComunicazioneInternaCreate, admin=Depends(require_admin)):
+    """Crea comunicazione.
+
+`POST /admin/comunicazioni`
+
+Params: **payload**.
+
+Requires JWT Bearer (admin)."""
     db = get_db()
     title = (payload.title or "").strip()
     body = (payload.bodyHtml or payload.testo or "").strip()
@@ -1076,6 +1385,13 @@ async def admin_crea_comunicazione(payload: ComunicazioneInternaCreate, admin=De
 
 @router.delete("/admin/comunicazioni/{comm_id}")
 async def admin_delete_comunicazione(comm_id: str, admin=Depends(require_admin)):
+    """Delete comunicazione.
+
+`DELETE /admin/comunicazioni/{comm_id}`
+
+Params: **comm_id**.
+
+Requires JWT Bearer (admin)."""
     db = get_db()
     await db.comunicazioni_interne.delete_one({"id": comm_id})
     await db.comunicazioni_letture.delete_many({"comunicazioneId": comm_id})

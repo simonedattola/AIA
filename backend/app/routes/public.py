@@ -39,6 +39,11 @@ def _normalize_nav_item(item: dict) -> dict:
 
 @router.get("/settings")
 async def get_settings():
+    """
+    Return public site settings (branding, contacts, founded year, etc.).
+    
+    No authentication required. Returns the site-settings document or `{}`.
+    """
     db = get_db()
     doc = await db.site_settings.find_one({"id": "site-settings"}, {"_id": 0})
     if not doc:
@@ -48,6 +53,11 @@ async def get_settings():
 
 @router.get("/nav")
 async def get_nav():
+    """
+    Build the public main navigation from published pages marked `showInMenu`.
+    
+    Returns an ordered list of nav items (`href`, `label`, `highlight`).
+    """
     db = get_db()
     pages = await db.pages.find(
         {"status": "published", "showInMenu": True},
@@ -60,6 +70,12 @@ async def get_nav():
 
 @router.get("/pages/{slug}")
 async def get_page(slug: str):
+    """
+    Fetch a published CMS page by slug.
+    
+    - **Path:** `slug`
+    - **Returns:** page document or 404 if missing/unpublished.
+    """
     db = get_db()
     page = await db.pages.find_one({"slug": slug, "status": "published"}, {"_id": 0})
     if not page:
@@ -69,6 +85,13 @@ async def get_page(slug: str):
 
 @router.get("/articles")
 async def list_articles(category: Optional[str] = None, limit: int = 20, skip: int = 0):
+    """
+    List published public articles (paginated).
+    
+    - **Query:** `category` (optional), `limit` (default 20), `skip` (default 0)
+    - **Returns:** `{items, total}` with title, bodyHtml/summary, coverUrl, publishedAt, etc.
+    - No authentication required.
+    """
     db = get_db()
     q = {"status": "published", "portalOnly": {"$ne": True}}
     if category:
@@ -82,6 +105,12 @@ async def list_articles(category: Optional[str] = None, limit: int = 20, skip: i
 
 @router.get("/articles/{slug}")
 async def get_article(slug: str):
+    """
+    Fetch a published public article by slug with related articles.
+    
+    - **Path:** `slug`
+    - **Returns:** `{article, related}` or 404.
+    """
     db = get_db()
     art = await db.articles.find_one(
         {"slug": slug, "status": "published", "portalOnly": {"$ne": True}},
@@ -105,6 +134,11 @@ async def get_article(slug: str):
 
 @router.get("/categories")
 async def list_categories():
+    """List categories.
+
+`GET /categories`
+
+No authentication required."""
     from ..article_categories import get_public_article_categories
 
     db = get_db()
@@ -113,6 +147,13 @@ async def list_categories():
 
 @router.get("/events")
 async def list_events(upcoming: bool = False, limit: int = 50):
+    """List events.
+
+`GET /events`
+
+Params: **upcoming**, **limit**.
+
+No authentication required."""
     db = get_db()
     from ..event_access import public_events_query
 
@@ -129,6 +170,11 @@ async def list_events(upcoming: bool = False, limit: int = 50):
 
 @router.get("/officials")
 async def list_officials():
+    """List officials.
+
+`GET /officials`
+
+No authentication required."""
     db = get_db()
     items = await db.officials.find({}, {"_id": 0}).sort("sortOrder", 1).to_list(100)
     for item in items:
@@ -144,7 +190,12 @@ async def list_members(
     scope: Optional[str] = None,
     limit: int = 200,
 ):
-    """Lista membri. Default: arbitri+assistenti. scope=chi_siamo per CD/osservatori."""
+    """
+    List public member profiles (default: arbitri + assistenti).
+    
+    - **Query:** `q`, `category`, `memberRole`, `scope` (`chi_siamo`|`organigramma`), `limit`
+    - **Returns:** sanitized public member objects.
+    """
     db = get_db()
     if memberRole:
         query = {"memberRole": memberRole}
@@ -173,6 +224,13 @@ async def list_members(
 
 @router.get("/members/{slug}")
 async def get_member(slug: str, season: Optional[str] = None):
+    """
+    Fetch a public member profile with awards, articles, testimonials, and designations.
+    
+    - **Path:** `slug`
+    - **Query:** `season` (optional)
+    - **Returns:** enriched profile payload or 404.
+    """
     db = get_db()
     m = await db.members.find_one({"slug": slug}, {"_id": 0})
     if not m:
@@ -256,6 +314,12 @@ async def get_member(slug: str, season: Optional[str] = None):
 
 @router.get("/designations")
 async def list_designations(role: Optional[str] = None, category: Optional[str] = None, limit: int = 500):
+    """
+    List public match designations for the current calendar window.
+    
+    - **Query:** `role`, `category`/`championship`, `limit` (default 500)
+    - **Returns:** enriched designation rows.
+    """
     db = get_db()
     from ..designation_filters import designations_page_query
 
@@ -280,6 +344,11 @@ async def list_designations(role: Optional[str] = None, category: Optional[str] 
 
 @router.get("/stats")
 async def get_stats():
+    """
+    Return public homepage counters (members, articles, season matches, events, years active).
+    
+    No authentication required.
+    """
     db = get_db()
     members_total = await db.members.count_documents({})
     associati = await db.members.count_documents({})
@@ -326,6 +395,11 @@ async def get_stats():
 
 @router.get("/document-sections")
 async def list_document_sections():
+    """List document sections.
+
+`GET /document-sections`
+
+No authentication required."""
     from ..document_sections import get_public_document_sections
 
     db = get_db()
@@ -334,6 +408,13 @@ async def list_document_sections():
 
 @router.get("/documents")
 async def list_documents(category: Optional[str] = None):
+    """List documents.
+
+`GET /documents`
+
+Params: **category**.
+
+No authentication required."""
     from ..media_urls import resolve_media_url
 
     db = get_db()
@@ -349,12 +430,24 @@ async def list_documents(category: Optional[str] = None):
 
 @router.get("/albums")
 async def list_albums():
+    """List albums.
+
+`GET /albums`
+
+No authentication required."""
     db = get_db()
     return await db.albums.find({}, {"_id": 0}).sort("sortOrder", 1).to_list(200)
 
 
 @router.get("/albums/{slug}")
 async def get_album(slug: str):
+    """Get album.
+
+`GET /albums/{slug}`
+
+Params: **slug**.
+
+No authentication required."""
     db = get_db()
     a = await db.albums.find_one({"slug": slug}, {"_id": 0})
     if not a:
@@ -364,6 +457,11 @@ async def get_album(slug: str):
 
 @router.get("/testimonials")
 async def list_testimonials():
+    """List testimonials.
+
+`GET /testimonials`
+
+No authentication required."""
     db = get_db()
     items = await db.testimonials.find(
         {"$or": [{"status": "published"}, {"status": {"$exists": False}}]},
@@ -388,6 +486,11 @@ async def list_testimonials():
 # ---- Forms ----
 @router.get("/gallery")
 async def get_gallery():
+    """Get gallery.
+
+`GET /gallery`
+
+No authentication required."""
     from ..gallery import list_public_gallery
 
     db = get_db()
@@ -397,6 +500,13 @@ async def get_gallery():
 
 @router.post("/forms/corso-arbitri", status_code=201)
 async def submit_lead(payload: LeadCreate, background: BackgroundTasks):
+    """
+    Submit a corso arbitri candidacy lead form.
+    
+    - **Body:** `LeadCreate`
+    - Persists the lead, optionally emails staff/user
+    - **Returns:** `{ok, id}`
+    """
     db = get_db()
     lead = Lead(**payload.model_dump())
     doc = lead.model_dump()
@@ -422,6 +532,13 @@ async def submit_lead(payload: LeadCreate, background: BackgroundTasks):
 
 @router.post("/forms/contatti", status_code=201)
 async def submit_contact(payload: ContactCreate, background: BackgroundTasks):
+    """
+    Submit a public contact form message.
+    
+    - **Body:** `ContactCreate`
+    - Persists the message, optionally notifies staff
+    - **Returns:** `{ok, id}`
+    """
     db = get_db()
     msg = ContactMessage(**payload.model_dump())
     doc = msg.model_dump()

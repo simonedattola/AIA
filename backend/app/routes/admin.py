@@ -35,6 +35,13 @@ UPLOAD_DIR.mkdir(parents=True, exist_ok=True)
 # ---- Auth ----
 @router.post("/login", response_model=TokenResponse)
 async def login(payload: LoginRequest):
+    """
+    Authenticate an admin user with email/password and issue a JWT.
+    
+    - **Body:** `{ "email": "...", "password": "..." }`
+    - **Returns:** `TokenResponse` with `token` and admin info, or 401.
+    - Use the token as `Authorization: Bearer <jwt_token>` on `/api/admin/*`.
+    """
     db = get_db()
     admin = await db.admin_users.find_one({"email": payload.email.lower()}, {"_id": 0})
     if not admin or not verify_password(payload.password, admin["passwordHash"]):
@@ -45,12 +52,22 @@ async def login(payload: LoginRequest):
 
 @router.get("/me")
 async def me(admin=Depends(require_admin)):
+    """
+    Return the authenticated admin identity from the JWT.
+    
+    Requires JWT Bearer (admin). Returns `{email, name}`.
+    """
     return {"email": admin.get("sub"), "name": admin.get("name", "Admin")}
 
 
 # ---- Dashboard stats ----
 @router.get("/dashboard")
 async def dashboard(admin=Depends(require_admin)):
+    """
+    Admin dashboard aggregates: content counts, pending gallery/testimonials, leads, next event, designations.
+    
+    Requires JWT Bearer (admin).
+    """
     from datetime import datetime, timezone
 
     from ..designation_enrich import build_member_lookups, enrich_designation
@@ -120,6 +137,11 @@ async def dashboard(admin=Depends(require_admin)):
 # ---- Settings ----
 @router.get("/settings")
 async def admin_get_settings(admin=Depends(require_admin)):
+    """Get settings.
+
+`GET /settings`
+
+Requires JWT Bearer (admin)."""
     db = get_db()
     doc = await db.site_settings.find_one({}, {"_id": 0})
     return doc or {}
@@ -127,6 +149,13 @@ async def admin_get_settings(admin=Depends(require_admin)):
 
 @router.put("/settings")
 async def admin_put_settings(payload: SiteSettings, admin=Depends(require_admin)):
+    """Put settings.
+
+`PUT /settings`
+
+Params: **payload**.
+
+Requires JWT Bearer (admin)."""
     db = get_db()
     payload.updatedAt = datetime.now(timezone.utc).isoformat()
     doc = payload.model_dump()
@@ -137,6 +166,11 @@ async def admin_put_settings(payload: SiteSettings, admin=Depends(require_admin)
 # ---- Pages ----
 @router.get("/pages")
 async def admin_list_pages(admin=Depends(require_admin)):
+    """List pages.
+
+`GET /pages`
+
+Requires JWT Bearer (admin)."""
     db = get_db()
     pages = await db.pages.find({}, {"_id": 0}).to_list(200)
     pages.sort(key=lambda p: (0 if p.get("template") == "system" else 1, p.get("menuOrder", 100), p.get("title", "")))
@@ -176,6 +210,13 @@ async def admin_reset_page_blocks(page_id: str, admin=Depends(require_admin)):
 
 @router.get("/pages/{page_id}")
 async def admin_get_page(page_id: str, admin=Depends(require_admin)):
+    """Get page.
+
+`GET /pages/{page_id}`
+
+Params: **page_id**.
+
+Requires JWT Bearer (admin)."""
     db = get_db()
     p = await db.pages.find_one({"id": page_id}, {"_id": 0})
     if not p:
@@ -185,6 +226,13 @@ async def admin_get_page(page_id: str, admin=Depends(require_admin)):
 
 @router.put("/pages/{page_id}")
 async def admin_update_page(page_id: str, payload: Page, admin=Depends(require_admin)):
+    """Update page.
+
+`PUT /pages/{page_id}`
+
+Params: **page_id**, **payload**.
+
+Requires JWT Bearer (admin)."""
     db = get_db()
     payload.id = page_id
     payload.bodyHtml = sanitize_html(payload.bodyHtml)
@@ -198,6 +246,13 @@ async def admin_update_page(page_id: str, payload: Page, admin=Depends(require_a
 
 @router.post("/pages")
 async def admin_create_page(payload: Page, admin=Depends(require_admin)):
+    """Create page.
+
+`POST /pages`
+
+Params: **payload**.
+
+Requires JWT Bearer (admin)."""
     db = get_db()
     if not payload.slug:
         payload.slug = slugify(payload.title)
@@ -217,6 +272,13 @@ async def admin_create_page(payload: Page, admin=Depends(require_admin)):
 
 @router.delete("/pages/{page_id}")
 async def admin_delete_page(page_id: str, admin=Depends(require_admin)):
+    """Delete page.
+
+`DELETE /pages/{page_id}`
+
+Params: **page_id**.
+
+Requires JWT Bearer (admin)."""
     db = get_db()
     page = await db.pages.find_one({"id": page_id}, {"_id": 0})
     if not page:
@@ -230,6 +292,11 @@ async def admin_delete_page(page_id: str, admin=Depends(require_admin)):
 # ---- Articles ----
 @router.get("/article-categories")
 async def admin_list_article_categories(admin=Depends(require_admin)):
+    """List article categories.
+
+`GET /article-categories`
+
+Requires JWT Bearer (admin)."""
     from ..article_categories import get_admin_article_categories
 
     db = get_db()
@@ -238,6 +305,13 @@ async def admin_list_article_categories(admin=Depends(require_admin)):
 
 @router.post("/article-categories")
 async def admin_add_article_category(payload: ArticleCategoryCreate, admin=Depends(require_admin)):
+    """Add article category.
+
+`POST /article-categories`
+
+Params: **payload**.
+
+Requires JWT Bearer (admin)."""
     from ..article_categories import add_article_category, normalize_category
 
     name = normalize_category(payload.name)
@@ -252,12 +326,24 @@ async def admin_add_article_category(payload: ArticleCategoryCreate, admin=Depen
 
 @router.get("/articles")
 async def admin_list_articles(admin=Depends(require_admin)):
+    """List articles.
+
+`GET /articles`
+
+Requires JWT Bearer (admin)."""
     db = get_db()
     return await db.articles.find({}, {"_id": 0}).sort("publishedAt", -1).to_list(500)
 
 
 @router.get("/articles/{article_id}")
 async def admin_get_article(article_id: str, admin=Depends(require_admin)):
+    """Get article.
+
+`GET /articles/{article_id}`
+
+Params: **article_id**.
+
+Requires JWT Bearer (admin)."""
     from ..article_body import normalize_article_body_html
     from ..media_urls import resolve_media_fields
 
@@ -272,6 +358,13 @@ async def admin_get_article(article_id: str, admin=Depends(require_admin)):
 
 @router.post("/articles")
 async def admin_create_article(payload: ArticleCreate, admin=Depends(require_admin)):
+    """Create article.
+
+`POST /articles`
+
+Params: **payload**.
+
+Requires JWT Bearer (admin)."""
     from ..article_categories import ensure_category_exists
 
     db = get_db()
@@ -309,6 +402,13 @@ async def admin_create_article(payload: ArticleCreate, admin=Depends(require_adm
 
 @router.put("/articles/{article_id}")
 async def admin_update_article(article_id: str, payload: Article, admin=Depends(require_admin)):
+    """Update article.
+
+`PUT /articles/{article_id}`
+
+Params: **article_id**, **payload**.
+
+Requires JWT Bearer (admin)."""
     from ..article_categories import ensure_category_exists
     from ..article_sanitize import sanitize_article_html
 
@@ -331,6 +431,13 @@ async def admin_update_article(article_id: str, payload: Article, admin=Depends(
 
 @router.delete("/articles/{article_id}")
 async def admin_delete_article(article_id: str, admin=Depends(require_admin)):
+    """Delete article.
+
+`DELETE /articles/{article_id}`
+
+Params: **article_id**.
+
+Requires JWT Bearer (admin)."""
     db = get_db()
     await db.articles.delete_one({"id": article_id})
     from ..gallery import ARTICLE_GALLERY_SOURCES
@@ -362,6 +469,11 @@ async def admin_cleanup_legacy_articles(admin=Depends(require_admin)):
 # ---- Events ----
 @router.get("/event-types")
 async def admin_list_event_types(admin=Depends(require_admin)):
+    """List event types.
+
+`GET /event-types`
+
+Requires JWT Bearer (admin)."""
     from ..event_categories import get_admin_event_types
 
     db = get_db()
@@ -370,6 +482,13 @@ async def admin_list_event_types(admin=Depends(require_admin)):
 
 @router.post("/event-types")
 async def admin_add_event_type(payload: ArticleCategoryCreate, admin=Depends(require_admin)):
+    """Add event type.
+
+`POST /event-types`
+
+Params: **payload**.
+
+Requires JWT Bearer (admin)."""
     from ..event_categories import add_event_type, normalize_event_type
 
     name = normalize_event_type(payload.name)
@@ -384,6 +503,11 @@ async def admin_add_event_type(payload: ArticleCategoryCreate, admin=Depends(req
 
 @router.get("/events")
 async def admin_list_events(admin=Depends(require_admin)):
+    """List events.
+
+`GET /events`
+
+Requires JWT Bearer (admin)."""
     from ..designation_filters import event_date_in_season_clause
 
     db = get_db()
@@ -393,6 +517,13 @@ async def admin_list_events(admin=Depends(require_admin)):
 
 @router.post("/events")
 async def admin_create_event(payload: Event, admin=Depends(require_admin)):
+    """Create event.
+
+`POST /events`
+
+Params: **payload**.
+
+Requires JWT Bearer (admin)."""
     db = get_db()
     from ..event_reminders import normalize_event_time
     from ..event_categories import ensure_event_type_exists
@@ -409,6 +540,13 @@ async def admin_create_event(payload: Event, admin=Depends(require_admin)):
 
 @router.put("/events/{event_id}")
 async def admin_update_event(event_id: str, payload: Event, admin=Depends(require_admin)):
+    """Update event.
+
+`PUT /events/{event_id}`
+
+Params: **event_id**, **payload**.
+
+Requires JWT Bearer (admin)."""
     db = get_db()
     from ..event_reminders import normalize_event_time
     from ..event_categories import ensure_event_type_exists
@@ -430,6 +568,13 @@ async def admin_update_event(event_id: str, payload: Event, admin=Depends(requir
 
 @router.delete("/events/{event_id}")
 async def admin_delete_event(event_id: str, admin=Depends(require_admin)):
+    """Delete event.
+
+`DELETE /events/{event_id}`
+
+Params: **event_id**.
+
+Requires JWT Bearer (admin)."""
     db = get_db()
     await db.events.delete_one({"id": event_id})
     return {"ok": True}
@@ -438,12 +583,24 @@ async def admin_delete_event(event_id: str, admin=Depends(require_admin)):
 # ---- Officials ----
 @router.get("/officials")
 async def admin_list_officials(admin=Depends(require_admin)):
+    """List officials.
+
+`GET /officials`
+
+Requires JWT Bearer (admin)."""
     db = get_db()
     return await db.officials.find({}, {"_id": 0}).sort("sortOrder", 1).to_list(100)
 
 
 @router.post("/officials")
 async def admin_create_official(payload: Official, admin=Depends(require_admin)):
+    """Create official.
+
+`POST /officials`
+
+Params: **payload**.
+
+Requires JWT Bearer (admin)."""
     db = get_db()
     payload.bioHtml = sanitize_html(payload.bioHtml)
     doc = payload.model_dump()
@@ -453,6 +610,13 @@ async def admin_create_official(payload: Official, admin=Depends(require_admin))
 
 @router.put("/officials/{official_id}")
 async def admin_update_official(official_id: str, payload: Official, admin=Depends(require_admin)):
+    """Update official.
+
+`PUT /officials/{official_id}`
+
+Params: **official_id**, **payload**.
+
+Requires JWT Bearer (admin)."""
     db = get_db()
     payload.id = official_id
     payload.bioHtml = sanitize_html(payload.bioHtml)
@@ -463,6 +627,13 @@ async def admin_update_official(official_id: str, payload: Official, admin=Depen
 
 @router.delete("/officials/{official_id}")
 async def admin_delete_official(official_id: str, admin=Depends(require_admin)):
+    """Delete official.
+
+`DELETE /officials/{official_id}`
+
+Params: **official_id**.
+
+Requires JWT Bearer (admin)."""
     db = get_db()
     await db.officials.delete_one({"id": official_id})
     return {"ok": True}
@@ -471,6 +642,13 @@ async def admin_delete_official(official_id: str, admin=Depends(require_admin)):
 # ---- Members ----
 @router.get("/members")
 async def admin_list_members(memberRole: Optional[str] = None, admin=Depends(require_admin)):
+    """List members.
+
+`GET /members`
+
+Params: **memberRole**.
+
+Requires JWT Bearer (admin)."""
     db = get_db()
     from ..media_urls import resolve_media_fields
     from ..member_roles import normalize_member
@@ -485,6 +663,13 @@ async def admin_list_members(memberRole: Optional[str] = None, admin=Depends(req
 
 @router.post("/members")
 async def admin_create_member(payload: MemberCreate, admin=Depends(require_admin)):
+    """Create member.
+
+`POST /members`
+
+Params: **payload**.
+
+Requires JWT Bearer (admin)."""
     db = get_db()
     slug = (payload.slug or "").strip()
     if not slug:
@@ -531,6 +716,13 @@ async def admin_create_member(payload: MemberCreate, admin=Depends(require_admin
 
 @router.put("/members/{member_id}")
 async def admin_update_member(member_id: str, payload: Member, admin=Depends(require_admin)):
+    """Update member.
+
+`PUT /members/{member_id}`
+
+Params: **member_id**, **payload**.
+
+Requires JWT Bearer (admin)."""
     db = get_db()
     payload.id = member_id
     payload.updatedAt = datetime.now(timezone.utc).isoformat()
@@ -561,6 +753,13 @@ async def admin_update_member(member_id: str, payload: Member, admin=Depends(req
 
 @router.delete("/members/{member_id}")
 async def admin_delete_member(member_id: str, admin=Depends(require_admin)):
+    """Delete member.
+
+`DELETE /members/{member_id}`
+
+Params: **member_id**.
+
+Requires JWT Bearer (admin)."""
     db = get_db()
     await db.members.delete_one({"id": member_id})
     return {"ok": True}
@@ -568,6 +767,11 @@ async def admin_delete_member(member_id: str, admin=Depends(require_admin)):
 
 @router.get("/members/import-template")
 async def admin_members_import_template(admin=Depends(require_admin)):
+    """Members import template.
+
+`GET /members/import-template`
+
+Requires JWT Bearer (admin)."""
     return Response(
         content=MEMBERS_IMPORT_TEMPLATE_CSV,
         media_type="text/csv; charset=utf-8",
@@ -631,6 +835,11 @@ async def _validate_designation_payload(db, doc: dict) -> None:
 
 @router.get("/designations")
 async def admin_list_designations(admin=Depends(require_admin)):
+    """List designations.
+
+`GET /designations`
+
+Requires JWT Bearer (admin)."""
     db = get_db()
     items = await db.designations.find(_designation_list_query(), {"_id": 0}).sort("matchDate", -1).to_list(500)
     from ..designation_enrich import build_member_lookups, enrich_designation
@@ -660,6 +869,13 @@ async def _attach_member_slug(db, doc: dict) -> dict:
 
 @router.post("/designations")
 async def admin_create_designation(payload: Designation, admin=Depends(require_admin)):
+    """Create designation.
+
+`POST /designations`
+
+Params: **payload**.
+
+Requires JWT Bearer (admin)."""
     db = get_db()
     doc = payload.model_dump()
     await _validate_designation_payload(db, doc)
@@ -670,6 +886,13 @@ async def admin_create_designation(payload: Designation, admin=Depends(require_a
 
 @router.put("/designations/{des_id}")
 async def admin_update_designation(des_id: str, payload: Designation, admin=Depends(require_admin)):
+    """Update designation.
+
+`PUT /designations/{des_id}`
+
+Params: **des_id**, **payload**.
+
+Requires JWT Bearer (admin)."""
     db = get_db()
     payload.id = des_id
     doc = payload.model_dump()
@@ -681,6 +904,13 @@ async def admin_update_designation(des_id: str, payload: Designation, admin=Depe
 
 @router.delete("/designations/{des_id}")
 async def admin_delete_designation(des_id: str, admin=Depends(require_admin)):
+    """Delete designation.
+
+`DELETE /designations/{des_id}`
+
+Params: **des_id**.
+
+Requires JWT Bearer (admin)."""
     db = get_db()
     await db.designations.delete_one({"id": des_id})
     return {"ok": True}
@@ -743,6 +973,11 @@ async def admin_import_designations_file(
 
 @router.get("/designations/sync-status")
 async def admin_designations_sync_status(admin=Depends(require_admin)):
+    """Designations sync status.
+
+`GET /designations/sync-status`
+
+Requires JWT Bearer (admin)."""
     db = get_db()
     settings = await db.site_settings.find_one({"id": "site-settings"}, {"_id": 0, "lastDesignationsSync": 1})
     return settings.get("lastDesignationsSync") if settings else {}
@@ -751,12 +986,24 @@ async def admin_designations_sync_status(admin=Depends(require_admin)):
 # ---- Leads ----
 @router.get("/leads")
 async def admin_list_leads(admin=Depends(require_admin)):
+    """List leads.
+
+`GET /leads`
+
+Requires JWT Bearer (admin)."""
     db = get_db()
     return await db.leads.find({}, {"_id": 0}).sort("createdAt", -1).to_list(1000)
 
 
 @router.put("/leads/{lead_id}")
 async def admin_update_lead_status(lead_id: str, payload: dict, admin=Depends(require_admin)):
+    """Update lead status.
+
+`PUT /leads/{lead_id}`
+
+Params: **lead_id**, **payload**.
+
+Requires JWT Bearer (admin)."""
     db = get_db()
     status = payload.get("status", "new")
     await db.leads.update_one({"id": lead_id}, {"$set": {"status": status}})
@@ -765,6 +1012,13 @@ async def admin_update_lead_status(lead_id: str, payload: dict, admin=Depends(re
 
 @router.delete("/leads/{lead_id}")
 async def admin_delete_lead(lead_id: str, admin=Depends(require_admin)):
+    """Delete lead.
+
+`DELETE /leads/{lead_id}`
+
+Params: **lead_id**.
+
+Requires JWT Bearer (admin)."""
     db = get_db()
     await db.leads.delete_one({"id": lead_id})
     return {"ok": True}
@@ -773,12 +1027,24 @@ async def admin_delete_lead(lead_id: str, admin=Depends(require_admin)):
 # ---- Messages ----
 @router.get("/messages")
 async def admin_list_messages(admin=Depends(require_admin)):
+    """List messages.
+
+`GET /messages`
+
+Requires JWT Bearer (admin)."""
     db = get_db()
     return await db.contact_messages.find({}, {"_id": 0}).sort("createdAt", -1).to_list(1000)
 
 
 @router.put("/messages/{msg_id}")
 async def admin_update_message(msg_id: str, payload: dict, admin=Depends(require_admin)):
+    """Update message.
+
+`PUT /messages/{msg_id}`
+
+Params: **msg_id**, **payload**.
+
+Requires JWT Bearer (admin)."""
     db = get_db()
     status = payload.get("status", "new")
     await db.contact_messages.update_one({"id": msg_id}, {"$set": {"status": status}})
@@ -787,6 +1053,13 @@ async def admin_update_message(msg_id: str, payload: dict, admin=Depends(require
 
 @router.delete("/messages/{msg_id}")
 async def admin_delete_message(msg_id: str, admin=Depends(require_admin)):
+    """Delete message.
+
+`DELETE /messages/{msg_id}`
+
+Params: **msg_id**.
+
+Requires JWT Bearer (admin)."""
     db = get_db()
     await db.contact_messages.delete_one({"id": msg_id})
     return {"ok": True}
@@ -795,6 +1068,11 @@ async def admin_delete_message(msg_id: str, admin=Depends(require_admin)):
 # ---- Documents (downloads) ----
 @router.get("/documents")
 async def admin_list_documents(admin=Depends(require_admin)):
+    """List documents.
+
+`GET /documents`
+
+Requires JWT Bearer (admin)."""
     from ..media_urls import file_size_label_for_media_url
 
     db = get_db()
@@ -825,6 +1103,11 @@ async def _enrich_document(doc: dict) -> dict:
 
 @router.get("/document-sections")
 async def admin_list_document_sections(admin=Depends(require_admin)):
+    """List document sections.
+
+`GET /document-sections`
+
+Requires JWT Bearer (admin)."""
     from ..document_sections import get_admin_document_sections
 
     db = get_db()
@@ -833,6 +1116,13 @@ async def admin_list_document_sections(admin=Depends(require_admin)):
 
 @router.post("/document-sections")
 async def admin_add_document_section(payload: ArticleCategoryCreate, admin=Depends(require_admin)):
+    """Add document section.
+
+`POST /document-sections`
+
+Params: **payload**.
+
+Requires JWT Bearer (admin)."""
     from ..document_sections import add_document_section, normalize_section_name
 
     name = normalize_section_name(payload.name)
@@ -847,6 +1137,13 @@ async def admin_add_document_section(payload: ArticleCategoryCreate, admin=Depen
 
 @router.post("/documents")
 async def admin_create_document(payload: Document, admin=Depends(require_admin)):
+    """Create document.
+
+`POST /documents`
+
+Params: **payload**.
+
+Requires JWT Bearer (admin)."""
     db = get_db()
     doc = await _enrich_document(payload.model_dump())
     await db.documents.insert_one(doc.copy())
@@ -855,6 +1152,13 @@ async def admin_create_document(payload: Document, admin=Depends(require_admin))
 
 @router.put("/documents/{doc_id}")
 async def admin_update_document(doc_id: str, payload: Document, admin=Depends(require_admin)):
+    """Update document.
+
+`PUT /documents/{doc_id}`
+
+Params: **doc_id**, **payload**.
+
+Requires JWT Bearer (admin)."""
     db = get_db()
     payload.id = doc_id
     doc = await _enrich_document(payload.model_dump())
@@ -864,6 +1168,13 @@ async def admin_update_document(doc_id: str, payload: Document, admin=Depends(re
 
 @router.delete("/documents/{doc_id}")
 async def admin_delete_document(doc_id: str, admin=Depends(require_admin)):
+    """Delete document.
+
+`DELETE /documents/{doc_id}`
+
+Params: **doc_id**.
+
+Requires JWT Bearer (admin)."""
     db = get_db()
     await db.documents.delete_one({"id": doc_id})
     return {"ok": True}
@@ -875,6 +1186,11 @@ _UTILITY_SECTIONS = {"link_utili"}
 
 @router.get("/utility")
 async def admin_get_utility(admin=Depends(require_admin)):
+    """Get utility.
+
+`GET /utility`
+
+Requires JWT Bearer (admin)."""
     from ..designation_filters import event_date_in_season_clause, merge_mongo_queries
 
     db = get_db()
@@ -893,6 +1209,13 @@ async def admin_get_utility(admin=Depends(require_admin)):
 
 @router.put("/utility/polo")
 async def admin_update_utility_polo(payload: UtilityPolo, admin=Depends(require_admin)):
+    """Update utility polo.
+
+`PUT /utility/polo`
+
+Params: **payload**.
+
+Requires JWT Bearer (admin)."""
     db = get_db()
     polo = payload.model_dump()
     await db.site_settings.update_one(
@@ -905,6 +1228,13 @@ async def admin_update_utility_polo(payload: UtilityPolo, admin=Depends(require_
 
 @router.post("/utility-items")
 async def admin_create_utility_item(payload: UtilityItem, admin=Depends(require_admin)):
+    """Create utility item.
+
+`POST /utility-items`
+
+Params: **payload**.
+
+Requires JWT Bearer (admin)."""
     section = (payload.section or "").strip()
     if section not in _UTILITY_SECTIONS:
         raise HTTPException(400, "Sezione non valida")
@@ -922,6 +1252,13 @@ async def admin_create_utility_item(payload: UtilityItem, admin=Depends(require_
 
 @router.put("/utility-items/{item_id}")
 async def admin_update_utility_item(item_id: str, payload: UtilityItem, admin=Depends(require_admin)):
+    """Update utility item.
+
+`PUT /utility-items/{item_id}`
+
+Params: **item_id**, **payload**.
+
+Requires JWT Bearer (admin)."""
     section = (payload.section or "").strip()
     if section not in _UTILITY_SECTIONS:
         raise HTTPException(400, "Sezione non valida")
@@ -940,6 +1277,13 @@ async def admin_update_utility_item(item_id: str, payload: UtilityItem, admin=De
 
 @router.delete("/utility-items/{item_id}")
 async def admin_delete_utility_item(item_id: str, admin=Depends(require_admin)):
+    """Delete utility item.
+
+`DELETE /utility-items/{item_id}`
+
+Params: **item_id**.
+
+Requires JWT Bearer (admin)."""
     db = get_db()
     await db.utility_items.delete_one({"id": item_id})
     return {"ok": True}
@@ -948,6 +1292,13 @@ async def admin_delete_utility_item(item_id: str, admin=Depends(require_admin)):
 @router.get("/utility/event/{event_id}")
 @router.get("/utility/rto/{event_id}")
 async def admin_get_utility_event_material(event_id: str, admin=Depends(require_admin)):
+    """Get utility event material.
+
+`GET /utility/event/{event_id}`
+
+Params: **event_id**.
+
+Requires JWT Bearer (admin)."""
     from ..media_urls import resolve_attachments
 
     db = get_db()
@@ -970,6 +1321,13 @@ async def admin_get_utility_event_material(event_id: str, admin=Depends(require_
 async def admin_update_utility_event_material(
     event_id: str, payload: EventUtilityMaterialUpdate, admin=Depends(require_admin)
 ):
+    """Update utility event material.
+
+`PUT /utility/event/{event_id}/material`
+
+Params: **event_id**, **payload**.
+
+Requires JWT Bearer (admin)."""
     from ..media_urls import resolve_attachments
 
     db = get_db()
@@ -1022,12 +1380,24 @@ async def admin_import_all_documents(admin=Depends(require_admin)):
 # ---- Albums ----
 @router.get("/albums")
 async def admin_list_albums(admin=Depends(require_admin)):
+    """List albums.
+
+`GET /albums`
+
+Requires JWT Bearer (admin)."""
     db = get_db()
     return await db.albums.find({}, {"_id": 0}).sort("sortOrder", 1).to_list(200)
 
 
 @router.post("/albums")
 async def admin_create_album(payload: Album, admin=Depends(require_admin)):
+    """Create album.
+
+`POST /albums`
+
+Params: **payload**.
+
+Requires JWT Bearer (admin)."""
     db = get_db()
     if not payload.slug:
         payload.slug = slugify(payload.title)
@@ -1038,6 +1408,13 @@ async def admin_create_album(payload: Album, admin=Depends(require_admin)):
 
 @router.put("/albums/{album_id}")
 async def admin_update_album(album_id: str, payload: Album, admin=Depends(require_admin)):
+    """Update album.
+
+`PUT /albums/{album_id}`
+
+Params: **album_id**, **payload**.
+
+Requires JWT Bearer (admin)."""
     db = get_db()
     payload.id = album_id
     doc = payload.model_dump()
@@ -1047,6 +1424,13 @@ async def admin_update_album(album_id: str, payload: Album, admin=Depends(requir
 
 @router.delete("/albums/{album_id}")
 async def admin_delete_album(album_id: str, admin=Depends(require_admin)):
+    """Delete album.
+
+`DELETE /albums/{album_id}`
+
+Params: **album_id**.
+
+Requires JWT Bearer (admin)."""
     db = get_db()
     await db.albums.delete_one({"id": album_id})
     return {"ok": True}
@@ -1066,12 +1450,24 @@ async def _attach_testimonial_member(db, doc: dict) -> dict:
 
 @router.get("/testimonials")
 async def admin_list_testimonials(admin=Depends(require_admin)):
+    """List testimonials.
+
+`GET /testimonials`
+
+Requires JWT Bearer (admin)."""
     db = get_db()
     return await db.testimonials.find({}, {"_id": 0}).sort("sortOrder", 1).to_list(100)
 
 
 @router.post("/testimonials")
 async def admin_create_testimonial(payload: Testimonial, admin=Depends(require_admin)):
+    """Create testimonial.
+
+`POST /testimonials`
+
+Params: **payload**.
+
+Requires JWT Bearer (admin)."""
     db = get_db()
     doc = await _attach_testimonial_member(db, payload.model_dump())
     await db.testimonials.insert_one(doc.copy())
@@ -1080,6 +1476,13 @@ async def admin_create_testimonial(payload: Testimonial, admin=Depends(require_a
 
 @router.put("/testimonials/{t_id}")
 async def admin_update_testimonial(t_id: str, payload: Testimonial, admin=Depends(require_admin)):
+    """Update testimonial.
+
+`PUT /testimonials/{t_id}`
+
+Params: **t_id**, **payload**.
+
+Requires JWT Bearer (admin)."""
     db = get_db()
     payload.id = t_id
     doc = await _attach_testimonial_member(db, payload.model_dump())
@@ -1089,6 +1492,13 @@ async def admin_update_testimonial(t_id: str, payload: Testimonial, admin=Depend
 
 @router.delete("/testimonials/{t_id}")
 async def admin_delete_testimonial(t_id: str, admin=Depends(require_admin)):
+    """Delete testimonial.
+
+`DELETE /testimonials/{t_id}`
+
+Params: **t_id**.
+
+Requires JWT Bearer (admin)."""
     from ..seed import _set_seed_flag
 
     db = get_db()
@@ -1107,6 +1517,13 @@ async def admin_list_gallery(
     dateTo: Optional[str] = None,
     admin=Depends(require_admin),
 ):
+    """List gallery.
+
+`GET /gallery`
+
+Params: **status**, **category**, **dateFrom**, **dateTo**.
+
+Requires JWT Bearer (admin)."""
     db = get_db()
     q: dict = {}
     if status:
@@ -1122,6 +1539,13 @@ async def admin_list_gallery(
 
 @router.post("/gallery")
 async def admin_create_gallery_image(payload: GalleryImageCreate, admin=Depends(require_admin)):
+    """Create gallery image.
+
+`POST /gallery`
+
+Params: **payload**.
+
+Requires JWT Bearer (admin)."""
     from ..article_categories import ensure_category_exists
     from ..gallery import save_uploaded_gallery_image
 
@@ -1204,6 +1628,13 @@ async def admin_gallery_source_image(image_id: str, admin=Depends(require_admin)
 async def admin_update_gallery_image(
     image_id: str, payload: GalleryImageUpdate, admin=Depends(require_admin)
 ):
+    """Update gallery image.
+
+`PUT /gallery/{image_id}`
+
+Params: **image_id**, **payload**.
+
+Requires JWT Bearer (admin)."""
     db = get_db()
     existing = await db.gallery_images.find_one({"id": image_id}, {"_id": 0, "id": 1})
     if not existing:
@@ -1239,6 +1670,13 @@ async def admin_update_gallery_image(
 
 @router.post("/gallery/{image_id}/approve")
 async def admin_approve_gallery_image(image_id: str, admin=Depends(require_admin)):
+    """Approve gallery image.
+
+`POST /gallery/{image_id}/approve`
+
+Params: **image_id**.
+
+Requires JWT Bearer (admin)."""
     db = get_db()
     res = await db.gallery_images.update_one(
         {"id": image_id},
@@ -1251,6 +1689,13 @@ async def admin_approve_gallery_image(image_id: str, admin=Depends(require_admin
 
 @router.post("/gallery/{image_id}/reject")
 async def admin_reject_gallery_image(image_id: str, admin=Depends(require_admin)):
+    """Reject gallery image.
+
+`POST /gallery/{image_id}/reject`
+
+Params: **image_id**.
+
+Requires JWT Bearer (admin)."""
     db = get_db()
     res = await db.gallery_images.update_one(
         {"id": image_id},
@@ -1263,6 +1708,13 @@ async def admin_reject_gallery_image(image_id: str, admin=Depends(require_admin)
 
 @router.delete("/gallery/{image_id}")
 async def admin_delete_gallery_image(image_id: str, admin=Depends(require_admin)):
+    """Delete gallery image.
+
+`DELETE /gallery/{image_id}`
+
+Params: **image_id**.
+
+Requires JWT Bearer (admin)."""
     db = get_db()
     await db.gallery_images.delete_one({"id": image_id})
     return {"ok": True}
@@ -1317,6 +1769,13 @@ async def admin_upload_gallery_image(
     aspect: str = Form("16:9"),
     admin=Depends(require_admin),
 ):
+    """Upload gallery image.
+
+`POST /gallery/upload`
+
+Params: **caption**, **sortOrder**, **category**, **sourceUrl**, **aspect**.
+
+Requires JWT Bearer (admin)."""
     import uuid as _u
     from ..media_urls import resolve_media_url
     from ..gallery import save_uploaded_gallery_image
@@ -1348,6 +1807,11 @@ async def admin_upload_gallery_image(
 # ---- Upload ----
 @router.post("/upload")
 async def admin_upload(file: UploadFile = File(...), admin=Depends(require_admin)):
+    """Upload.
+
+`POST /upload`
+
+Requires JWT Bearer (admin)."""
     import uuid as _u
     ext = Path(file.filename or "").suffix.lower() or ".bin"
     if ext not in {".jpg", ".jpeg", ".png", ".webp", ".gif", ".svg"}:
@@ -1375,6 +1839,11 @@ async def admin_upload(file: UploadFile = File(...), admin=Depends(require_admin
 
 @router.post("/upload-attachment")
 async def admin_upload_attachment(file: UploadFile = File(...), admin=Depends(require_admin)):
+    """Upload attachment.
+
+`POST /upload-attachment`
+
+Requires JWT Bearer (admin)."""
     import uuid as _u
 
     allowed = {
@@ -1410,6 +1879,11 @@ async def admin_upload_attachment(file: UploadFile = File(...), admin=Depends(re
 
 @router.get("/media")
 async def admin_list_media(admin=Depends(require_admin)):
+    """List media.
+
+`GET /media`
+
+Requires JWT Bearer (admin)."""
     db = get_db()
     return await db.media.find({}, {"_id": 0}).sort("createdAt", -1).to_list(500)
 
@@ -1417,6 +1891,13 @@ async def admin_list_media(admin=Depends(require_admin)):
 # ---- Comunicazioni interne (registro letture) ----
 @router.get("/comunicazioni/{comm_id}/letture")
 async def admin_comunicazione_letture(comm_id: str, admin=Depends(require_admin)):
+    """Comunicazione letture.
+
+`GET /comunicazioni/{comm_id}/letture`
+
+Params: **comm_id**.
+
+Requires JWT Bearer (admin)."""
     from ..comunicazioni_helpers import comunicazione_letture_report
 
     db = get_db()
