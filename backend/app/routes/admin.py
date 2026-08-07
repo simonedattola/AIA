@@ -35,11 +35,22 @@ UPLOAD_DIR.mkdir(parents=True, exist_ok=True)
 # ---- Auth ----
 @router.post("/login", response_model=TokenResponse)
 async def login(payload: LoginRequest):
+    from ..logging_config import log_event
+
+    email = (payload.email or "").lower().strip()
     db = get_db()
-    admin = await db.admin_users.find_one({"email": payload.email.lower()}, {"_id": 0})
+    admin = await db.admin_users.find_one({"email": email}, {"_id": 0})
     if not admin or not verify_password(payload.password, admin["passwordHash"]):
+        log_event(
+            logger,
+            "admin_login_failed",
+            level=logging.WARNING,
+            email=email,
+            reason="invalid_password",
+        )
         raise HTTPException(status_code=401, detail="Credenziali non valide")
     token = create_token({"sub": admin["email"], "role": "admin", "name": admin.get("name", "Admin")})
+    log_event(logger, "admin_login_attempt", email=email, outcome="success")
     return TokenResponse(token=token, admin=AdminInfo(email=admin["email"], name=admin.get("name", "Admin")))
 
 

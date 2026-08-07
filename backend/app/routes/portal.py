@@ -147,20 +147,46 @@ async def _upsert_presenza(db, event_id: str, member_id: str, stato: str, update
 # ---- Auth associato ----
 @router.post("/login")
 async def portal_login(payload: PortalLoginRequest):
+    from ..logging_config import log_event
+    import logging
+
+    _log = logging.getLogger(__name__)
     db = get_db()
     codice = (payload.codice or "").strip()
     if not codice:
+        log_event(_log, "portal_login_failed", level=logging.WARNING, reason="missing_codice")
         raise HTTPException(status_code=400, detail="Codice meccanografico obbligatorio")
     member = await db.members.find_one({"meccanografico": codice}, {"_id": 0})
     if not member:
+        log_event(
+            _log,
+            "portal_login_failed",
+            level=logging.WARNING,
+            codice=codice,
+            reason="unknown_member",
+        )
         raise HTTPException(status_code=401, detail="Credenziali non valide")
     if not member_can_use_portal(member):
+        log_event(
+            _log,
+            "portal_login_failed",
+            level=logging.WARNING,
+            codice=codice,
+            reason="portal_disabled",
+        )
         raise HTTPException(status_code=403, detail="Accesso portale non abilitato per questo profilo")
     if not member.get("passwordHash"):
         from ..portal_credentials import ensure_member_portal_credentials
         await ensure_member_portal_credentials(member)
         member = await db.members.find_one({"id": member["id"]}, {"_id": 0})
     if not verify_password(payload.password, member.get("passwordHash", "")):
+        log_event(
+            _log,
+            "portal_login_failed",
+            level=logging.WARNING,
+            codice=codice,
+            reason="invalid_password",
+        )
         raise HTTPException(status_code=401, detail="Credenziali non valide")
     token = create_token({
         "sub": member["id"],
@@ -170,6 +196,7 @@ async def portal_login(payload: PortalLoginRequest):
         "name": f"{member.get('firstName', '')} {member.get('lastName', '')}".strip(),
     })
     resolve_media_fields(member)
+    log_event(_log, "portal_login_attempt", codice=codice, outcome="success")
     return {"token": token, "member": member_public(member)}
 
 
