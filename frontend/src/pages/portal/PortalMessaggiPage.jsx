@@ -14,6 +14,7 @@ import {
   portalAggiornaGruppo,
   portalEliminaConversazione,
 } from "../../lib/portal-api";
+import { readJsonStorage, writeJsonStorage } from "../../lib/storage";
 import "../../styles/whatsapp-chat.css";
 import ChatList from "../../components/portal/chat/ChatList";
 import ChatWindow from "../../components/portal/chat/ChatWindow";
@@ -60,7 +61,7 @@ export default function PortalMessaggiPage() {
   const fileRef = useRef(null);
   const groupPhotoRef = useRef(null);
   const groupPanelPhotoRef = useRef(null);
-  const me = JSON.parse(localStorage.getItem("aia_member") || "{}");
+  const me = readJsonStorage("aia_member", {}) || {};
 
   const loadConversazioni = () => portalConversazioni().then(setConversazioni);
 

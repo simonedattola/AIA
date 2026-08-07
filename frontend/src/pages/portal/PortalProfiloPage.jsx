@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 
 import { portalMe, portalUpdateMe, portalUploadFoto, portalDeleteFoto, portalSubmitTestimonial } from "../../lib/portal-api";
+import { readJsonStorage, writeJsonStorage } from "../../lib/storage";
 
 import { Upload, Quote, Bell, Trash2 } from "lucide-react";
 
@@ -94,9 +95,9 @@ export default function PortalProfiloPage() {
 
       setForm((prev) => ({ ...prev, photoUrl: res.url }));
 
-      const stored = JSON.parse(localStorage.getItem("aia_member") || "{}");
+      const stored = readJsonStorage("aia_member", {}) || {};
 
-      localStorage.setItem("aia_member", JSON.stringify({ ...stored, photoUrl: res.url }));
+      writeJsonStorage("aia_member", { ...stored, photoUrl: res.url });
 
       setProfileMsg("Foto profilo aggiornata.");
 
@@ -130,9 +131,9 @@ export default function PortalProfiloPage() {
 
       setForm((prev) => ({ ...prev, photoUrl: "" }));
 
-      const stored = JSON.parse(localStorage.getItem("aia_member") || "{}");
+      const stored = readJsonStorage("aia_member", {}) || {};
 
-      localStorage.setItem("aia_member", JSON.stringify({ ...stored, photoUrl: "" }));
+      writeJsonStorage("aia_member", { ...stored, photoUrl: "" });
 
       setProfileMsg("Foto profilo rimossa.");
 
@@ -177,7 +178,7 @@ export default function PortalProfiloPage() {
 
       });
 
-      localStorage.setItem("aia_member", JSON.stringify(res));
+      writeJsonStorage("aia_member", res);
 
       setForm((prev) => ({
 

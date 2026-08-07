@@ -1,17 +1,24 @@
 """Admin routes - CRUD over all resources. Requires JWT admin token."""
 import logging
 import os
-import shutil
-from pathlib import Path
 from datetime import datetime, timezone
 from typing import Optional
-from fastapi import APIRouter, Depends, HTTPException, UploadFile, File, Form
+from fastapi import APIRouter, Depends, HTTPException, UploadFile, File, Form, Request
 from fastapi.responses import FileResponse, Response
 from slugify import slugify
 
 from ..db import get_db
 from ..security import require_admin, verify_password, create_token
 from ..paths import UPLOAD_DIR
+from ..member_roles import strip_sensitive_member_fields
+from ..uploads import (
+    save_upload,
+    IMAGE_EXTENSIONS,
+    ATTACHMENT_EXTENSIONS,
+    DEFAULT_IMAGE_MAX_BYTES,
+    max_bytes_for_attachment,
+)
+from ..rate_limit import client_ip, enforce_rate_limit
 from ..models import (
     LoginRequest, TokenResponse, AdminInfo,
     SiteSettings, Page, Article, ArticleCreate, Event,
@@ -34,10 +41,16 @@ UPLOAD_DIR.mkdir(parents=True, exist_ok=True)
 
 # ---- Auth ----
 @router.post("/login", response_model=TokenResponse)
-async def login(payload: LoginRequest):
+async def login(payload: LoginRequest, request: Request):
+    enforce_rate_limit(
+        f"admin-login:{client_ip(request)}",
+        max_hits=10,
+        window_seconds=300,
+        detail="Troppi tentativi di login, riprova tra poco",
+    )
     db = get_db()
     admin = await db.admin_users.find_one({"email": payload.email.lower()}, {"_id": 0})
-    if not admin or not verify_password(payload.password, admin["passwordHash"]):
+    if not admin or not verify_password(payload.password, admin.get("passwordHash", "")):
         raise HTTPException(status_code=401, detail="Credenziali non valide")
     token = create_token({"sub": admin["email"], "role": "admin", "name": admin.get("name", "Admin")})
     return TokenResponse(token=token, admin=AdminInfo(email=admin["email"], name=admin.get("name", "Admin")))
@@ -476,10 +489,14 @@ async def admin_list_members(memberRole: Optional[str] = None, admin=Depends(req
     from ..member_roles import normalize_member
 
     query = {"memberRole": memberRole} if memberRole else {}
-    items = await db.members.find(query, {"_id": 0}).sort([("lastName", 1), ("firstName", 1)]).to_list(500)
+    items = await db.members.find(
+        query,
+        {"_id": 0, "passwordHash": 0},
+    ).sort([("lastName", 1), ("firstName", 1)]).to_list(500)
     for item in items:
         normalize_member(item)
         resolve_media_fields(item)
+        strip_sensitive_member_fields(item)
     return items
 
 
@@ -521,11 +538,13 @@ async def admin_create_member(payload: MemberCreate, admin=Depends(require_admin
         awards=payload.awards or [],
     )
     doc = member.model_dump()
+    doc.pop("passwordHash", None)
     normalize_member(doc)
     await db.members.insert_one(doc.copy())
     from ..portal_credentials import ensure_member_portal_credentials
 
     await ensure_member_portal_credentials(doc)
+    strip_sensitive_member_fields(doc)
     return doc
 
 
@@ -545,17 +564,25 @@ async def admin_update_member(member_id: str, payload: Member, admin=Depends(req
     if not (payload.slug or "").strip():
         payload.slug = slugify(f"{payload.firstName}-{payload.lastName}")
     doc = payload.model_dump()
+    # Mai sovrascrivere l'hash password dal payload admin (evita reset involontario)
+    doc.pop("passwordHash", None)
     normalize_member(doc)
     await db.members.update_one({"id": member_id}, {"$set": doc})
     from ..media_urls import resolve_media_fields
     from ..member_category import refresh_member_category
 
+    existing = await db.members.find_one({"id": member_id}, {"_id": 0, "passwordHash": 1, "meccanografico": 1})
+    if existing:
+        doc["passwordHash"] = existing.get("passwordHash") or ""
+        if not doc.get("meccanografico"):
+            doc["meccanografico"] = existing.get("meccanografico") or ""
     if doc.get("memberRole") == "arbitro":
         await refresh_member_category(db, doc, persist=True)
     resolve_media_fields(doc)
     from ..portal_credentials import ensure_member_portal_credentials
 
     await ensure_member_portal_credentials(doc)
+    strip_sensitive_member_fields(doc)
     return doc
 
 
@@ -1317,17 +1344,14 @@ async def admin_upload_gallery_image(
     aspect: str = Form("16:9"),
     admin=Depends(require_admin),
 ):
-    import uuid as _u
     from ..media_urls import resolve_media_url
     from ..gallery import save_uploaded_gallery_image
 
-    ext = Path(file.filename or "").suffix.lower() or ".bin"
-    if ext not in {".jpg", ".jpeg", ".png", ".webp", ".gif"}:
-        raise HTTPException(400, "Formato non supportato")
-    name = f"{_u.uuid4().hex}{ext}"
-    target = UPLOAD_DIR / name
-    with target.open("wb") as f:
-        shutil.copyfileobj(file.file, f)
+    _target, name, _size = await save_upload(
+        file,
+        allowed_ext=IMAGE_EXTENSIONS,
+        max_bytes=DEFAULT_IMAGE_MAX_BYTES,
+    )
     rel_path = f"/api/uploads/{name}"
     url = resolve_media_url(rel_path)
     db = get_db()
@@ -1349,18 +1373,16 @@ async def admin_upload_gallery_image(
 @router.post("/upload")
 async def admin_upload(file: UploadFile = File(...), admin=Depends(require_admin)):
     import uuid as _u
-    ext = Path(file.filename or "").suffix.lower() or ".bin"
-    if ext not in {".jpg", ".jpeg", ".png", ".webp", ".gif", ".svg"}:
-        raise HTTPException(400, "Formato non supportato")
-    name = f"{_u.uuid4().hex}{ext}"
-    target = UPLOAD_DIR / name
-    with target.open("wb") as f:
-        shutil.copyfileobj(file.file, f)
+
+    _target, name, _size = await save_upload(
+        file,
+        allowed_ext=IMAGE_EXTENSIONS,
+        max_bytes=DEFAULT_IMAGE_MAX_BYTES,
+    )
     from ..media_urls import resolve_media_url
 
     rel_path = f"/api/uploads/{name}"
     abs_url = resolve_media_url(rel_path)
-    # Persist record
     db = get_db()
     doc = {
         "id": _u.uuid4().hex,
@@ -1376,25 +1398,16 @@ async def admin_upload(file: UploadFile = File(...), admin=Depends(require_admin
 @router.post("/upload-attachment")
 async def admin_upload_attachment(file: UploadFile = File(...), admin=Depends(require_admin)):
     import uuid as _u
+    from pathlib import Path as _Path
 
-    allowed = {
-        ".jpg", ".jpeg", ".png", ".webp", ".gif",
-        ".pdf", ".doc", ".docx", ".xls", ".xlsx", ".ppt", ".pptx", ".txt", ".zip",
-        ".mp4", ".webm", ".mov",
-    }
-    video_ext = {".mp4", ".webm", ".mov"}
-    ext = Path(file.filename or "").suffix.lower() or ".bin"
-    if ext not in allowed:
-        raise HTTPException(status_code=400, detail="Formato file non supportato")
-    max_bytes = 50 * 1024 * 1024 if ext in video_ext else 10 * 1024 * 1024
-    name = f"att_{_u.uuid4().hex}{ext}"
-    target = UPLOAD_DIR / name
-    with target.open("wb") as f:
-        shutil.copyfileobj(file.file, f)
-    if target.stat().st_size > max_bytes:
-        target.unlink(missing_ok=True)
-        limit_mb = max_bytes // (1024 * 1024)
-        raise HTTPException(status_code=400, detail=f"File troppo grande (max {limit_mb} MB)")
+    ext = _Path(file.filename or "").suffix.lower() or ".bin"
+    max_bytes = max_bytes_for_attachment(ext)
+    target, name, size = await save_upload(
+        file,
+        allowed_ext=ATTACHMENT_EXTENSIONS,
+        max_bytes=max_bytes,
+        name_prefix="att_",
+    )
     from ..media_urls import resolve_media_url
 
     rel_path = f"/api/uploads/{name}"
@@ -1403,7 +1416,7 @@ async def admin_upload_attachment(file: UploadFile = File(...), admin=Depends(re
         "fileName": file.filename or name,
         "fileUrl": rel_path,
         "url": resolve_media_url(rel_path),
-        "fileSize": target.stat().st_size,
+        "fileSize": size,
         "mimeType": file.content_type or "",
     }
 

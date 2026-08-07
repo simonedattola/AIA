@@ -2,8 +2,16 @@
 import os
 import asyncio
 import logging
+from html import escape as html_escape
 
 logger = logging.getLogger(__name__)
+
+
+def _e(value) -> str:
+    """Escape user-controlled values for HTML email bodies."""
+    if value is None:
+        return ""
+    return html_escape(str(value), quote=True)
 
 
 async def send_email(to: str, subject: str, html: str) -> bool:
@@ -41,13 +49,13 @@ def render_lead_email(lead: dict) -> str:
         Nuova candidatura - Corso Arbitri
       </h2>
       <table cellpadding="8" style="width:100%;border-collapse:collapse;">
-        <tr><td style="background:#F1F5F9;width:35%;"><strong>Nome</strong></td><td>{lead.get('firstName','')}</td></tr>
-        <tr><td style="background:#F1F5F9;"><strong>Cognome</strong></td><td>{lead.get('lastName','')}</td></tr>
-        <tr><td style="background:#F1F5F9;"><strong>Età</strong></td><td>{lead.get('age','-')}</td></tr>
-        <tr><td style="background:#F1F5F9;"><strong>Telefono</strong></td><td>{lead.get('phone','-')}</td></tr>
-        <tr><td style="background:#F1F5F9;"><strong>Email</strong></td><td>{lead.get('email','-')}</td></tr>
-        <tr><td style="background:#F1F5F9;"><strong>Preferenza contatto</strong></td><td>{pref}</td></tr>
-        <tr><td style="background:#F1F5F9;"><strong>Messaggio</strong></td><td>{lead.get('message','-')}</td></tr>
+        <tr><td style="background:#F1F5F9;width:35%;"><strong>Nome</strong></td><td>{_e(lead.get('firstName',''))}</td></tr>
+        <tr><td style="background:#F1F5F9;"><strong>Cognome</strong></td><td>{_e(lead.get('lastName',''))}</td></tr>
+        <tr><td style="background:#F1F5F9;"><strong>Età</strong></td><td>{_e(lead.get('age','-'))}</td></tr>
+        <tr><td style="background:#F1F5F9;"><strong>Telefono</strong></td><td>{_e(lead.get('phone','-'))}</td></tr>
+        <tr><td style="background:#F1F5F9;"><strong>Email</strong></td><td>{_e(lead.get('email','-'))}</td></tr>
+        <tr><td style="background:#F1F5F9;"><strong>Preferenza contatto</strong></td><td>{_e(pref)}</td></tr>
+        <tr><td style="background:#F1F5F9;"><strong>Messaggio</strong></td><td>{_e(lead.get('message','-'))}</td></tr>
       </table>
       <p style="color:#64748B;font-size:12px;margin-top:24px;">
         Inviato dal sito ufficiale AIA Legnano — Sezione Associazione Italiana Arbitri
@@ -62,11 +70,11 @@ def render_contact_email(msg: dict) -> str:
       <h2 style="color:#004587;border-bottom:3px solid #D4AF37;padding-bottom:8px;">
         Nuovo messaggio dal sito
       </h2>
-      <p><strong>Nome:</strong> {msg.get('name','')}</p>
-      <p><strong>Email:</strong> {msg.get('email','')}</p>
-      <p><strong>Oggetto:</strong> {msg.get('subject','-')}</p>
+      <p><strong>Nome:</strong> {_e(msg.get('name',''))}</p>
+      <p><strong>Email:</strong> {_e(msg.get('email',''))}</p>
+      <p><strong>Oggetto:</strong> {_e(msg.get('subject','-'))}</p>
       <hr/>
-      <p style="white-space:pre-line;">{msg.get('body','')}</p>
+      <p style="white-space:pre-line;">{_e(msg.get('body',''))}</p>
     </div>
     """
 
@@ -92,10 +100,10 @@ def _format_event_datetime_it(event: dict) -> str:
 def render_event_reminder_email(event: dict, member: dict, lead_hours: int) -> str:
     when = _format_event_datetime_it(event)
     lead = "1 ora" if lead_hours == 1 else f"{lead_hours} ore"
-    nome = f"{member.get('firstName', '')} {member.get('lastName', '')}".strip()
-    titolo = event.get("titolo", "Evento")
-    luogo = event.get("luogo", "")
-    descrizione = (event.get("descrizione") or "").strip()
+    nome = _e(f"{member.get('firstName', '')} {member.get('lastName', '')}".strip())
+    titolo = _e(event.get("titolo", "Evento"))
+    luogo = _e(event.get("luogo", ""))
+    descrizione = _e((event.get("descrizione") or "").strip())
     luogo_row = (
         f'<tr><td style="background:#F1F5F9;"><strong>Luogo</strong></td><td>{luogo}</td></tr>'
         if luogo
@@ -115,7 +123,7 @@ def render_event_reminder_email(event: dict, member: dict, lead_hours: int) -> s
       <p style="color:#334155;">Ti ricordiamo che tra <strong>{lead}</strong> è in programma:</p>
       <table cellpadding="8" style="width:100%;border-collapse:collapse;margin-top:12px;">
         <tr><td style="background:#F1F5F9;width:35%;"><strong>Evento</strong></td><td>{titolo}</td></tr>
-        <tr><td style="background:#F1F5F9;"><strong>Data e ora</strong></td><td>{when}</td></tr>
+        <tr><td style="background:#F1F5F9;"><strong>Data e ora</strong></td><td>{_e(when)}</td></tr>
         {luogo_row}
       </table>
       {desc_block}

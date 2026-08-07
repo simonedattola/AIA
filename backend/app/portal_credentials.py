@@ -69,11 +69,12 @@ async def ensure_member_portal_credentials(member: dict[str, Any]) -> None:
         return
     db = get_db()
     pwd = default_portal_password(member.get("firstName", ""), member.get("lastName", ""))
+    hashed = hash_password(pwd)
     await db.members.update_one(
         {"id": member["id"]},
-        {"$set": {"passwordHash": hash_password(pwd)}},
+        {"$set": {"passwordHash": hashed}},
     )
-    member["passwordHash"] = hash_password(pwd)
+    member["passwordHash"] = hashed
     logger.info("Password portale impostata per %s %s", member.get("firstName"), member.get("lastName"))
 
 

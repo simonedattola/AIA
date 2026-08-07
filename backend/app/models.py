@@ -2,7 +2,7 @@
 import uuid
 from datetime import datetime, timezone, date
 from typing import Optional, List
-from pydantic import BaseModel, Field, EmailStr, ConfigDict
+from pydantic import BaseModel, Field, EmailStr, ConfigDict, field_validator
 
 
 def _id() -> str:
@@ -404,13 +404,24 @@ class Testimonial(BaseModel):
 
 # ---- Lead (Corso arbitri) ----
 class LeadCreate(BaseModel):
-    firstName: str
-    lastName: str
-    age: Optional[int] = None
-    phone: str = ""
+    firstName: str = Field(min_length=1, max_length=80)
+    lastName: str = Field(min_length=1, max_length=80)
+    age: Optional[int] = Field(default=None, ge=10, le=99)
+    phone: str = Field(default="", max_length=40)
     email: EmailStr
     contactPreference: str = "email"  # email | phone
-    message: str = ""
+    message: str = Field(default="", max_length=2000)
+
+    @field_validator("firstName", "lastName", "phone", "message", mode="before")
+    @classmethod
+    def _strip_str(cls, v):
+        return (v or "").strip() if isinstance(v, str) else v
+
+    @field_validator("contactPreference")
+    @classmethod
+    def _pref(cls, v: str) -> str:
+        pref = (v or "email").strip().lower()
+        return pref if pref in ("email", "phone") else "email"
 
 
 class Lead(BaseModel):
@@ -429,10 +440,15 @@ class Lead(BaseModel):
 
 # ---- Contact message ----
 class ContactCreate(BaseModel):
-    name: str
+    name: str = Field(min_length=1, max_length=120)
     email: EmailStr
-    subject: str = ""
-    body: str
+    subject: str = Field(default="", max_length=200)
+    body: str = Field(min_length=1, max_length=5000)
+
+    @field_validator("name", "subject", "body", mode="before")
+    @classmethod
+    def _strip_contact(cls, v):
+        return (v or "").strip() if isinstance(v, str) else v
 
 
 class ContactMessage(BaseModel):

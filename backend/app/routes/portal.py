@@ -5,10 +5,7 @@ import uuid
 from datetime import datetime, timezone
 from typing import Optional, List
 
-from pathlib import Path
-import shutil
-
-from fastapi import APIRouter, Depends, HTTPException, UploadFile, File, Form
+from fastapi import APIRouter, Depends, HTTPException, UploadFile, File, Form, Request
 from pydantic import BaseModel, Field
 
 from ..db import get_db
@@ -19,6 +16,13 @@ from ..security import (
     require_member,
     require_admin,
 )
+from ..uploads import (
+    save_upload,
+    IMAGE_EXTENSIONS,
+    DEFAULT_IMAGE_MAX_BYTES,
+    DEFAULT_MESSAGE_ATTACHMENT_MAX_BYTES,
+)
+from ..rate_limit import client_ip, enforce_rate_limit
 from ..models import (
     PortalLoginRequest,
     PresenzaEventoUpdate,
@@ -146,7 +150,13 @@ async def _upsert_presenza(db, event_id: str, member_id: str, stato: str, update
 
 # ---- Auth associato ----
 @router.post("/login")
-async def portal_login(payload: PortalLoginRequest):
+async def portal_login(payload: PortalLoginRequest, request: Request):
+    enforce_rate_limit(
+        f"portal-login:{client_ip(request)}",
+        max_hits=15,
+        window_seconds=300,
+        detail="Troppi tentativi di login, riprova tra poco",
+    )
     db = get_db()
     codice = (payload.codice or "").strip()
     if not codice:
@@ -686,19 +696,20 @@ async def portal_upload_allegato(file: UploadFile = File(...), auth=Depends(requ
         ".jpg", ".jpeg", ".png", ".webp", ".gif",
         ".pdf", ".doc", ".docx", ".xls", ".xlsx", ".ppt", ".pptx", ".txt", ".zip",
     }
-    ext = Path(file.filename or "").suffix.lower() or ".bin"
-    if ext not in allowed:
-        raise HTTPException(status_code=400, detail="Formato file non supportato")
-    UPLOAD_DIR.mkdir(parents=True, exist_ok=True)
-    name = f"msg_{uuid.uuid4().hex}{ext}"
-    target = UPLOAD_DIR / name
-    with target.open("wb") as f:
-        shutil.copyfileobj(file.file, f)
+    from pathlib import Path as _Path
+
+    ext = _Path(file.filename or "").suffix.lower() or ".bin"
+    _target, name, _size = await save_upload(
+        file,
+        allowed_ext=allowed,
+        max_bytes=DEFAULT_MESSAGE_ATTACHMENT_MAX_BYTES,
+        name_prefix="msg_",
+    )
     from ..media_urls import resolve_media_url
 
     rel_path = f"/api/uploads/{name}"
     mime = file.content_type or ""
-    tipo = "image" if mime.startswith("image/") or ext in {".jpg", ".jpeg", ".png", ".webp", ".gif"} else "file"
+    tipo = "image" if mime.startswith("image/") or ext in IMAGE_EXTENSIONS else "file"
     return {
         "attachmentUrl": rel_path,
         "attachmentUrlResolved": resolve_media_url(rel_path),
@@ -812,14 +823,11 @@ async def portal_gallery_upload(
     category: str = Form(""),
     auth=Depends(require_member),
 ):
-    ext = Path(file.filename or "").suffix.lower() or ".bin"
-    if ext not in {".jpg", ".jpeg", ".png", ".webp", ".gif"}:
-        raise HTTPException(status_code=400, detail="Formato non supportato")
-    UPLOAD_DIR.mkdir(parents=True, exist_ok=True)
-    name = f"{uuid.uuid4().hex}{ext}"
-    target = UPLOAD_DIR / name
-    with target.open("wb") as f:
-        shutil.copyfileobj(file.file, f)
+    _target, name, _size = await save_upload(
+        file,
+        allowed_ext=IMAGE_EXTENSIONS,
+        max_bytes=DEFAULT_IMAGE_MAX_BYTES,
+    )
     from ..article_categories import validate_member_category_choice
     from ..media_urls import resolve_media_url
     from ..gallery import save_uploaded_gallery_image
@@ -849,14 +857,11 @@ async def portal_gallery_upload(
 
 @router.post("/upload-foto")
 async def portal_upload_foto(file: UploadFile = File(...), auth=Depends(require_member)):
-    ext = Path(file.filename or "").suffix.lower() or ".bin"
-    if ext not in {".jpg", ".jpeg", ".png", ".webp", ".gif"}:
-        raise HTTPException(status_code=400, detail="Formato non supportato")
-    UPLOAD_DIR.mkdir(parents=True, exist_ok=True)
-    name = f"{uuid.uuid4().hex}{ext}"
-    target = UPLOAD_DIR / name
-    with target.open("wb") as f:
-        shutil.copyfileobj(file.file, f)
+    _target, name, _size = await save_upload(
+        file,
+        allowed_ext=IMAGE_EXTENSIONS,
+        max_bytes=DEFAULT_IMAGE_MAX_BYTES,
+    )
     from ..media_urls import resolve_media_url
 
     rel_path = f"/api/uploads/{name}"

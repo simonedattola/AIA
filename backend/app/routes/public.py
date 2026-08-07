@@ -1,6 +1,7 @@
 """Public API routes - readable without authentication."""
-from fastapi import APIRouter, HTTPException, BackgroundTasks
+from fastapi import APIRouter, HTTPException, BackgroundTasks, Request
 from typing import Optional
+from html import escape as html_escape
 
 from ..db import get_db
 from ..designation_enrich import build_member_lookups, enrich_designation, enrich_testimonial
@@ -10,15 +11,15 @@ from ..member_roles import (
     public_member,
     legacy_arbitri_query,
     legacy_chi_siamo_query,
-    is_observer_designation_role,
 )
 from ..media_urls import resolve_media_fields, resolve_attachments
-from ..sanitize import sanitize_html
 from ..page_nav import page_to_nav_item
 from ..models import (
     LeadCreate, Lead, ContactCreate, ContactMessage,
 )
 from ..mailer import send_email, render_lead_email, render_contact_email, contact_preference_label
+from ..query_utils import clamp_limit, clamp_skip, safe_regex
+from ..rate_limit import client_ip, enforce_rate_limit
 import os
 
 router = APIRouter(prefix="/api/public", tags=["public"])
@@ -70,9 +71,11 @@ async def get_page(slug: str):
 @router.get("/articles")
 async def list_articles(category: Optional[str] = None, limit: int = 20, skip: int = 0):
     db = get_db()
+    limit = clamp_limit(limit, default=20, max_limit=100)
+    skip = clamp_skip(skip)
     q = {"status": "published", "portalOnly": {"$ne": True}}
     if category:
-        q["category"] = category
+        q["category"] = category[:80]
     total = await db.articles.count_documents(q)
     items = await db.articles.find(q, {"_id": 0}).sort("publishedAt", -1).skip(skip).limit(limit).to_list(limit)
     for item in items:
@@ -92,7 +95,6 @@ async def get_article(slug: str):
     from ..article_body import normalize_article_body_html
 
     art["bodyHtml"] = normalize_article_body_html(art.get("bodyHtml") or "")
-    # related: same category, 3 most recent excluding current
     resolve_media_fields(art)
     related = await db.articles.find(
         {"status": "published", "category": art["category"], "slug": {"$ne": slug}},
@@ -116,6 +118,7 @@ async def list_events(upcoming: bool = False, limit: int = 50):
     db = get_db()
     from ..event_access import public_events_query
 
+    limit = clamp_limit(limit, default=50, max_limit=200)
     today = ""
     if upcoming:
         from datetime import datetime, timezone
@@ -146,6 +149,7 @@ async def list_members(
 ):
     """Lista membri. Default: arbitri+assistenti. scope=chi_siamo per CD/osservatori."""
     db = get_db()
+    limit = clamp_limit(limit, default=200, max_limit=500)
     if memberRole:
         query = {"memberRole": memberRole}
     elif scope in ("chi_siamo", "organigramma"):
@@ -153,19 +157,22 @@ async def list_members(
     else:
         query = legacy_arbitri_query()
     if category:
-        query["category"] = category
+        query["category"] = category[:80]
     if q:
-        query["$or"] = [
-            {"firstName": {"$regex": q, "$options": "i"}},
-            {"lastName": {"$regex": q, "$options": "i"}},
-        ]
+        pattern = safe_regex(q)
+        if pattern:
+            query["$or"] = [
+                {"firstName": {"$regex": pattern, "$options": "i"}},
+                {"lastName": {"$regex": pattern, "$options": "i"}},
+            ]
     from ..member_category import refresh_member_category
 
     items = await db.members.find(query, {"_id": 0}).sort([("lastName", 1), ("firstName", 1)]).limit(limit).to_list(limit)
     for item in items:
         normalize_member(item)
+        # Non persistere su GET pubblici (evita write storm / side-effect)
         if item.get("memberRole") == "arbitro":
-            await refresh_member_category(db, item, persist=True)
+            await refresh_member_category(db, item, persist=False)
         resolve_media_fields(item)
         public_member(item)
     return items
@@ -194,17 +201,17 @@ async def get_member(slug: str, season: Optional[str] = None):
     des_q = member_designations_query(m, season=active_season)
     if des_q:
         designations = await db.designations.find(des_q, {"_id": 0}).sort("matchDate", -1).limit(1000).to_list(1000)
+        # Enrich only in-memory on public GET (backfill is handled by sync/admin jobs)
         slug_val = (m.get("slug") or "").strip()
         for d in designations:
-            updates = {}
             if d.get("memberId") != mid:
-                updates["memberId"] = mid
+                d["memberId"] = mid
             if slug_val and (d.get("memberSlug") or "") != slug_val:
-                updates["memberSlug"] = slug_val
-            if updates:
-                await db.designations.update_one({"id": d["id"]}, {"$set": updates})
-                d.update(updates)
-    members = await db.members.find(legacy_arbitri_query(), {"_id": 0, "id": 1, "slug": 1, "firstName": 1, "lastName": 1, "kind": 1, "memberRole": 1}).to_list(2000)
+                d["memberSlug"] = slug_val
+    members = await db.members.find(
+        legacy_arbitri_query(),
+        {"_id": 0, "id": 1, "slug": 1, "firstName": 1, "lastName": 1, "kind": 1, "memberRole": 1},
+    ).to_list(2000)
     slug_by_id, member_by_name = build_member_lookups(members)
     for item in designations:
         enrich_designation(item, slug_by_id, member_by_name)
@@ -212,7 +219,7 @@ async def get_member(slug: str, season: Optional[str] = None):
     from ..member_category import refresh_member_category
 
     if m.get("memberRole") == "arbitro":
-        await refresh_member_category(db, m, persist=True)
+        await refresh_member_category(db, m, persist=False)
 
     article_fields = {"_id": 0, "slug": 1, "title": 1, "category": 1, "excerpt": 1, "coverUrl": 1, "publishedAt": 1}
     articles = await db.articles.find(
@@ -259,6 +266,7 @@ async def list_designations(role: Optional[str] = None, category: Optional[str] 
     db = get_db()
     from ..designation_filters import designations_page_query
 
+    limit = clamp_limit(limit, default=500, max_limit=1000)
     settings = await db.site_settings.find_one({"id": "site-settings"}, {"_id": 0, "lastDesignationsSync": 1}) or {}
     last_sync = settings.get("lastDesignationsSync")
     query = designations_page_query(last_sync)
@@ -266,12 +274,16 @@ async def list_designations(role: Optional[str] = None, category: Optional[str] 
         if role == "Assistente":
             query["$and"].append({"role": {"$regex": r"^Assistente", "$options": "i"}})
         else:
-            query["$and"].append({"role": role})
+            query["$and"].append({"role": role[:80]})
     if category:
-        query["$and"].append({"$or": [{"championship": category}, {"category": category}]})
+        cat = category[:80]
+        query["$and"].append({"$or": [{"championship": cat}, {"category": cat}]})
     items = await db.designations.find(query, {"_id": 0}).sort("matchDate", 1).limit(limit).to_list(limit)
 
-    members = await db.members.find(legacy_arbitri_query(), {"_id": 0, "id": 1, "slug": 1, "firstName": 1, "lastName": 1, "kind": 1, "memberRole": 1}).to_list(2000)
+    members = await db.members.find(
+        legacy_arbitri_query(),
+        {"_id": 0, "id": 1, "slug": 1, "firstName": 1, "lastName": 1, "kind": 1, "memberRole": 1},
+    ).to_list(2000)
     slug_by_id, member_by_name = build_member_lookups(members)
     for item in items:
         enrich_designation(item, slug_by_id, member_by_name)
@@ -309,7 +321,7 @@ async def get_stats():
     events_upcoming = await db.events.count_documents({"date": {"$gte": today}})
     settings = await db.site_settings.find_one({}, {"_id": 0}) or {}
     founded = settings.get("foundedYear", "1927")
-    years = max(1, datetime.now().year - int(founded)) if founded.isdigit() else 99
+    years = max(1, datetime.now().year - int(founded)) if str(founded).isdigit() else 99
     return {
         "members": members_total,
         "associati": associati,
@@ -339,7 +351,7 @@ async def list_documents(category: Optional[str] = None):
     db = get_db()
     q = {}
     if category:
-        q["category"] = category
+        q["category"] = category[:120]
     docs = await db.documents.find(q, {"_id": 0}).sort("sortOrder", 1).to_list(500)
     for d in docs:
         if d.get("fileUrl"):
@@ -376,16 +388,11 @@ async def list_testimonials():
     slug_by_id, member_by_name = build_member_lookups(members, arbitri_only=False)
     member_by_id = {str(m["id"]): m for m in members if m.get("id")}
     for item in items:
-        before_slug = (item.get("memberSlug") or "").strip()
         enrich_testimonial(item, slug_by_id, member_by_name, member_by_id)
         resolve_media_fields(item)
-        slug_val = (item.get("memberSlug") or "").strip()
-        if slug_val and slug_val != before_slug:
-            await db.testimonials.update_one({"id": item["id"]}, {"$set": {"memberSlug": slug_val}})
     return items
 
 
-# ---- Forms ----
 @router.get("/gallery")
 async def get_gallery():
     from ..gallery import list_public_gallery
@@ -396,39 +403,60 @@ async def get_gallery():
 
 
 @router.post("/forms/corso-arbitri", status_code=201)
-async def submit_lead(payload: LeadCreate, background: BackgroundTasks):
+async def submit_lead(payload: LeadCreate, background: BackgroundTasks, request: Request):
+    enforce_rate_limit(
+        f"lead:{client_ip(request)}",
+        max_hits=5,
+        window_seconds=600,
+        detail="Troppe candidature da questo indirizzo, riprova più tardi",
+    )
     db = get_db()
     lead = Lead(**payload.model_dump())
     doc = lead.model_dump()
-    await db.leads.insert_one(doc.copy())  # copy to avoid _id mutation
-    # email notifications
+    await db.leads.insert_one(doc.copy())
     notify = os.environ.get("NOTIFY_EMAIL", "").strip()
     if notify:
-        background.add_task(send_email, notify,
-                            f"Nuova candidatura corso arbitri – {lead.firstName} {lead.lastName}",
-                            render_lead_email(doc))
-    # confirmation to user
-    background.add_task(send_email, lead.email,
-                        "Grazie! Abbiamo ricevuto la tua candidatura - AIA Legnano",
-                        f"""<div style="font-family:Arial,sans-serif;max-width:600px;">
-                        <h2 style="color:#004587;">Ciao {lead.firstName},</h2>
+        background.add_task(
+            send_email,
+            notify,
+            f"Nuova candidatura corso arbitri – {lead.firstName} {lead.lastName}",
+            render_lead_email(doc),
+        )
+    safe_name = html_escape(lead.firstName)
+    pref = html_escape(contact_preference_label(lead.contactPreference))
+    background.add_task(
+        send_email,
+        lead.email,
+        "Grazie! Abbiamo ricevuto la tua candidatura - AIA Legnano",
+        f"""<div style="font-family:Arial,sans-serif;max-width:600px;">
+                        <h2 style="color:#004587;">Ciao {safe_name},</h2>
                         <p>grazie per aver inviato la tua candidatura al <strong>corso arbitri</strong>
                         della Sezione AIA di Legnano.</p>
-                        <p>Un nostro referente ti contatterà entro pochi giorni tramite {contact_preference_label(lead.contactPreference)}.</p>
+                        <p>Un nostro referente ti contatterà entro pochi giorni tramite {pref}.</p>
                         <p style="margin-top:24px;color:#64748B;">A presto sui campi,<br/>
-                        <strong>Sezione AIA Legnano</strong></p></div>""")
+                        <strong>Sezione AIA Legnano</strong></p></div>""",
+    )
     return {"ok": True, "id": lead.id}
 
 
 @router.post("/forms/contatti", status_code=201)
-async def submit_contact(payload: ContactCreate, background: BackgroundTasks):
+async def submit_contact(payload: ContactCreate, background: BackgroundTasks, request: Request):
+    enforce_rate_limit(
+        f"contact:{client_ip(request)}",
+        max_hits=8,
+        window_seconds=600,
+        detail="Troppi messaggi da questo indirizzo, riprova più tardi",
+    )
     db = get_db()
     msg = ContactMessage(**payload.model_dump())
     doc = msg.model_dump()
     await db.contact_messages.insert_one(doc.copy())
     notify = os.environ.get("NOTIFY_EMAIL", "").strip()
     if notify:
-        background.add_task(send_email, notify,
-                            f"[Sito AIA Legnano] {payload.subject or 'Nuovo messaggio'}",
-                            render_contact_email(doc))
+        background.add_task(
+            send_email,
+            notify,
+            f"[Sito AIA Legnano] {payload.subject or 'Nuovo messaggio'}",
+            render_contact_email(doc),
+        )
     return {"ok": True, "id": msg.id}

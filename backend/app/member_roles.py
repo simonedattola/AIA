@@ -74,10 +74,32 @@ def normalize_member(doc: dict) -> dict:
     return doc
 
 
+_SENSITIVE_MEMBER_FIELDS = frozenset({
+    "notes",
+    "meccanografico",
+    "passwordHash",
+    "emailNotifyEvents",
+    "emailNotifyEventLeadHours",
+    "emailNotifyComunicazioni",
+    "emailNotifyMessages",
+})
+
+
+def strip_sensitive_member_fields(doc: dict) -> dict:
+    """Rimuove hash password e altri campi interni dalle risposte API."""
+    doc.pop("passwordHash", None)
+    return doc
+
+
 def public_member(doc: dict) -> dict:
     """Campi esposti sul sito pubblico (senza note private né codice meccanografico)."""
     normalize_member(doc)
-    out = {k: v for k, v in doc.items() if k not in ("notes", "meccanografico", "passwordHash")}
+    out = {k: v for k, v in doc.items() if k not in _SENSITIVE_MEMBER_FIELDS}
+    # Email/telefono solo se esplicitamente pubblici
+    if not doc.get("emailVisibile"):
+        out["email"] = ""
+    if not doc.get("telefonoVisibile"):
+        out["phone"] = ""
     return out
 
 

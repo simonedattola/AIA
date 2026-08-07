@@ -17,8 +17,8 @@ import requests
 BASE_URL = os.environ.get("REACT_APP_BACKEND_URL", "https://arbitri-platform.preview.emergentagent.com").rstrip("/")
 API = f"{BASE_URL}/api"
 
-ADMIN_EMAIL = "admin@aia-legnano.it"
-ADMIN_PASSWORD = "AiaLegnano2026!"
+ADMIN_EMAIL = os.environ.get("ADMIN_EMAIL", "admin@aia-legnano.it")
+ADMIN_PASSWORD = os.environ.get("ADMIN_PASSWORD", "AiaLegnano2026!")
 
 
 # ---------- Fixtures ----------
