@@ -17,16 +17,75 @@ HREF_TO_SLUG["/associati"] = "arbitri"
 HREF_TO_SLUG["/associati/"] = "arbitri"
 
 MENU_PAGE_DEFAULTS = [
-    {"slug": "home", "title": "Home", "menuLabel": "Home", "menuOrder": 1, "showInMenu": True},
-    {"slug": "chi-siamo", "title": "Chi Siamo", "menuLabel": "Chi Siamo", "menuOrder": 2, "showInMenu": True},
-    {"slug": "designazioni", "title": "Designazioni", "menuLabel": "Designazioni", "menuOrder": 3, "showInMenu": True},
-    {"slug": "arbitri", "title": "Arbitri", "menuLabel": "Arbitri", "menuOrder": 4, "showInMenu": True},
-    {"slug": "news", "title": "News & Successi", "menuLabel": "News & Successi", "menuOrder": 5, "showInMenu": True},
-    {"slug": "eventi", "title": "Eventi", "menuLabel": "Eventi", "menuOrder": 6, "showInMenu": True},
-    {"slug": "contatti", "title": "Contatti", "menuLabel": "Contatti", "menuOrder": 7, "showInMenu": True},
-    {"slug": "diventa-arbitro", "title": "Diventa Arbitro", "showInMenu": False, "menuOrder": 0},
-    {"slug": "area-associati", "title": "Area associati", "menuLabel": "Area associati", "showInMenu": False, "menuOrder": 8, "menuHighlight": True},
-    {"slug": "arbitro-profilo", "title": "Profilo arbitro", "showInMenu": False, "menuOrder": 99},
+    {
+        "slug": "home",
+        "title": "Home",
+        "menuLabel": "Home",
+        "menuOrder": 1,
+        "showInMenu": True,
+    },
+    {
+        "slug": "chi-siamo",
+        "title": "Chi Siamo",
+        "menuLabel": "Chi Siamo",
+        "menuOrder": 2,
+        "showInMenu": True,
+    },
+    {
+        "slug": "designazioni",
+        "title": "Designazioni",
+        "menuLabel": "Designazioni",
+        "menuOrder": 3,
+        "showInMenu": True,
+    },
+    {
+        "slug": "arbitri",
+        "title": "Arbitri",
+        "menuLabel": "Arbitri",
+        "menuOrder": 4,
+        "showInMenu": True,
+    },
+    {
+        "slug": "news",
+        "title": "News & Successi",
+        "menuLabel": "News & Successi",
+        "menuOrder": 5,
+        "showInMenu": True,
+    },
+    {
+        "slug": "eventi",
+        "title": "Eventi",
+        "menuLabel": "Eventi",
+        "menuOrder": 6,
+        "showInMenu": True,
+    },
+    {
+        "slug": "contatti",
+        "title": "Contatti",
+        "menuLabel": "Contatti",
+        "menuOrder": 7,
+        "showInMenu": True,
+    },
+    {
+        "slug": "diventa-arbitro",
+        "title": "Diventa Arbitro",
+        "showInMenu": False,
+        "menuOrder": 0,
+    },
+    {
+        "slug": "area-associati",
+        "title": "Area associati",
+        "menuLabel": "Area associati",
+        "showInMenu": False,
+        "menuOrder": 8,
+        "menuHighlight": True,
+    },
+    {
+        "slug": "arbitro-profilo",
+        "title": "Profilo arbitro",
+        "showInMenu": False,
+        "menuOrder": 99,
+    },
 ]
 
 

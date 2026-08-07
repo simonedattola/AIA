@@ -1,0 +1,35 @@
+name: PR Checks
+
+# Unified gate: backend + frontend must both pass before merge.
+# Enable branch protection on `main` requiring this workflow's `verify` job
+# (Settings → Branches → Require status checks → "verify").
+# See .github/CI.md.
+
+on:
+  pull_request:
+    branches: [main]
+  push:
+    branches: [main, "cursor/**"]
+
+jobs:
+  backend:
+    uses: ./.github/workflows/backend-test.yml
+
+  frontend:
+    uses: ./.github/workflows/frontend-test.yml
+
+  verify:
+    name: verify
+    needs: [backend, frontend]
+    runs-on: ubuntu-latest
+    if: always()
+    steps:
+      - name: Require backend + frontend success
+        run: |
+          echo "backend=${{ needs.backend.result }}"
+          echo "frontend=${{ needs.frontend.result }}"
+          if [ "${{ needs.backend.result }}" != "success" ] || [ "${{ needs.frontend.result }}" != "success" ]; then
+            echo "One or more required checks failed."
+            exit 1
+          fi
+          echo "All PR checks passed."

@@ -61,10 +61,7 @@ export default function PortalComunicazioniPage() {
     const id = searchParams.get("id");
 
     if (id) openDetail(id);
-
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-
-  }, [searchParams]);
+  }, [searchParams]); // eslint-disable-line react-hooks/exhaustive-deps
 
 
 

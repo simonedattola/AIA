@@ -1,4 +1,5 @@
 """Pulizia articoli importati dal sito legacy."""
+
 from __future__ import annotations
 
 import html as html_lib
@@ -32,7 +33,9 @@ def is_weekly_designations_article(doc: dict) -> bool:
         return True
     if DESIGNATIONS_TITLE.search(title):
         return True
-    text = article_plain_text(title, doc.get("bodyHtml") or "", doc.get("excerpt") or "")
+    text = article_plain_text(
+        title, doc.get("bodyHtml") or "", doc.get("excerpt") or ""
+    )
     if DESIGNATIONS_BODY.search(text) and text.lower().count("girone") >= 2:
         return True
     if text.count("GARA :") + text.count("GARA:") >= 4:
@@ -74,7 +77,9 @@ async def run_article_cleanup(db) -> dict[str, Any]:
     }
 
     to_delete: list[str] = []
-    async for doc in db.articles.find({}, {"_id": 0, "id": 1, "slug": 1, "title": 1, "bodyHtml": 1, "excerpt": 1}):
+    async for doc in db.articles.find(
+        {}, {"_id": 0, "id": 1, "slug": 1, "title": 1, "bodyHtml": 1, "excerpt": 1}
+    ):
         if is_weekly_designations_article(doc):
             to_delete.append(doc["id"])
             stats["deleted_designations"] += 1

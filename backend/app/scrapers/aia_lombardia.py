@@ -5,6 +5,7 @@ Hierarchy:
   gir.asp?gare=3-270-SEC  -> matchday links (des.asp)
   des.asp?gare=3-270-SEC-R -> match table with referees
 """
+
 from __future__ import annotations
 
 import hashlib
@@ -179,7 +180,9 @@ def parse_des_page(html: str, page_url: str, gare: str) -> list[ScrapedDesignati
                     continue
                 out.append(
                     ScrapedDesignation(
-                        external_id=_external_id(match_date or "1970-01-01", home, away, role, name),
+                        external_id=_external_id(
+                            match_date or "1970-01-01", home, away, role, name
+                        ),
                         match_date=match_date or "1970-01-01",
                         championship=championship,
                         match_home=home,
@@ -319,7 +322,9 @@ class AiaLombardiaScraper:
         self.timeout = timeout
         self.source = source
         self.section_index_url = (
-            f"{self.base_url}default.asp?gare={self.section_gare}" if self.section_gare else self.base_url
+            f"{self.base_url}default.asp?gare={self.section_gare}"
+            if self.section_gare
+            else self.base_url
         )
 
     def fetch(self, client: httpx.Client, url: str) -> str:
@@ -352,9 +357,7 @@ class AiaLombardiaScraper:
         # Lombardia (e altri CRA): i gir.asp sono nelle pagine default.asp di ogni sezione.
         section_urls = _discover_section_index_urls(html, self.base_url)
         if not section_urls and "lombardia" in self.base_url.lower():
-            section_urls = [
-                s["url"] for s in self.list_lombardia_sections(client)
-            ]
+            section_urls = [s["url"] for s in self.list_lombardia_sections(client)]
 
         all_gir: list[str] = []
         seen: set[str] = set()
@@ -452,7 +455,9 @@ class AiaLombardiaScraper:
             gare = _gare_from_url(urljoin(BASE_URL, href))
             if not gare or not label:
                 continue
-            sections.append({"label": label, "gare": gare, "url": urljoin(BASE_URL, href)})
+            sections.append(
+                {"label": label, "gare": gare, "url": urljoin(BASE_URL, href)}
+            )
         # dedupe by gare
         by_gare: dict[str, dict] = {}
         for s in sections:

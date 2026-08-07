@@ -1,4 +1,5 @@
 """Shared filesystem paths for the backend."""
+
 import os
 from pathlib import Path
 

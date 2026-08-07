@@ -1,4 +1,5 @@
 """Scrape documenti da https://www.aia-legnano.it/download/"""
+
 from __future__ import annotations
 
 import logging
@@ -75,7 +76,8 @@ def _is_download_href(href: str, page_url: str) -> bool:
     if low.rstrip("/") in ("/download", "download", page_url.rstrip("/")):
         return False
     if "aia-legnano.it/download" in low and not any(
-        ext in low for ext in (".pdf", ".doc", ".docx", ".zip", ".pptx", ".mp3", "/documents/")
+        ext in low
+        for ext in (".pdf", ".doc", ".docx", ".zip", ".pptx", ".mp3", "/documents/")
     ):
         return False
     return any(
@@ -94,10 +96,14 @@ def _is_download_href(href: str, page_url: str) -> bool:
     )
 
 
-def scrape_legnano_downloads(client: httpx.Client | None = None) -> list[ScrapedDownload]:
+def scrape_legnano_downloads(
+    client: httpx.Client | None = None,
+) -> list[ScrapedDownload]:
     own = client is None
     if own:
-        client = httpx.Client(headers=DEFAULT_HEADERS, follow_redirects=True, timeout=60.0)
+        client = httpx.Client(
+            headers=DEFAULT_HEADERS, follow_redirects=True, timeout=60.0
+        )
     try:
         res = client.get(DOWNLOAD_PAGE)
         res.raise_for_status()

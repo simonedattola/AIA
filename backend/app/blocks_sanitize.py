@@ -1,4 +1,5 @@
 """Sanitize a Page's blocks: walk rich_text bodies and clean HTML."""
+
 import re
 
 import bleach
@@ -30,7 +31,19 @@ def normalize_instagram_embed_html(html: str) -> str | None:
 _EMBED_BLEACH = {
     "tags": ["iframe", "video", "source", "div", "p", "br", "a", "span"],
     "attributes": {
-        "iframe": ["src", "width", "height", "frameborder", "allow", "allowfullscreen", "title", "loading", "referrerpolicy", "scrolling", "allowtransparency"],
+        "iframe": [
+            "src",
+            "width",
+            "height",
+            "frameborder",
+            "allow",
+            "allowfullscreen",
+            "title",
+            "loading",
+            "referrerpolicy",
+            "scrolling",
+            "allowtransparency",
+        ],
         "video": ["src", "controls", "width", "height", "poster"],
         "source": ["src", "type"],
         "a": ["href", "target", "rel"],

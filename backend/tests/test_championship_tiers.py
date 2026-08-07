@@ -7,7 +7,9 @@ from app.championship_tiers import (
 
 
 def test_detect_tiers():
-    assert detect_championship_tier("SECONDA CATEGORIA · Girone R") == "Seconda Categoria"
+    assert (
+        detect_championship_tier("SECONDA CATEGORIA · Girone R") == "Seconda Categoria"
+    )
     assert detect_championship_tier("Serie D") == "Serie D"
     assert detect_championship_tier("ECCELLENZA") == "Eccellenza"
 

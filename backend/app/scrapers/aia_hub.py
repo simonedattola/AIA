@@ -1,4 +1,5 @@
 """Scoperta hub da https://www.aia-figc.it/designazioni/ e crawl multi-hub."""
+
 from __future__ import annotations
 
 import logging
@@ -110,7 +111,11 @@ def scrape_designazioni_hubs(
                 continue
             if only is not None and hub.slug not in only:
                 continue
-            source = "aia-figc-lombardia" if hub.slug == "lombardia" else f"aia-figc-{hub.slug}"
+            source = (
+                "aia-figc-lombardia"
+                if hub.slug == "lombardia"
+                else f"aia-figc-{hub.slug}"
+            )
             try:
                 scraper = AiaLombardiaScraper(
                     section_gare="",

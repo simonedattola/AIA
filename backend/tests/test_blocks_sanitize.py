@@ -5,7 +5,7 @@ def test_normalize_instagram_embed_from_blockquote():
     html = (
         '<blockquote class="instagram-media" data-instgrm-permalink='
         '"https://www.instagram.com/p/DW1XFlpjGQV/?utm_source=ig_embed">'
-        "</blockquote><script async src=\"//www.instagram.com/embed.js\"></script>"
+        '</blockquote><script async src="//www.instagram.com/embed.js"></script>'
     )
     out = normalize_instagram_embed_html(html)
     assert out is not None

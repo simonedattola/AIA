@@ -27,4 +27,10 @@ def test_legacy_related_member_ids():
 def test_public_visibility():
     assert event_visible_on_public_site({"portalOnly": False}) is True
     assert event_visible_on_public_site({"portalOnly": True}) is False
-    assert public_events_query() == {"portalOnly": {"$ne": True}}
+    q = public_events_query()
+    # Visibilità pubblica + filtro stagione corrente (1 ago – 31 lug)
+    assert "$and" in q
+    assert {"portalOnly": {"$ne": True}} in q["$and"]
+    assert any("date" in part for part in q["$and"])
+    # Opt-out stagione: solo portalOnly
+    assert public_events_query(current_season=False) == {"portalOnly": {"$ne": True}}

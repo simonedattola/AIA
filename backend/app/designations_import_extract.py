@@ -1,4 +1,5 @@
 """Estrae tabelle grezze da CSV, Excel, PDF e Word per l'import designazioni."""
+
 from __future__ import annotations
 
 import io
@@ -67,7 +68,9 @@ def _read_pdf_tables(content: bytes) -> list[pd.DataFrame]:
                 rows = [[_cell_str(c) for c in row] for row in table[1:]]
                 if not any(header) and rows:
                     header = [f"col{i}" for i in range(len(rows[0]))]
-                df = pd.DataFrame(rows, columns=header[: len(rows[0])] if rows else header)
+                df = pd.DataFrame(
+                    rows, columns=header[: len(rows[0])] if rows else header
+                )
                 tables.append(df)
     return tables
 
@@ -100,7 +103,9 @@ def _parse_text_lines_to_rows(text: str) -> pd.DataFrame:
         line = re.sub(r"\s+", " ", line.strip())
         if len(line) < 12:
             continue
-        date_m = re.search(r"\b(\d{1,2}[/.-]\d{1,2}[/.-]\d{2,4}|\d{4}-\d{2}-\d{2})\b", line)
+        date_m = re.search(
+            r"\b(\d{1,2}[/.-]\d{1,2}[/.-]\d{2,4}|\d{4}-\d{2}-\d{2})\b", line
+        )
         if not date_m:
             continue
         rest = line[date_m.end() :].strip(" -|;\t")
@@ -130,11 +135,15 @@ def extract_raw_tables(content: bytes, filename: str) -> tuple[list[pd.DataFrame
     """Restituisce tabelle grezze e il tipo di file rilevato."""
     lower = (filename or "").lower()
     if lower.endswith((".xlsx", ".xls", ".xlsm")):
-        return [_normalize_table(df) for df in _read_excel_bytes(content) if not df.empty], "excel"
+        return [
+            _normalize_table(df) for df in _read_excel_bytes(content) if not df.empty
+        ], "excel"
     if lower.endswith(".csv"):
         return [_normalize_table(_read_csv_bytes(content))], "csv"
     if lower.endswith(".pdf"):
-        tables = [_normalize_table(df) for df in _read_pdf_tables(content) if not df.empty]
+        tables = [
+            _normalize_table(df) for df in _read_pdf_tables(content) if not df.empty
+        ]
         if tables:
             return tables, "pdf"
         try:
@@ -152,8 +161,12 @@ def extract_raw_tables(content: bytes, filename: str) -> tuple[list[pd.DataFrame
         raise ValueError("Nessuna tabella leggibile nel PDF.")
     if lower.endswith((".docx", ".doc")):
         if lower.endswith(".doc"):
-            raise ValueError("I file .doc legacy non sono supportati. Salva come .docx o PDF.")
-        tables = [_normalize_table(df) for df in _read_docx_tables(content) if not df.empty]
+            raise ValueError(
+                "I file .doc legacy non sono supportati. Salva come .docx o PDF."
+            )
+        tables = [
+            _normalize_table(df) for df in _read_docx_tables(content) if not df.empty
+        ]
         if tables:
             return tables, "word"
         raise ValueError("Nessuna tabella trovata nel documento Word.")

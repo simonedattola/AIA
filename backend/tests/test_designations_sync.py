@@ -1,4 +1,5 @@
 """Unit tests for designation sync member resolution."""
+
 from app.designations_sync import _split_full_name, _normalize_name
 
 

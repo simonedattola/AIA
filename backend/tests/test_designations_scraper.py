@@ -1,4 +1,5 @@
 """Unit tests for AIA FIGC designazioni scraper (offline HTML fixtures)."""
+
 from pathlib import Path
 
 from app.scrapers.aia_lombardia import (
@@ -17,7 +18,9 @@ def _read(name: str) -> str:
 class TestParseDesPage:
     def test_legnano_seconda_categoria_parses_matches(self):
         html = _read("des_legnano_sec_r.html")
-        rows = parse_des_page(html, "https://example/des.asp?gare=3-270-SEC-R", "3-270-SEC-R")
+        rows = parse_des_page(
+            html, "https://example/des.asp?gare=3-270-SEC-R", "3-270-SEC-R"
+        )
         assert len(rows) >= 2
         names = {r.member_name for r in rows}
         assert "Lorenzo Menapace" in names
@@ -32,7 +35,9 @@ class TestParseDesPage:
 
     def test_eccellenza_parses_arbitro_and_assistenti(self):
         html = _read("des_ecc_a.html")
-        rows = parse_des_page(html, "https://example/des.asp?gare=3-0-ECC-A", "3-0-ECC-A")
+        rows = parse_des_page(
+            html, "https://example/des.asp?gare=3-0-ECC-A", "3-0-ECC-A"
+        )
         assert len(rows) >= 6  # 2 matches x 3 roles
         roles = {r.role for r in rows}
         assert "Arbitro" in roles
@@ -53,7 +58,9 @@ class TestParseDesPage:
 class TestLinkExtraction:
     def test_gir_page_links_to_des(self):
         html = _read("gir_sec.html")
-        links = _extract_links(html, "https://www.aia-figc.it/designazioni/lombardia/", "des.asp")
+        links = _extract_links(
+            html, "https://www.aia-figc.it/designazioni/lombardia/", "des.asp"
+        )
         assert any("des.asp" in u and "3-270-SEC" in u for u in links)
 
 

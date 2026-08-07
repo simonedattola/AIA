@@ -1,4 +1,5 @@
 """Compat: re-export da member_roles."""
+
 from .member_roles import (
     arbitri_query,
     chi_siamo_query,

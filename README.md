@@ -97,6 +97,10 @@ Variabili in `backend/.env`:
 
 Per disattivare: `DESIGNATIONS_AUTO_SYNC=false`
 
+## CI/CD
+
+GitHub Actions: see [`.github/CI.md`](.github/CI.md) (backend lint/test, frontend lint/build, PR `verify` gate).
+
 ## Test backend
 
 ```bash

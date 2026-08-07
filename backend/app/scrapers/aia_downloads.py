@@ -1,4 +1,5 @@
 """Scrape documenti da https://www.aia-figc.it/download/"""
+
 from __future__ import annotations
 
 import logging
@@ -51,7 +52,9 @@ def _clean_query(url: str) -> str:
 def scrape_aia_downloads(client: httpx.Client | None = None) -> list[ScrapedDownload]:
     own = client is None
     if own:
-        client = httpx.Client(headers=DEFAULT_HEADERS, follow_redirects=True, timeout=60.0)
+        client = httpx.Client(
+            headers=DEFAULT_HEADERS, follow_redirects=True, timeout=60.0
+        )
     try:
         res = client.get(DOWNLOAD_PAGE)
         res.raise_for_status()
@@ -70,7 +73,11 @@ def scrape_aia_downloads(client: httpx.Client | None = None) -> list[ScrapedDown
             if not href or href.rstrip("/") in ("/download", "download"):
                 continue
             title_el = el.select_one("h3")
-            title = title_el.get_text(" ", strip=True) if title_el else link.get_text(" ", strip=True)
+            title = (
+                title_el.get_text(" ", strip=True)
+                if title_el
+                else link.get_text(" ", strip=True)
+            )
             if not title:
                 continue
             desc_el = el.select_one("p")
@@ -121,11 +128,15 @@ async def import_scraped_downloads(
     if replace_existing:
         await db.documents.delete_many({"source": source})
         if source == FIGC_SOURCE:
-            await db.documents.delete_many({"fileUrl": {"$in": ["#", "https://www.figc.it/"]}})
+            await db.documents.delete_many(
+                {"fileUrl": {"$in": ["#", "https://www.figc.it/"]}}
+            )
 
     imported = skipped = errors = 0
 
-    async with httpx.AsyncClient(headers=FILE_HEADERS, follow_redirects=True, timeout=120.0) as client:
+    async with httpx.AsyncClient(
+        headers=FILE_HEADERS, follow_redirects=True, timeout=120.0
+    ) as client:
         for i, item in enumerate(scraped):
             stored_url = item.file_url
             file_size = ""
@@ -138,7 +149,10 @@ async def import_scraped_downloads(
                         headers={**FILE_HEADERS, "Referer": referer},
                     )
                     res.raise_for_status()
-                    suffix = Path(_local_name_from_url(item.file_url)).suffix.lower() or ".bin"
+                    suffix = (
+                        Path(_local_name_from_url(item.file_url)).suffix.lower()
+                        or ".bin"
+                    )
                     name = f"{file_prefix}_{uuid.uuid4().hex[:12]}{suffix}"
                     target = UPLOAD_DIR / name
                     UPLOAD_DIR.mkdir(parents=True, exist_ok=True)

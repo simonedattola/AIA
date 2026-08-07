@@ -1,4 +1,5 @@
 """Tests for event email reminders."""
+
 from datetime import datetime
 from zoneinfo import ZoneInfo
 
@@ -19,7 +20,9 @@ class TestNormalizeEventTime:
 
     def test_valid(self):
         assert normalize_event_time("14:30") == "14:30"
-        assert normalize_event_time("9:5") == "09:05"
+        assert normalize_event_time("9:05") == "09:05"
+        # Minuti devono essere a 2 cifre; altrimenti fallback orario default
+        assert normalize_event_time("9:5") == "09:00"
 
 
 class TestEventStartDatetime:
