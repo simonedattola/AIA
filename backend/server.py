@@ -67,6 +67,13 @@ async def on_startup():
         logger.info("Seed complete.")
     except Exception as e:
         logger.exception(f"Seed failed: {e}")
+
+    try:
+        from app.db_indexes import create_indexes
+        await create_indexes()
+    except Exception as e:
+        logger.exception("Index creation failed: %s", e)
+
     start_designations_scheduler()
     start_event_reminders_scheduler()
 

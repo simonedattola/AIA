@@ -97,6 +97,13 @@ Variabili in `backend/.env`:
 
 Per disattivare: `DESIGNATIONS_AUTO_SYNC=false`
 
+
+## Backup & disaster recovery
+
+See [`docs/BACKUP.md`](docs/BACKUP.md) for `mongodump` / `mongorestore`, uploads archives, cron examples, and production (Atlas + object storage) guidance.
+
+MongoDB indexes are ensured on API startup via `app.db_indexes.create_indexes()`.
+
 ## Test backend
 
 ```bash
