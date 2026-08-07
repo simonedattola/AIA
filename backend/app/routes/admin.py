@@ -72,19 +72,14 @@ async def login(payload: LoginRequest):
             reason="invalid_password",
         )
         raise HTTPException(status_code=401, detail="Credenziali non valide")
-<<<<<<< HEAD
     token = create_token(
         {"sub": admin["email"], "role": "admin", "name": admin.get("name", "Admin")}
     )
+    log_event(logger, "admin_login_attempt", email=email, outcome="success")
     return TokenResponse(
         token=token,
         admin=AdminInfo(email=admin["email"], name=admin.get("name", "Admin")),
     )
-=======
-    token = create_token({"sub": admin["email"], "role": "admin", "name": admin.get("name", "Admin")})
-    log_event(logger, "admin_login_attempt", email=email, outcome="success")
-    return TokenResponse(token=token, admin=AdminInfo(email=admin["email"], name=admin.get("name", "Admin")))
->>>>>>> origin/cursor/monitoring-logging-8535
 
 
 @router.get("/me")

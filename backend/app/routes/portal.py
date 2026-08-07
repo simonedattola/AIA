@@ -161,14 +161,12 @@ async def portal_login(payload: PortalLoginRequest):
     db = get_db()
     codice = (payload.codice or "").strip()
     if not codice:
-<<<<<<< HEAD
+        log_event(
+            _log, "portal_login_failed", level=logging.WARNING, reason="missing_codice"
+        )
         raise HTTPException(
             status_code=400, detail="Codice meccanografico obbligatorio"
         )
-=======
-        log_event(_log, "portal_login_failed", level=logging.WARNING, reason="missing_codice")
-        raise HTTPException(status_code=400, detail="Codice meccanografico obbligatorio")
->>>>>>> origin/cursor/monitoring-logging-8535
     member = await db.members.find_one({"meccanografico": codice}, {"_id": 0})
     if not member:
         log_event(
@@ -180,11 +178,6 @@ async def portal_login(payload: PortalLoginRequest):
         )
         raise HTTPException(status_code=401, detail="Credenziali non valide")
     if not member_can_use_portal(member):
-<<<<<<< HEAD
-        raise HTTPException(
-            status_code=403, detail="Accesso portale non abilitato per questo profilo"
-        )
-=======
         log_event(
             _log,
             "portal_login_failed",
@@ -192,8 +185,9 @@ async def portal_login(payload: PortalLoginRequest):
             codice=codice,
             reason="portal_disabled",
         )
-        raise HTTPException(status_code=403, detail="Accesso portale non abilitato per questo profilo")
->>>>>>> origin/cursor/monitoring-logging-8535
+        raise HTTPException(
+            status_code=403, detail="Accesso portale non abilitato per questo profilo"
+        )
     if not member.get("passwordHash"):
         from ..portal_credentials import ensure_member_portal_credentials
 
