@@ -74,7 +74,7 @@ function CtaLink({ href = "/", variant = "primary", className, children, ...rest
 /* ============ HERO ============ */
 export function HeroBlock({ config: c, stats }) {
   const overlayClass = c.overlay === "dark" ? "bg-black/70" : c.overlay === "light" ? "bg-white/40" : "hero-overlay";
-  const heightCls = c.height === "tall" ? "min-h-[90vh]" : c.height === "medium" ? "min-h-[60vh]" : "min-h-[40vh]";
+  const heightCls = c.height === "tall" ? "min-h-[72vh] sm:min-h-[90vh]" : c.height === "medium" ? "min-h-[52vh] sm:min-h-[60vh]" : "min-h-[40vh]";
   return (
     <section className={`relative ${heightCls} flex items-center overflow-hidden`} data-testid="hero-block">
       {c.backgroundImage && (
@@ -83,10 +83,10 @@ export function HeroBlock({ config: c, stats }) {
           <div className={`absolute inset-0 ${overlayClass}`} />
         </div>
       )}
-      <div className="relative z-10 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-20 grid grid-cols-1 lg:grid-cols-12 gap-12 items-center w-full text-white">
+      <div className="relative z-10 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-14 sm:py-20 grid grid-cols-1 lg:grid-cols-12 gap-8 sm:gap-12 items-center w-full text-white">
         <div className={c.showStats ? "lg:col-span-7" : "lg:col-span-12"}>
           {(c.badgeLogoUrl || c.eyebrow) && (
-            <div className="inline-flex items-center gap-3 mb-6 px-4 py-2 rounded-full bg-white/10 backdrop-blur-md border border-white/20">
+            <div className="inline-flex max-w-full items-center gap-2.5 sm:gap-3 mb-5 sm:mb-6 px-3 sm:px-4 py-2 rounded-full bg-white/10 backdrop-blur-md border border-white/20">
               {c.badgeLogoUrl && (
                 <img
                   src={resolveSectionLogo(c.badgeLogoUrl)}
@@ -94,21 +94,21 @@ export function HeroBlock({ config: c, stats }) {
                   className={SECTION_LOGO_CLASS.badge}
                 />
               )}
-              {c.eyebrow && <Eyebrow className="tracking-[0.22em] font-medium text-white">{c.eyebrow}</Eyebrow>}
+              {c.eyebrow && <Eyebrow className="tracking-[0.14em] sm:tracking-[0.22em] font-medium text-white truncate">{c.eyebrow}</Eyebrow>}
             </div>
           )}
-          <HeroTitle className="text-white mb-6 whitespace-pre-line">
+          <HeroTitle className="text-white mb-5 sm:mb-6 whitespace-pre-line">
             {c.title}
           </HeroTitle>
-          {c.subtitle && <p className="text-lg sm:text-xl text-slate-200 max-w-2xl leading-relaxed mb-10">{c.subtitle}</p>}
-          <div className="flex flex-wrap items-center gap-4">
+          {c.subtitle && <p className="text-base sm:text-xl text-slate-200 max-w-2xl leading-relaxed mb-8 sm:mb-10">{c.subtitle}</p>}
+          <div className="flex flex-col sm:flex-row flex-wrap items-stretch sm:items-center gap-3 sm:gap-4">
             {c.primaryCta?.label && (
-              <CtaLink href={c.primaryCta.href || "/"} variant="secondary" className="group" data-testid="hero-cta-primary">
+              <CtaLink href={c.primaryCta.href || "/"} variant="secondary" className="group w-full sm:w-auto justify-center" data-testid="hero-cta-primary">
                 {c.primaryCta.label} <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-1" />
               </CtaLink>
             )}
             {c.secondaryCta?.label && (
-              <CtaLink href={c.secondaryCta.href || "/"} className="inline-flex items-center gap-2 text-white border-b-2 border-white/40 hover:border-gold-400 pb-1 font-medium transition-colors">
+              <CtaLink href={c.secondaryCta.href || "/"} className="inline-flex items-center justify-center min-h-[44px] gap-2 text-white border-b-2 border-white/40 hover:border-gold-400 px-1 font-medium transition-colors w-full sm:w-auto">
                 {c.secondaryCta.label} <ChevronRight className="h-4 w-4" />
               </CtaLink>
             )}
@@ -117,10 +117,10 @@ export function HeroBlock({ config: c, stats }) {
 
         {c.showStats && stats && (
           <div className="lg:col-span-5">
-            <div className="bg-white/95 backdrop-blur-md rounded-lg shadow-2xl p-8 border-t-4 border-gold-400 text-slate-900">
-              <Eyebrow className="mb-2 tracking-[0.25em]">La nostra sezione</Eyebrow>
-              <SubsectionTitle as="div" className="mb-6">In numeri</SubsectionTitle>
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-ds-grid">
+            <div className="bg-white/95 backdrop-blur-md rounded-lg shadow-2xl p-5 sm:p-8 border-t-4 border-gold-400 text-slate-900">
+              <Eyebrow className="mb-2 tracking-[0.18em] sm:tracking-[0.25em]">La nostra sezione</Eyebrow>
+              <SubsectionTitle as="div" className="mb-5 sm:mb-6">In numeri</SubsectionTitle>
+              <div className="grid grid-cols-2 gap-ds-grid">
                 <Stat icon="Users" value={stats.members} label="Associati"/>
                 <Stat icon="Trophy" value={stats.yearsActive} label="Anni di attività"/>
                 <Stat icon="Whistle" value={stats.matchesThisSeason ?? 0} label="Partite arbitrate questa stagione"/>
@@ -185,7 +185,7 @@ function TextImagePhoto({ config: c, aspectCls, portraitMaxW, wrapClassName = ""
     <div className={`relative w-full ${wrapCls}`}>
       <img src={c.imageUrl} alt={c.title || ""} className={`rounded-lg shadow-xl w-full ${aspectCls} object-cover`} />
       {c.badgeLabel && (
-        <div className="absolute -bottom-6 -left-6 bg-gold-400 text-navy-900 p-5 rounded-lg shadow-lg max-w-[200px]">
+        <div className="absolute bottom-3 left-3 sm:-bottom-6 sm:-left-6 bg-gold-400 text-navy-900 p-4 sm:p-5 rounded-lg shadow-lg max-w-[min(200px,calc(100%-1.5rem))]">
           <SectionTitle as="div" className="text-navy-900">{c.badgeLabel}</SectionTitle>
           {c.badgeText && <Eyebrow as="div" className="tracking-wider mt-1 text-navy-900">{c.badgeText}</Eyebrow>}
         </div>
@@ -350,20 +350,20 @@ function CorsoArbitriForm() {
       </Card>
     );
   }
-  const I = "w-full px-4 py-2.5 border border-slate-300 rounded-md focus:border-navy-600 focus:ring-2 focus:ring-navy-600/20 focus:outline-none text-slate-900 transition";
+  const I = "w-full min-h-[44px] px-4 py-3 border border-slate-300 rounded-md focus:border-navy-600 focus:ring-2 focus:ring-navy-600/20 focus:outline-none text-base text-slate-900 transition";
   return (
-    <Card as="form" onSubmit={submit} variant="accent" shadow="md" className="text-slate-900 p-6 sm:p-8 max-w-2xl mx-auto shadow-2xl text-left" data-testid="lead-form">
+    <Card as="form" onSubmit={submit} variant="accent" shadow="md" className="text-slate-900 p-5 sm:p-8 max-w-2xl mx-auto shadow-2xl text-left" data-testid="lead-form">
       {error && <div className="bg-red-50 border border-red-200 text-red-700 p-3 rounded mb-5 text-sm">{error}</div>}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
         <FormField label="Nome*"><input data-testid="lead-firstName" required value={form.firstName} onChange={onChange("firstName")} className={I}/></FormField>
         <FormField label="Cognome*"><input data-testid="lead-lastName" required value={form.lastName} onChange={onChange("lastName")} className={I}/></FormField>
-        <FormField label="Età"><input data-testid="lead-age" type="number" min="14" max="99" value={form.age} onChange={onChange("age")} className={I}/></FormField>
+        <FormField label="Età"><input data-testid="lead-age" type="number" min="14" max="99" value={form.age} onChange={onChange("age")} className={I} inputMode="numeric"/></FormField>
         <FormField label="Telefono"><input data-testid="lead-phone" type="tel" value={form.phone} onChange={onChange("phone")} className={I}/></FormField>
         <FormField label="Email*"><input data-testid="lead-email" required type="email" value={form.email} onChange={onChange("email")} className={I}/></FormField>
         <FormField label="Preferenza contatto"><select data-testid="lead-contactPreference" value={form.contactPreference} onChange={onChange("contactPreference")} className={I}><option value="email">Email</option><option value="phone">Telefono</option></select></FormField>
       </div>
-      <FormField label="Messaggio (opzionale)"><textarea data-testid="lead-message" rows={3} value={form.message} onChange={onChange("message")} className={I}/></FormField>
-      <Button type="submit" disabled={submitting} variant="primary" className="mt-4 w-full justify-center" data-testid="lead-submit">
+      <FormField label="Messaggio (opzionale)"><textarea data-testid="lead-message" rows={3} value={form.message} onChange={onChange("message")} className={`${I} min-h-[88px]`}/></FormField>
+      <Button type="submit" disabled={submitting} variant="primary" className="mt-4 w-full justify-center min-h-[48px]" data-testid="lead-submit">
         {submitting ? "Invio in corso…" : "Invia la candidatura"}
       </Button>
       <p className="text-xs text-slate-500 mt-3 text-center">I dati sono trattati esclusivamente per le finalità del corso arbitri.</p>

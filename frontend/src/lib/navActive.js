@@ -48,10 +48,10 @@ export function publicNavLinkClass(isActive) {
 }
 
 export function publicMobileNavLinkClass(isActive) {
-  return `block px-4 py-2 text-sm whitespace-nowrap ${
+  return `flex items-center min-h-[48px] px-4 py-3 text-base whitespace-nowrap rounded-md ${
     isActive
-      ? "text-navy-600 font-semibold"
-      : "font-medium text-slate-700 hover:bg-slate-50 hover:text-navy-600"
+      ? "text-navy-600 font-semibold bg-navy-50"
+      : "font-medium text-slate-700 active:bg-slate-50 hover:bg-slate-50 hover:text-navy-600"
   }`;
 }
 

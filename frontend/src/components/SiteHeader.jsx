@@ -7,7 +7,7 @@ import { isNavItemActive, normalizePublicNavItem, publicNavLinkClass, publicMobi
 import { Menu, X, ChevronRight } from "lucide-react";
 import { Button } from "@/design-system";
 
-/** Larghezza minima per menu inline (7 voci + logo + 2 CTA, senza icona lucchetto). */
+/** Larghezza minima per menu inline (7 voci + logo + 2 CTA). */
 const INLINE_NAV_MIN_PX = 1140;
 
 function useInlineNav() {
@@ -32,6 +32,7 @@ export default function SiteHeader() {
   const [open, setOpen] = useState(false);
   const [scrolled, setScrolled] = useState(false);
   const menuRef = useRef(null);
+  const toggleRef = useRef(null);
   const inlineNav = useInlineNav();
 
   useEffect(() => {
@@ -53,20 +54,23 @@ export default function SiteHeader() {
     return () => window.removeEventListener("scroll", on);
   }, []);
 
+  // Body scroll lock when mobile sheet is open
+  useEffect(() => {
+    if (!open || inlineNav) return;
+    const prev = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    return () => {
+      document.body.style.overflow = prev;
+    };
+  }, [open, inlineNav]);
+
   useEffect(() => {
     if (!open) return;
-    const onOutside = (e) => {
-      if (menuRef.current && !menuRef.current.contains(e.target)) setOpen(false);
-    };
     const onEsc = (e) => {
       if (e.key === "Escape") setOpen(false);
     };
-    document.addEventListener("mousedown", onOutside);
     document.addEventListener("keydown", onEsc);
-    return () => {
-      document.removeEventListener("mousedown", onOutside);
-      document.removeEventListener("keydown", onEsc);
-    };
+    return () => document.removeEventListener("keydown", onEsc);
   }, [open]);
 
   const closeMenu = useCallback(() => setOpen(false), []);
@@ -79,11 +83,11 @@ export default function SiteHeader() {
         scrolled ? "backdrop-blur-xl bg-white/95 shadow-sm border-b border-slate-200" : "bg-white/80 backdrop-blur-md"
       }`}
     >
-      <div className="max-w-7xl mx-auto px-5 sm:px-6 lg:px-8">
-        <div className="flex items-center gap-2.5 max-[1139px]:gap-3 sm:gap-4 h-16 max-[1139px]:h-[4.5rem] xl:h-[4.25rem] min-w-0">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div className="flex items-center gap-2 max-[1139px]:gap-2.5 sm:gap-4 h-14 max-[1139px]:h-16 xl:h-[4.25rem] min-w-0">
           <Link
             to="/"
-            className="flex items-center gap-2.5 max-[1139px]:gap-3 shrink-0 min-w-0"
+            className="flex items-center gap-2 max-[1139px]:gap-2.5 shrink-0 min-w-0"
             data-testid="header-logo"
           >
             <img
@@ -91,7 +95,7 @@ export default function SiteHeader() {
               alt="AIA Legnano"
               className={SECTION_LOGO_CLASS.header}
             />
-            <span className="font-display font-bold text-navy-600 max-[1139px]:text-lg min-[1140px]:text-base xl:text-lg tracking-tight whitespace-nowrap truncate">
+            <span className="font-display font-bold text-navy-600 text-base max-[1139px]:text-lg min-[1140px]:text-base xl:text-lg tracking-tight whitespace-nowrap truncate">
               AIA Legnano
             </span>
           </Link>
@@ -121,14 +125,15 @@ export default function SiteHeader() {
 
           <div
             ref={menuRef}
-            className={`relative flex items-center gap-1.5 max-[1139px]:gap-2 shrink-0 ${inlineNav ? "" : "ml-auto"}`}
+            className={`relative flex items-center gap-1.5 sm:gap-2 shrink-0 ${inlineNav ? "" : "ml-auto"}`}
           >
+            {/* Su schermi stretti nascondi CTA secondaria: resta nel menu sheet */}
             <Button
               to="/diventa-arbitro"
               variant="outline"
               size="sm"
               data-testid="header-cta-diventa-arbitro"
-              className="text-[15px] max-[1139px]:text-base font-semibold whitespace-nowrap"
+              className="hidden min-[420px]:inline-flex text-[15px] max-[1139px]:text-base font-semibold whitespace-nowrap"
             >
               {inlineNav ? (
                 <>
@@ -137,7 +142,7 @@ export default function SiteHeader() {
                 </>
               ) : (
                 <>
-                  <span className="hidden min-[380px]:inline">Diventa </span>
+                  <span className="hidden min-[520px]:inline">Diventa </span>
                   Arbitro
                 </>
               )}
@@ -150,56 +155,88 @@ export default function SiteHeader() {
               data-testid="nav-link-area-associati"
               className="text-[15px] max-[1139px]:text-base font-semibold whitespace-nowrap"
             >
-              <span className="hidden min-[400px]:inline">Area Associati</span>
-              <span className="min-[400px]:hidden">Area</span>
+              <span className="hidden min-[480px]:inline">Area Associati</span>
+              <span className="min-[480px]:hidden">Area</span>
             </Button>
 
             {!inlineNav && (
               <button
+                ref={toggleRef}
                 type="button"
                 data-testid="header-mobile-toggle"
                 onClick={() => setOpen((v) => !v)}
-                className="inline-flex items-center justify-center min-h-[44px] min-w-[44px] p-2 max-[1139px]:p-2.5 rounded-md text-slate-700 hover:bg-slate-100 shrink-0 border border-slate-200 focus-visible:ring-2 focus-visible:ring-gold-400 focus-visible:ring-offset-2"
+                className="inline-flex items-center justify-center min-h-[44px] min-w-[44px] p-2.5 rounded-md text-slate-700 hover:bg-slate-100 shrink-0 border border-slate-200 focus-visible:ring-2 focus-visible:ring-gold-400 focus-visible:ring-offset-2"
                 aria-label={open ? "Chiudi menu" : "Apri menu navigazione"}
                 aria-expanded={open}
-                aria-haspopup="true"
+                aria-controls="mobile-nav-sheet"
+                aria-haspopup="dialog"
               >
-                {open ? <X className="h-5 w-5 max-[1139px]:h-6 max-[1139px]:w-6" /> : <Menu className="h-5 w-5 max-[1139px]:h-6 max-[1139px]:w-6" />}
+                {open ? <X className="h-6 w-6" /> : <Menu className="h-6 w-6" />}
               </button>
-            )}
-
-            {!inlineNav && open && (
-              <div
-                className="absolute right-0 top-full mt-1.5 z-50 py-1.5 bg-white rounded-lg border border-slate-200 shadow-lg"
-                data-testid="mobile-menu"
-                role="menu"
-              >
-                <nav
-                  className="flex flex-col min-w-[11rem] w-max max-w-[min(16rem,calc(100vw-2rem))]"
-                  aria-label="Navigazione principale"
-                >
-                  {mainNav.map((it) => {
-                    const active = isNavItemActive(pathname, it.href);
-                    return (
-                      <NavLink
-                        key={it.id}
-                        to={it.href}
-                        end={it.href === "/"}
-                        onClick={closeMenu}
-                        aria-current={active ? "page" : undefined}
-                        data-testid={`nav-link-${it.href.replace(/\//g, "") || "home"}`}
-                        className={publicMobileNavLinkClass(active)}
-                      >
-                        <NavActiveLabel isActive={active}>{it.label}</NavActiveLabel>
-                      </NavLink>
-                    );
-                  })}
-                </nav>
-              </div>
             )}
           </div>
         </div>
       </div>
+
+      {/* Mobile full-bleed sheet — stesso look navy/oro, solo UX touch */}
+      {!inlineNav && open && (
+        <>
+          <button
+            type="button"
+            className="fixed inset-0 top-16 z-40 bg-navy-900/40 backdrop-blur-[2px]"
+            aria-label="Chiudi menu"
+            onClick={closeMenu}
+          />
+          <div
+            id="mobile-nav-sheet"
+            data-testid="mobile-menu"
+            role="dialog"
+            aria-modal="true"
+            aria-label="Menu di navigazione"
+            className="fixed inset-x-0 top-16 bottom-0 z-50 bg-white overflow-y-auto overscroll-contain shadow-[0_-4px_24px_rgba(0,69,135,0.08)]"
+          >
+            <nav className="flex flex-col px-2 py-3" aria-label="Navigazione principale">
+              {mainNav.map((it) => {
+                const active = isNavItemActive(pathname, it.href);
+                return (
+                  <NavLink
+                    key={it.id}
+                    to={it.href}
+                    end={it.href === "/"}
+                    onClick={closeMenu}
+                    aria-current={active ? "page" : undefined}
+                    data-testid={`nav-link-${it.href.replace(/\//g, "") || "home"}`}
+                    className={publicMobileNavLinkClass(active)}
+                  >
+                    <NavActiveLabel isActive={active}>{it.label}</NavActiveLabel>
+                  </NavLink>
+                );
+              })}
+            </nav>
+            <div className="px-4 pb-8 pt-2 border-t border-slate-100 space-y-3">
+              <Button
+                to="/diventa-arbitro"
+                variant="outline"
+                className="w-full justify-center min-[420px]:hidden font-semibold"
+                onClick={closeMenu}
+                data-testid="mobile-cta-diventa-arbitro"
+              >
+                Diventa Arbitro
+                <ChevronRight className="h-4 w-4" aria-hidden />
+              </Button>
+              <Button
+                to={PORTAL_ROUTES.login}
+                variant="primary"
+                className="w-full justify-center font-semibold"
+                onClick={closeMenu}
+                data-testid="mobile-cta-area-associati"
+              >
+                Area Associati
+              </Button>
+            </div>
+          </div>
+        </>
+      )}
     </header>
   );
 }

@@ -40,14 +40,14 @@ export default function SiteFooter() {
             <div className="flex items-center gap-3 mt-6">
               {s.facebookUrl && (
                 <a href={s.facebookUrl} target="_blank" rel="noopener noreferrer"
-                   className="w-10 h-10 rounded-full bg-white/10 hover:bg-gold-400 hover:text-navy-900 flex items-center justify-center transition-colors"
+                   className="w-11 h-11 min-w-[44px] min-h-[44px] rounded-full bg-white/10 hover:bg-gold-400 hover:text-navy-900 flex items-center justify-center transition-colors"
                    data-testid="footer-facebook" aria-label="Facebook">
                   <Facebook className="h-5 w-5" />
                 </a>
               )}
               {s.instagramUrl && (
                 <a href={s.instagramUrl} target="_blank" rel="noopener noreferrer"
-                   className="w-10 h-10 rounded-full bg-white/10 hover:bg-gold-400 hover:text-navy-900 flex items-center justify-center transition-colors"
+                   className="w-11 h-11 min-w-[44px] min-h-[44px] rounded-full bg-white/10 hover:bg-gold-400 hover:text-navy-900 flex items-center justify-center transition-colors"
                    data-testid="footer-instagram" aria-label="Instagram">
                   <Instagram className="h-5 w-5" />
                 </a>

@@ -34,10 +34,11 @@
 
 @layer base {
   * { @apply border-border; }
-  html { overflow-anchor: none; }
+  html { overflow-anchor: none; overflow-x: hidden; }
   body,
   .app-canvas {
     overflow-anchor: none;
+    overflow-x: hidden;
     @apply bg-background text-foreground;
     font-family: 'IBM Plex Sans', system-ui, sans-serif;
     -webkit-font-smoothing: antialiased;
@@ -58,13 +59,14 @@
 .prose-aia h2 {
   font-family: 'Outfit', sans-serif;
   font-weight: 700;
-  font-size: 1.875rem;
+  font-size: clamp(1.375rem, 4.5vw, 1.875rem);
   line-height: 1.25;
   color: #0F172A;
   margin: 2.5rem 0 1rem;
   padding-bottom: .5rem;
   border-bottom: 2px solid #D4AF37;
   display: inline-block;
+  max-width: 100%;
 }
 .prose-aia h3 {
   font-family: 'Outfit', sans-serif;

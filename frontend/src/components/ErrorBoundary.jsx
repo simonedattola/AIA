@@ -1,4 +1,4 @@
-"""React error boundary for unexpected UI failures."""
+// React error boundary for unexpected UI failures.
 import { Component } from "react";
 
 export default class ErrorBoundary extends Component {

@@ -87,7 +87,7 @@ export function DesignationsTableBlock({ config: c }) {
             ))}
           </div>
           <div className="relative w-full md:w-72">
-            <input value={search} onChange={(e) => setSearch(e.target.value)} placeholder={c.searchPlaceholder || "Cerca gara o nominativo…"} className="w-full pl-4 pr-9 py-2 border border-slate-300 rounded-md text-sm focus:border-navy-600 focus:ring-2 focus:ring-navy-600/20 focus:outline-none" />
+            <input value={search} onChange={(e) => setSearch(e.target.value)} placeholder={c.searchPlaceholder || "Cerca gara o nominativo…"} className="w-full min-h-[44px] pl-4 pr-9 py-3 border border-slate-300 rounded-md text-base focus:border-navy-600 focus:ring-2 focus:ring-navy-600/20 focus:outline-none" />
             {search && <button type="button" onClick={() => setSearch("")} className="absolute right-2 top-1/2 -translate-y-1/2 text-slate-400"><X className="h-4 w-4" /></button>}
           </div>
         </div>
@@ -138,7 +138,7 @@ export function MembersGridBlock({ config: c }) {
           </div>
           <div className="relative w-full md:w-72">
             <Search className="h-4 w-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
-            <input value={search} onChange={(e) => setSearch(e.target.value)} placeholder={c.searchPlaceholder || "Cerca per nome…"} className="w-full pl-10 pr-9 py-2 border border-slate-300 rounded-md text-sm focus:border-navy-600 focus:outline-none" />
+            <input value={search} onChange={(e) => setSearch(e.target.value)} placeholder={c.searchPlaceholder || "Cerca per nome…"} className="w-full min-h-[44px] pl-10 pr-9 py-3 border border-slate-300 rounded-md text-base focus:border-navy-600 focus:outline-none" />
           </div>
         </div>
         {loading ? <p className="text-slate-500">Caricamento…</p> : (
@@ -354,20 +354,20 @@ export function ContactSectionBlock({ config: c }) {
               </p>
             </Card>
           ) : (
-            <Card as="form" onSubmit={submit} padding="none" className="p-8 space-y-5">
+            <Card as="form" onSubmit={submit} padding="none" className="p-5 sm:p-8 space-y-5">
               <SubsectionTitle as="h2">{c.formTitle || "Scrivici"}</SubsectionTitle>
               {error && <p className="text-red-600 text-sm">{error}</p>}
               {["name", "email", "subject"].map((k) => (
                 <label key={k} className="block">
                   <span className="block text-sm font-medium text-slate-700 mb-1.5">{k === "name" ? "Nome" : k === "email" ? "Email" : "Oggetto"}</span>
-                  <input required type={k === "email" ? "email" : "text"} value={form[k]} onChange={(e) => setForm({ ...form, [k]: e.target.value })} className="w-full px-3 py-2 border border-slate-300 rounded-md text-sm focus:border-navy-600 focus:outline-none" />
+                  <input required type={k === "email" ? "email" : "text"} value={form[k]} onChange={(e) => setForm({ ...form, [k]: e.target.value })} className="w-full min-h-[44px] px-4 py-3 border border-slate-300 rounded-md text-base focus:border-navy-600 focus:outline-none" />
                 </label>
               ))}
               <label className="block">
                 <span className="block text-sm font-medium text-slate-700 mb-1.5">Messaggio</span>
-                <textarea required rows={5} value={form.body} onChange={(e) => setForm({ ...form, body: e.target.value })} className="w-full px-3 py-2 border border-slate-300 rounded-md text-sm focus:border-navy-600 focus:outline-none" />
+                <textarea required rows={5} value={form.body} onChange={(e) => setForm({ ...form, body: e.target.value })} className="w-full min-h-[120px] px-4 py-3 border border-slate-300 rounded-md text-base focus:border-navy-600 focus:outline-none" />
               </label>
-              <Button type="submit" disabled={submitting} variant="primary">{submitting ? "Invio…" : "Invia messaggio"}</Button>
+              <Button type="submit" disabled={submitting} variant="primary" className="w-full justify-center min-h-[48px]">{submitting ? "Invio…" : "Invia messaggio"}</Button>
             </Card>
           )}
         </div>

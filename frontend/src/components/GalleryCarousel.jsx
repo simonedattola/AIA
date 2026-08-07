@@ -105,7 +105,7 @@ export default function GalleryCarousel({ images = [], className = "", showTitle
           <button
             type="button"
             onClick={() => setLightbox(null)}
-            className="absolute top-4 right-4 text-white p-2 hover:bg-white/10 rounded"
+            className="absolute top-4 right-4 text-white min-h-[44px] min-w-[44px] inline-flex items-center justify-center hover:bg-white/10 rounded"
             aria-label="Chiudi"
           >
             <X className="h-7 w-7" />
