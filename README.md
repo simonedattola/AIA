@@ -97,6 +97,24 @@ Variabili in `backend/.env`:
 
 Per disattivare: `DESIGNATIONS_AUTO_SYNC=false`
 
+## Documentation
+
+| Doc | Description |
+|-----|-------------|
+| [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md) | System diagram and data flows |
+| [`docs/DEPLOYMENT.md`](docs/DEPLOYMENT.md) | Development, staging, production |
+| [`docs/CONTRIBUTING.md`](docs/CONTRIBUTING.md) | Local workflow and PR guidelines |
+| [`docs/BACKUP.md`](docs/BACKUP.md) | Mongo + uploads backup / DR (when merged from Phase 6) |
+
+## Production URLs
+
+| Surface | URL |
+|---------|-----|
+| Frontend (Vercel) | `https://aia-legnano.vercel.app` _(replace with custom domain when ready)_ |
+| Backend API | _TBD — custom infra (Railway / Render / ECS); see [`docs/DEPLOYMENT.md`](docs/DEPLOYMENT.md)_ |
+| Local frontend | `http://localhost:3000` |
+| Local API | `http://localhost:8000` |
+
 ## Test backend
 
 ```bash
@@ -110,11 +128,42 @@ REACT_APP_BACKEND_URL=http://localhost:8000 pytest tests/ -v
 
 - Nel menu pubblico: voce **Area riservata** (o `/area/riservata`)
 - Nel pannello admin: link **Area riservata** nella sidebar
-- Portale: `http://localhost:3001` (con `docker compose up` include il servizio `area-riservata`)
+- Portale integrato: `http://localhost:3000/area-riservata/login` (API `/api/portal/*`)
 - Login: **codice meccanografico** + password iniziale `nome.cognome` (es. Mario Rossi → codice assegnato / `mario.rossi`)
 - In Admin → Associati imposta il codice meccanografico: all’aggiornamento viene creato/sincronizzato l’account portale
+- La cartella `area-riservata/` (Next.js) è deprecata
 
 ## Credenziali admin (seed)
 
 - Email: valore di `ADMIN_EMAIL` in `.env` (default `admin@aia-legnano.it`)
 - Password: valore di `ADMIN_PASSWORD` in `.env`
+
+## Status & Roadmap
+
+### v1.0 (Current)
+
+- [x] Public site + admin panel
+- [x] Member portal
+- [x] Designations sync (AIA FIGC)
+- [x] Mobile-first responsive UI
+- [x] Security hardening (PR #5)
+
+### v1.1 (Next)
+
+- [ ] Full CI/CD pipeline (GitHub Actions)
+- [ ] E2E testing (Playwright)
+- [ ] Monitoring + alerting
+- [ ] Database backup automation
+- [ ] Object storage for uploads (S3 / R2) in production
+
+---
+
+## Contributing
+
+See [`docs/CONTRIBUTING.md`](docs/CONTRIBUTING.md) for local development, testing, and PR guidelines.
+
+---
+
+## License
+
+© 2026 AIA Legnano. All rights reserved.
