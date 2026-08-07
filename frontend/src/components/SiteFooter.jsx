@@ -1,7 +1,7 @@
 import { Link } from "react-router-dom";
 import { useMemo } from "react";
 import { useSite } from "../lib/site-context";
-import { SECTION_LOGO, SECTION_LOGO_CLASS } from "../lib/brand";
+import { SECTION_LOGO, SECTION_LOGO_CLASS, NATIONAL_LOGO, NATIONAL_LOGO_CLASS } from "../lib/brand";
 import { ADMIN_ROUTES, PORTAL_ROUTES } from "../lib/appRoutes";
 import { MapPin, Phone, Mail, Facebook, Instagram, ExternalLink, Lock } from "lucide-react";
 
@@ -99,8 +99,19 @@ export default function SiteFooter() {
                 </Link>
               </li>
               <li>
-                <a href={s.formationPortalUrl || "https://www.aia-figc.it/"} target="_blank" rel="noopener noreferrer"
-                   className="inline-flex items-center gap-1 text-slate-300 hover:text-gold-400 transition-colors text-sm">
+                <a
+                  href={s.formationPortalUrl || "https://www.aia-figc.it/"}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="inline-flex items-center gap-2 text-slate-300 hover:text-gold-400 transition-colors text-sm"
+                  data-testid="footer-aia-nazionale-link"
+                >
+                  <img
+                    src={NATIONAL_LOGO}
+                    alt=""
+                    aria-hidden="true"
+                    className="h-6 w-6 rounded-full object-contain"
+                  />
                   AIA Nazionale <ExternalLink className="h-3 w-3" />
                 </a>
               </li>
@@ -109,11 +120,26 @@ export default function SiteFooter() {
         </div>
 
         <div className="border-t border-white/10 mt-12 pt-8 flex flex-col md:flex-row items-center justify-between gap-4">
-          <div className="flex items-center gap-4">
+          <div className="flex items-center gap-3 sm:gap-4">
             <img src={SECTION_LOGO} alt="AIA Legnano" className={SECTION_LOGO_CLASS.sm} />
+            <a
+              href={s.formationPortalUrl || "https://www.aia-figc.it/"}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex items-center"
+              data-testid="footer-aia-nazionale-logo"
+              aria-label="AIA Nazionale — Associazione Italiana Arbitri (FIGC)"
+              title="AIA Nazionale"
+            >
+              <img
+                src={NATIONAL_LOGO}
+                alt="AIA Nazionale"
+                className={NATIONAL_LOGO_CLASS.footer}
+              />
+            </a>
             <div className="text-xs text-slate-400">
               <span>&copy; {new Date().getFullYear()} Sezione AIA Legnano — Tutti i diritti riservati.</span>
-              <span className="block">Fondata nel {s.foundedYear || "1927"}.</span>
+              <span className="block">Fondata nel {s.foundedYear || "1927"} · Sezione AIA / FIGC</span>
             </div>
           </div>
           <div className="text-xs text-slate-400">

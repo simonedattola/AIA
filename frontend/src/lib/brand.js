@@ -1,6 +1,9 @@
 /** Logo ufficiale Sezione AIA Legnano — usare ovunque sul sito. */
 export const SECTION_LOGO = "/brand/logo-aia-legnano.png";
 
+/** Logo AIA Nazionale (FIGC) — affiliazione istituzionale, non sostituisce il logo sezionale. */
+export const NATIONAL_LOGO = "/brand/logo-aia-nazionale.png";
+
 /** Logo in cerchio (stesso diametro, contenuto proporzionato). */
 const circleLogo = (size, responsive = "") =>
   `${size} ${responsive} rounded-full object-contain bg-navy-700 shrink-0 overflow-hidden aspect-square`;
@@ -14,10 +17,17 @@ export const SECTION_LOGO_CLASS = {
   badge: circleLogo("h-8 w-8"),
 };
 
-const NATIONAL_LOGO_PATH = "/brand/logo-aia-figc.png";
+/** Classi per il badge AIA Nazionale (sfondo trasparente / navy già nel PNG). */
+export const NATIONAL_LOGO_CLASS = {
+  sm: "h-10 w-10 rounded-full object-contain shrink-0",
+  md: "h-12 w-12 rounded-full object-contain shrink-0",
+  footer: "h-11 w-11 sm:h-12 sm:w-12 rounded-full object-contain shrink-0",
+};
 
-/** Risolve badge hero: sostituisce il vecchio logo AIA nazionale con quello sezionale. */
+const LEGACY_NATIONAL_PATH = "/brand/logo-aia-figc.png";
+
+/** Risolve badge hero: sostituisce il vecchio path AIA nazionale con quello sezionale. */
 export function resolveSectionLogo(url) {
-  if (!url || url === NATIONAL_LOGO_PATH) return SECTION_LOGO;
+  if (!url || url === LEGACY_NATIONAL_PATH || url === NATIONAL_LOGO) return SECTION_LOGO;
   return url;
 }
