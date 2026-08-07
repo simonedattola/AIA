@@ -1,4 +1,5 @@
 """Filtri calendario (pagina Designazioni) vs storico profilo (per stagione)."""
+
 from __future__ import annotations
 
 import re
@@ -159,7 +160,9 @@ def aia_calendar_window_clause(
     Calendario pubblico /designazioni: designazioni AIA Legnano con data gara
     nella finestra recente (indipendente dall'ultimo batch di sync).
     """
-    window = match_date_window_clause(days_past=days_past, days_future=days_future, ref=ref)
+    window = match_date_window_clause(
+        days_past=days_past, days_future=days_future, ref=ref
+    )
     return {
         "$and": [
             {"source": {"$regex": f"^{SOURCE_AIA_PREFIX}"}},
@@ -265,5 +268,3 @@ def count_refereed_matches_for_season(
 
 def count_refereed_matches_this_season(designation_rows: list[dict]) -> int:
     return count_refereed_matches_for_season(designation_rows)
-
-

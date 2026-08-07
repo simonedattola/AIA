@@ -1,8 +1,6 @@
 """Testo ufficiale pagina Chi siamo."""
 
-CHI_SIAMO_SUMMARY = (
-    "Storia e identità della Sezione AIA di Legnano, dal 1927 al servizio del calcio e della comunità arbitrale."
-)
+CHI_SIAMO_SUMMARY = "Storia e identità della Sezione AIA di Legnano, dal 1927 al servizio del calcio e della comunità arbitrale."
 
 CHI_SIAMO_BODY_HTML = """
 <p>L'Associazione Italiana Arbitri (AIA), fondata a Milano il 27 agosto 1911, è l'organismo che riunisce tutti gli arbitri di calcio italiani all'interno della FIGC. Oggi l'AIA è strutturata in 18 Comitati Regionali, 2 Comitati Provinciali Autonomi e 209 Sezioni distribuite su tutto il territorio nazionale, autentico cuore pulsante del sistema arbitrale.</p>

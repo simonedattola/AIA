@@ -1,4 +1,5 @@
 """Scala campionati (dal più alto al più basso) per categoria arbitro."""
+
 from __future__ import annotations
 
 import re

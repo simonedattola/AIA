@@ -1,4 +1,5 @@
 """Serializzazione associato per API portale (senza password)."""
+
 from __future__ import annotations
 
 from typing import Any

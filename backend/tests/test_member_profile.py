@@ -1,8 +1,11 @@
 """Member public profile API."""
+
 import pytest
-from httpx import AsyncClient, ASGITransport
+from httpx import ASGITransport, AsyncClient
 
 from server import app
+
+pytestmark = pytest.mark.integration
 
 
 @pytest.fixture

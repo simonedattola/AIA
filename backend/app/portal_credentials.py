@@ -1,4 +1,5 @@
 """Credenziali portale su MongoDB (sostituisce sync verso app Next separata)."""
+
 from __future__ import annotations
 
 import logging
@@ -68,13 +69,19 @@ async def ensure_member_portal_credentials(member: dict[str, Any]) -> None:
     if member.get("passwordHash"):
         return
     db = get_db()
-    pwd = default_portal_password(member.get("firstName", ""), member.get("lastName", ""))
+    pwd = default_portal_password(
+        member.get("firstName", ""), member.get("lastName", "")
+    )
     await db.members.update_one(
         {"id": member["id"]},
         {"$set": {"passwordHash": hash_password(pwd)}},
     )
     member["passwordHash"] = hash_password(pwd)
-    logger.info("Password portale impostata per %s %s", member.get("firstName"), member.get("lastName"))
+    logger.info(
+        "Password portale impostata per %s %s",
+        member.get("firstName"),
+        member.get("lastName"),
+    )
 
 
 async def backfill_portal_passwords() -> int:

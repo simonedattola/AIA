@@ -1,4 +1,5 @@
 """Pydantic models for API I/O. MongoDB documents use string `id` (uuid)."""
+
 import uuid
 from datetime import datetime, timezone, date
 from typing import Optional, List
@@ -35,7 +36,9 @@ class SiteSettings(BaseModel):
     id: str = Field(default="site-settings")
     siteName: str = "AIA Legnano"
     tagline: str = "Sezione Associazione Italiana Arbitri"
-    footerTagline: str = "Punto di riferimento per arbitri associati, aspiranti arbitri e appassionati dell'Alto Milanese."
+    footerTagline: str = (
+        "Punto di riferimento per arbitri associati, aspiranti arbitri e appassionati dell'Alto Milanese."
+    )
     address: str = "Via XX Settembre, Legnano (MI)"
     phone: str = "+39 0331 000000"
     email: str = "legnano@aia-figc.it"
@@ -172,10 +175,14 @@ class Event(BaseModel):
     descrizione: str = ""
     luogo: str = ""
     tipo: str = "Riunione"
-    invitedMemberIds: List[str] = Field(default_factory=list)  # vuoto = tutti gli associati
+    invitedMemberIds: List[str] = Field(
+        default_factory=list
+    )  # vuoto = tutti gli associati
     portalOnly: bool = False  # True = solo area associati, non sul sito pubblico
     attachments: List[ContentAttachment] = Field(default_factory=list)
-    utilityMaterial: List[ContentAttachment] = Field(default_factory=list)  # solo Utility (RTO)
+    utilityMaterial: List[ContentAttachment] = Field(
+        default_factory=list
+    )  # solo Utility (RTO)
     createdAt: str = Field(default_factory=_now)
 
 
@@ -216,7 +223,9 @@ class Member(BaseModel):
     passwordHash: str = ""
     emailVisibile: bool = False
     telefonoVisibile: bool = False
-    memberRole: str = "arbitro"  # arbitro | assistente | consiglio_direttivo | osservatore
+    memberRole: str = (
+        "arbitro"  # arbitro | assistente | consiglio_direttivo | osservatore
+    )
     observerType: str = ""  # oa | ot (solo se memberRole=osservatore)
     boardTitle: str = ""  # incarico CD (es. Vice Presidente)
     isPresident: bool = False
@@ -300,8 +309,11 @@ class Designation(BaseModel):
 
 class DesignationSyncRequest(BaseModel):
     """Optional overrides for AIA FIGC sync."""
+
     sectionGare: Optional[str] = None  # es. 3-270 Legnano
-    filterSection: Optional[str] = None  # es. Legnano — solo nominativi di quella sezione
+    filterSection: Optional[str] = (
+        None  # es. Legnano — solo nominativi di quella sezione
+    )
     replaceExisting: bool = True
     maxDesPages: Optional[int] = None  # limit for testing
 

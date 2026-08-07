@@ -44,7 +44,8 @@ def test_designations_page_query_structure():
 def test_aia_calendar_window():
     c = aia_calendar_window_clause(ref=date(2026, 5, 21))
     assert "refereeSection" in str(c)
-    assert c["matchDate"]["$gte"].startswith("2026-05-14")
+    window = next(part for part in c["$and"] if "matchDate" in part)
+    assert window["matchDate"]["$gte"].startswith("2026-05-14")
 
 
 def test_manual_window():

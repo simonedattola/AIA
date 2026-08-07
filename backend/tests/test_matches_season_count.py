@@ -1,5 +1,9 @@
 """Conteggio partite arbitrate per stagione."""
-from app.designation_filters import count_refereed_matches_for_season, count_refereed_matches_this_season
+
+from app.designation_filters import (
+    count_refereed_matches_for_season,
+    count_refereed_matches_this_season,
+)
 
 
 def test_counts_unique_matches_not_roles():
@@ -33,7 +37,7 @@ def test_counts_unique_matches_not_roles():
             "memberName": "Paolo Neri",
         },
     ]
-    assert count_refereed_matches_this_season(rows) == 2
+    assert count_refereed_matches_for_season(rows, "2025-26") == 2
 
 
 def test_counts_august_match_in_same_season():

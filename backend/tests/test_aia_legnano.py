@@ -8,22 +8,31 @@ Covers:
 - Admin lead/messages list + status update
 - Admin settings PUT reflects in public GET
 """
+
 import os
 import time
 import uuid
+
 import pytest
 import requests
 
-BASE_URL = os.environ.get("REACT_APP_BACKEND_URL", "https://arbitri-platform.preview.emergentagent.com").rstrip("/")
+pytestmark = pytest.mark.integration
+
+BASE_URL = os.environ.get(
+    "REACT_APP_BACKEND_URL", "https://arbitri-platform.preview.emergentagent.com"
+).rstrip("/")
 API = f"{BASE_URL}/api"
 
 ADMIN_EMAIL = os.environ.get("ADMIN_EMAIL", "admin@aia-legnano.it")
 ADMIN_PASSWORD = os.environ.get("ADMIN_PASSWORD", "")
+<<<<<<< HEAD
 if not ADMIN_PASSWORD:
     raise RuntimeError(
         "ADMIN_PASSWORD non impostato: esporta la variabile (o carica backend/.env) "
         "prima di eseguire i test di integrazione."
     )
+=======
+>>>>>>> origin/cursor/testing-infrastructure-8535
 
 
 # ---------- Fixtures ----------
@@ -36,17 +45,26 @@ def session():
 
 @pytest.fixture(scope="session")
 def admin_token(session):
-    r = session.post(f"{API}/admin/login", json={"email": ADMIN_EMAIL, "password": ADMIN_PASSWORD}, timeout=15)
+    r = session.post(
+        f"{API}/admin/login",
+        json={"email": ADMIN_EMAIL, "password": ADMIN_PASSWORD},
+        timeout=15,
+    )
     assert r.status_code == 200, f"Admin login failed: {r.status_code} {r.text}"
     data = r.json()
-    assert "token" in data and isinstance(data["token"], str) and len(data["token"]) > 10
+    assert (
+        "token" in data and isinstance(data["token"], str) and len(data["token"]) > 10
+    )
     assert data["admin"]["email"] == ADMIN_EMAIL
     return data["token"]
 
 
 @pytest.fixture(scope="session")
 def admin_headers(admin_token):
-    return {"Authorization": f"Bearer {admin_token}", "Content-Type": "application/json"}
+    return {
+        "Authorization": f"Bearer {admin_token}",
+        "Content-Type": "application/json",
+    }
 
 
 # ---------- Health ----------
@@ -59,7 +77,10 @@ def test_health_root(session):
 # ---------- Admin Auth ----------
 class TestAdminAuth:
     def test_login_success(self, session):
-        r = session.post(f"{API}/admin/login", json={"email": ADMIN_EMAIL, "password": ADMIN_PASSWORD})
+        r = session.post(
+            f"{API}/admin/login",
+            json={"email": ADMIN_EMAIL, "password": ADMIN_PASSWORD},
+        )
         assert r.status_code == 200
         body = r.json()
         assert body["admin"]["email"] == ADMIN_EMAIL
@@ -67,7 +88,9 @@ class TestAdminAuth:
         assert isinstance(body["token"], str)
 
     def test_login_invalid(self, session):
-        r = session.post(f"{API}/admin/login", json={"email": ADMIN_EMAIL, "password": "wrong"})
+        r = session.post(
+            f"{API}/admin/login", json={"email": ADMIN_EMAIL, "password": "wrong"}
+        )
         assert r.status_code == 401
 
     def test_me_with_token(self, session, admin_headers):
@@ -86,7 +109,14 @@ class TestAdminAuth:
         r = session.get(f"{API}/admin/dashboard", headers=admin_headers)
         assert r.status_code == 200
         body = r.json()
-        for key in ["articles", "events", "members", "designations", "leadsTotal", "messagesTotal"]:
+        for key in [
+            "articles",
+            "events",
+            "members",
+            "designations",
+            "leadsTotal",
+            "messagesTotal",
+        ]:
             assert key in body
             assert isinstance(body[key], int)
 
@@ -143,6 +173,7 @@ class TestPublic:
         items = r.json()
         assert isinstance(items, list)
         from datetime import datetime, timezone
+
         today = datetime.now(timezone.utc).strftime("%Y-%m-%d")
         for ev in items:
             assert ev["date"] >= today, f"upcoming filter failed: {ev}"
@@ -196,7 +227,15 @@ class TestPublic:
         r = session.get(f"{API}/public/stats")
         assert r.status_code == 200
         body = r.json()
-        for key in ["members", "articles", "matchesThisSeason", "activeSeason", "eventsUpcoming", "yearsActive", "foundedYear"]:
+        for key in [
+            "members",
+            "articles",
+            "matchesThisSeason",
+            "activeSeason",
+            "eventsUpcoming",
+            "yearsActive",
+            "foundedYear",
+        ]:
             assert key in body
 
 
@@ -230,7 +269,11 @@ class TestForms:
         assert found["email"] == payload["email"]
 
         # update status
-        r3 = session.put(f"{API}/admin/leads/{lead_id}", headers=admin_headers, json={"status": "contacted"})
+        r3 = session.put(
+            f"{API}/admin/leads/{lead_id}",
+            headers=admin_headers,
+            json={"status": "contacted"},
+        )
         assert r3.status_code == 200
         # verify
         r4 = session.get(f"{API}/admin/leads", headers=admin_headers)
@@ -297,28 +340,47 @@ class TestAdminArticles:
         if not TestAdminArticles.created_id:
             pytest.skip("create failed")
         # fetch first
-        r = session.get(f"{API}/admin/articles/{TestAdminArticles.created_id}", headers=admin_headers)
+        r = session.get(
+            f"{API}/admin/articles/{TestAdminArticles.created_id}",
+            headers=admin_headers,
+        )
         assert r.status_code == 200
         art = r.json()
         art["title"] = art["title"] + " UPDATED"
-        r2 = session.put(f"{API}/admin/articles/{TestAdminArticles.created_id}", headers=admin_headers, json=art)
+        r2 = session.put(
+            f"{API}/admin/articles/{TestAdminArticles.created_id}",
+            headers=admin_headers,
+            json=art,
+        )
         assert r2.status_code == 200
         assert "UPDATED" in r2.json()["title"]
 
     def test_delete_article(self, session, admin_headers):
         if not TestAdminArticles.created_id:
             pytest.skip("create failed")
-        r = session.delete(f"{API}/admin/articles/{TestAdminArticles.created_id}", headers=admin_headers)
+        r = session.delete(
+            f"{API}/admin/articles/{TestAdminArticles.created_id}",
+            headers=admin_headers,
+        )
         assert r.status_code == 200
         # verify gone
-        r2 = session.get(f"{API}/admin/articles/{TestAdminArticles.created_id}", headers=admin_headers)
+        r2 = session.get(
+            f"{API}/admin/articles/{TestAdminArticles.created_id}",
+            headers=admin_headers,
+        )
         assert r2.status_code == 404
 
 
 # ---------- Admin CRUD: events, officials, members, designations ----------
 class TestAdminMisc:
     def test_event_crud(self, session, admin_headers):
-        payload = {"date": "2030-01-15", "titolo": "TEST evento", "descrizione": "x", "luogo": "Legnano", "tipo": "riunione"}
+        payload = {
+            "date": "2030-01-15",
+            "titolo": "TEST evento",
+            "descrizione": "x",
+            "luogo": "Legnano",
+            "tipo": "riunione",
+        }
         r = session.post(f"{API}/admin/events", headers=admin_headers, json=payload)
         assert r.status_code == 200, r.text
         ev = r.json()
@@ -332,20 +394,33 @@ class TestAdminMisc:
         assert r3.status_code == 200
 
     def test_official_crud(self, session, admin_headers):
-        payload = {"role": "TEST role", "firstName": "TEST", "lastName": "Person", "sortOrder": 99}
+        payload = {
+            "role": "TEST role",
+            "firstName": "TEST",
+            "lastName": "Person",
+            "sortOrder": 99,
+        }
         r = session.post(f"{API}/admin/officials", headers=admin_headers, json=payload)
         assert r.status_code == 200, r.text
         off = r.json()
         oid = off["id"]
         off["role"] = "TEST role UPDATED"
-        r2 = session.put(f"{API}/admin/officials/{oid}", headers=admin_headers, json=off)
+        r2 = session.put(
+            f"{API}/admin/officials/{oid}", headers=admin_headers, json=off
+        )
         assert r2.status_code == 200
         r3 = session.delete(f"{API}/admin/officials/{oid}", headers=admin_headers)
         assert r3.status_code == 200
 
     def test_member_crud(self, session, admin_headers):
         unique = uuid.uuid4().hex[:6]
-        payload = {"slug": f"test-member-{unique}", "firstName": "TESTm", "lastName": f"Person{unique}", "kind": "associato", "role": "Arbitro"}
+        payload = {
+            "slug": f"test-member-{unique}",
+            "firstName": "TESTm",
+            "lastName": f"Person{unique}",
+            "kind": "associato",
+            "role": "Arbitro",
+        }
         r = session.post(f"{API}/admin/members", headers=admin_headers, json=payload)
         assert r.status_code == 200, r.text
         m = r.json()
@@ -357,13 +432,22 @@ class TestAdminMisc:
         assert r3.status_code == 200
 
     def test_designation_crud(self, session, admin_headers):
-        payload = {"matchDate": "2030-02-10", "matchLabel": "TEST match", "role": "Arbitro", "status": "published"}
-        r = session.post(f"{API}/admin/designations", headers=admin_headers, json=payload)
+        payload = {
+            "matchDate": "2030-02-10",
+            "matchLabel": "TEST match",
+            "role": "Arbitro",
+            "status": "published",
+        }
+        r = session.post(
+            f"{API}/admin/designations", headers=admin_headers, json=payload
+        )
         assert r.status_code == 200, r.text
         d = r.json()
         did = d["id"]
         d["matchLabel"] = "TEST match UPDATED"
-        r2 = session.put(f"{API}/admin/designations/{did}", headers=admin_headers, json=d)
+        r2 = session.put(
+            f"{API}/admin/designations/{did}", headers=admin_headers, json=d
+        )
         assert r2.status_code == 200
         r3 = session.delete(f"{API}/admin/designations/{did}", headers=admin_headers)
         assert r3.status_code == 200

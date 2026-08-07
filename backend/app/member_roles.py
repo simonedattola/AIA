@@ -1,4 +1,5 @@
 """Ruoli sezionali unificati (gestiti dalla pagina Associati in admin)."""
+
 from __future__ import annotations
 
 import re
@@ -62,7 +63,13 @@ def normalize_member(doc: dict) -> dict:
         doc["observerType"] = infer_observer_type(doc)
     if not doc.get("boardTitle") and doc["memberRole"] == "consiglio_direttivo":
         legacy = (doc.get("role") or "").strip()
-        if legacy and legacy.lower() not in ("arbitro", "assistente", "oa", "ot", "tutor"):
+        if legacy and legacy.lower() not in (
+            "arbitro",
+            "assistente",
+            "oa",
+            "ot",
+            "tutor",
+        ):
             doc["boardTitle"] = legacy
     if doc["memberRole"] == "consiglio_direttivo":
         bt = (doc.get("boardTitle") or "").lower()
@@ -77,7 +84,11 @@ def normalize_member(doc: dict) -> dict:
 def public_member(doc: dict) -> dict:
     """Campi esposti sul sito pubblico (senza note private né codice meccanografico)."""
     normalize_member(doc)
-    out = {k: v for k, v in doc.items() if k not in ("notes", "meccanografico", "passwordHash")}
+    out = {
+        k: v
+        for k, v in doc.items()
+        if k not in ("notes", "meccanografico", "passwordHash")
+    }
     return out
 
 
@@ -137,7 +148,11 @@ def member_role_label(member_role: str | None, observer_type: str | None = None)
 
 
 def observer_subtitle(observer_type: str | None) -> str:
-    return "Organo Tecnico" if (observer_type or "").lower() == "ot" else "Osservatore Arbitrale"
+    return (
+        "Organo Tecnico"
+        if (observer_type or "").lower() == "ot"
+        else "Osservatore Arbitrale"
+    )
 
 
 def member_role_from_seed_category(category: str) -> str:

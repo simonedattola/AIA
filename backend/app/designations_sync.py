@@ -1,4 +1,5 @@
 """Sync scraped AIA FIGC designations into MongoDB."""
+
 from __future__ import annotations
 
 import asyncio
@@ -72,7 +73,20 @@ async def _build_member_lookup(db) -> dict[str, dict]:
     """Map normalized full name / meccanografico -> {id, slug}."""
     from .member_roles import has_designations, normalize_member
 
-    members = await db.members.find({}, {"_id": 0, "id": 1, "slug": 1, "firstName": 1, "lastName": 1, "meccanografico": 1, "memberRole": 1, "kind": 1, "role": 1}).to_list(2000)
+    members = await db.members.find(
+        {},
+        {
+            "_id": 0,
+            "id": 1,
+            "slug": 1,
+            "firstName": 1,
+            "lastName": 1,
+            "meccanografico": 1,
+            "memberRole": 1,
+            "kind": 1,
+            "role": 1,
+        },
+    ).to_list(2000)
     lookup: dict[str, dict] = {}
     for m in members:
         normalize_member(m)
@@ -138,7 +152,16 @@ async def _backfill_member_links(db) -> int:
 
     members = await db.members.find(
         {},
-        {"_id": 0, "id": 1, "slug": 1, "firstName": 1, "lastName": 1, "memberRole": 1, "kind": 1, "role": 1},
+        {
+            "_id": 0,
+            "id": 1,
+            "slug": 1,
+            "firstName": 1,
+            "lastName": 1,
+            "memberRole": 1,
+            "kind": 1,
+            "role": 1,
+        },
     ).to_list(2000)
     slug_by_id, member_by_name = build_member_lookups(members, arbitri_only=False)
     fixed = 0
@@ -180,7 +203,9 @@ def _dedupe_scraped_rows(rows: list) -> list:
     best: dict[str, object] = {}
     for r in rows:
         eid = r.external_id
-        if eid not in best or _source_priority(r.source) < _source_priority(best[eid].source):
+        if eid not in best or _source_priority(r.source) < _source_priority(
+            best[eid].source
+        ):
             best[eid] = r
     return list(best.values())
 
@@ -224,7 +249,9 @@ async def _purge_duplicate_designations(db) -> int:
     for group in groups.values():
         if len(group) <= 1:
             continue
-        group.sort(key=lambda x: (_source_priority(x.get("source", "")), x.get("id", "")))
+        group.sort(
+            key=lambda x: (_source_priority(x.get("source", "")), x.get("id", ""))
+        )
         for dup in group[1:]:
             res = await db.designations.delete_one({"id": dup["id"]})
             removed += res.deleted_count
@@ -272,7 +299,11 @@ def _run_full_scrape(
         out.pages_fetched += nat.pages_fetched
         out.errors.extend(nat.errors)
         out.other_hubs_scraped += len(nat.items)
-        logger.info("Hub nazionali %s: %d righe Legnano", ",".join(sorted(national)), len(nat.items))
+        logger.info(
+            "Hub nazionali %s: %d righe Legnano",
+            ",".join(sorted(national)),
+            len(nat.items),
+        )
 
     if crawl_all_hubs:
         hubs = discover_designazioni_hubs()
@@ -307,7 +338,11 @@ async def sync_from_aia_lombardia(
     max_des_pages: Optional[int] = None,
     trigger: str = "manual",
 ) -> dict:
-    section_name = filter_section if filter_section is not None else os.environ.get("DESIGNATIONS_FILTER_SECTION", "Legnano")
+    section_name = (
+        filter_section
+        if filter_section is not None
+        else os.environ.get("DESIGNATIONS_FILTER_SECTION", "Legnano")
+    )
     if section_name == "":
         section_name = None
 
@@ -348,10 +383,14 @@ async def sync_from_aia_lombardia(
             "filterSection": section_name,
         }
 
-    purge = await db.designations.delete_many(mongo_drop_non_legnano_aia_clause(legnano_label))
+    purge = await db.designations.delete_many(
+        mongo_drop_non_legnano_aia_clause(legnano_label)
+    )
     purge_deleted = purge.deleted_count
     if purge_deleted:
-        logger.info("Rimosse %s designazioni AIA senza sezione %s", purge_deleted, legnano_label)
+        logger.info(
+            "Rimosse %s designazioni AIA senza sezione %s", purge_deleted, legnano_label
+        )
 
     member_lookup = await _build_member_lookup(db)
     sync_batch_at = _now()
@@ -411,7 +450,9 @@ async def sync_from_aia_lombardia(
             {"_id": 0, "id": 1, "source": 1},
         )
         if existing:
-            await db.designations.update_one({"id": existing["id"]}, {"$set": doc_fields})
+            await db.designations.update_one(
+                {"id": existing["id"]}, {"$set": doc_fields}
+            )
             updated += 1
         else:
             doc = {"id": _id(), "createdAt": _now(), **doc_fields}
@@ -454,7 +495,9 @@ async def sync_from_aia_lombardia(
                     "categoriesUpdated": categories_updated,
                     "pagesFetched": scrape.pages_fetched,
                     "errors": scrape.errors[:20],
-                    "nextSyncHours": float(os.environ.get("DESIGNATIONS_SYNC_INTERVAL_HOURS", "12")),
+                    "nextSyncHours": float(
+                        os.environ.get("DESIGNATIONS_SYNC_INTERVAL_HOURS", "12")
+                    ),
                 }
             }
         },

@@ -1,4 +1,5 @@
 """Email sender via Resend (no-op if keys not configured)."""
+
 import os
 import asyncio
 import logging
@@ -14,6 +15,7 @@ async def send_email(to: str, subject: str, html: str) -> bool:
         return False
     try:
         import resend
+
         resend.api_key = api_key
         params = {
             "from": sender,
@@ -83,8 +85,18 @@ def _format_event_datetime_it(event: dict) -> str:
         return f"{date} alle {orario}"
     y, m, d = int(parts[0]), int(parts[1]), int(parts[2])
     months = (
-        "gennaio", "febbraio", "marzo", "aprile", "maggio", "giugno",
-        "luglio", "agosto", "settembre", "ottobre", "novembre", "dicembre",
+        "gennaio",
+        "febbraio",
+        "marzo",
+        "aprile",
+        "maggio",
+        "giugno",
+        "luglio",
+        "agosto",
+        "settembre",
+        "ottobre",
+        "novembre",
+        "dicembre",
     )
     return f"{d} {months[m - 1]} {y} alle {orario}"
 
@@ -168,7 +180,9 @@ def render_event_created_email(event: dict, member: dict, *, link: str) -> str:
     """
 
 
-def render_comunicazione_email(*, title: str, body_preview: str, member_name: str, link: str) -> str:
+def render_comunicazione_email(
+    *, title: str, body_preview: str, member_name: str, link: str
+) -> str:
     return f"""
     <div style="font-family:Arial,sans-serif;max-width:600px;margin:0 auto;">
       <h2 style="color:#004587;border-bottom:3px solid #D4AF37;padding-bottom:8px;">

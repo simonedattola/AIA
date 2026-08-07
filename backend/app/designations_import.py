@@ -1,4 +1,5 @@
 """Import designazioni flessibile da file eterogenei (CSV, Excel, PDF, Word)."""
+
 from __future__ import annotations
 
 import hashlib
@@ -18,7 +19,11 @@ from .designations_sync import (
     _now,
     _resolve_member,
 )
-from .designations_import_extract import SUPPORTED_EXTENSIONS, extract_raw_tables, _cell_str
+from .designations_import_extract import (
+    SUPPORTED_EXTENSIONS,
+    extract_raw_tables,
+    _cell_str,
+)
 from .member_roles import is_observer_designation_role
 from .scrapers.aia_lombardia import ROLE_MAP, _clean_text
 
@@ -26,16 +31,46 @@ SOURCE = "file-import"
 
 FIELD_KEYWORDS: dict[str, list[str]] = {
     "matchDate": ["data", "date", "giorno", "giornata data", "when", "match date"],
-    "championship": ["campionato", "categoria", "category", "competizione", "livello", "torneo"],
+    "championship": [
+        "campionato",
+        "categoria",
+        "category",
+        "competizione",
+        "livello",
+        "torneo",
+    ],
     "girone": ["girone", "group", "gruppo"],
     "matchDay": ["giornata", "turno", "matchday", "round"],
     "matchHome": ["casa", "home", "domicilio", "squadra casa", "match home", "locale"],
-    "matchAway": ["ospite", "away", "trasferta", "squadra ospite", "match away", "visit"],
-    "matchLabel": ["gara", "partita", "incontro", "match", "avversari", "squadre", "teams"],
+    "matchAway": [
+        "ospite",
+        "away",
+        "trasferta",
+        "squadra ospite",
+        "match away",
+        "visit",
+    ],
+    "matchLabel": [
+        "gara",
+        "partita",
+        "incontro",
+        "match",
+        "avversari",
+        "squadre",
+        "teams",
+    ],
     "role": ["ruolo", "role", "incarico", "designazione", "funzione"],
     "memberName": [
-        "nominativo", "arbitro", "nome", "cognome", "ufficiale", "designato",
-        "name", "referee", "nome cognome", "nome e cognome",
+        "nominativo",
+        "arbitro",
+        "nome",
+        "cognome",
+        "ufficiale",
+        "designato",
+        "name",
+        "referee",
+        "nome cognome",
+        "nome e cognome",
     ],
     "meccanografico": ["meccanografico", "matricola", "codice", "mec", "cod"],
 }
@@ -101,7 +136,12 @@ def _looks_like_match(value: str) -> bool:
 
 def _looks_like_team(value: str) -> bool:
     text = _cell_str(value)
-    if not text or _looks_like_person(text) or _looks_like_role(text) or _looks_like_date(text):
+    if (
+        not text
+        or _looks_like_person(text)
+        or _looks_like_role(text)
+        or _looks_like_date(text)
+    ):
         return False
     return len(text) >= 3 and not _looks_like_match(text)
 
@@ -230,7 +270,15 @@ def _map_columns(df: pd.DataFrame) -> tuple[pd.DataFrame, dict[str, str], list[s
 
     renamed = body.rename(columns={v: k for k, v in mapping.items()}).copy()
     keep = [k for k in mapping]
-    for k in ("matchLabel", "matchHome", "matchAway", "championship", "girone", "matchDay", "meccanografico"):
+    for k in (
+        "matchLabel",
+        "matchHome",
+        "matchAway",
+        "championship",
+        "girone",
+        "matchDay",
+        "meccanografico",
+    ):
         if k in renamed.columns and k not in keep:
             keep.append(k)
     renamed = renamed[[c for c in keep if c in renamed.columns]]
@@ -290,7 +338,9 @@ def _to_iso_datetime(date_str: str) -> str:
     return f"{date_str}T12:00:00+00:00"
 
 
-def _row_dict_from_mapped(row: dict[str, Any], line: int, warnings: list[str]) -> Optional[dict]:
+def _row_dict_from_mapped(
+    row: dict[str, Any], line: int, warnings: list[str]
+) -> Optional[dict]:
     match_date = _parse_date(row.get("matchDate", ""))
     if not match_date:
         warnings.append(f"Riga {line}: data non valida — saltata.")
@@ -341,7 +391,9 @@ def _dedupe_rows(rows: list[dict]) -> tuple[list[dict], int]:
     out: list[dict] = []
     skipped = 0
     for row in rows:
-        key = _designation_match_key({**row, "matchDate": _to_iso_datetime(row["matchDate"])})
+        key = _designation_match_key(
+            {**row, "matchDate": _to_iso_datetime(row["matchDate"])}
+        )
         if key in seen:
             skipped += 1
             continue
@@ -350,7 +402,9 @@ def _dedupe_rows(rows: list[dict]) -> tuple[list[dict], int]:
     return out, skipped
 
 
-def parse_designations_file(content: bytes, filename: str) -> tuple[list[dict], list[str], dict]:
+def parse_designations_file(
+    content: bytes, filename: str
+) -> tuple[list[dict], list[str], dict]:
     """Estrae e normalizza righe da qualsiasi formato supportato."""
     tables, file_type = extract_raw_tables(content, filename)
     warnings: list[str] = []

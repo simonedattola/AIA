@@ -1,4 +1,5 @@
 """Normalizzazione HTML corpo articolo (gallerie legacy WordPress / BWG)."""
+
 from __future__ import annotations
 
 import re

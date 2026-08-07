@@ -1,4 +1,5 @@
 """Background scheduler: sync Legnano designations from AIA FIGC every N hours."""
+
 from __future__ import annotations
 
 import asyncio

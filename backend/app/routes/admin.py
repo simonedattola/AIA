@@ -1,4 +1,5 @@
 """Admin routes - CRUD over all resources. Requires JWT admin token."""
+
 import logging
 import os
 import shutil
@@ -13,17 +14,39 @@ from ..db import get_db
 from ..security import require_admin, verify_password, create_token
 from ..paths import UPLOAD_DIR
 from ..models import (
-    LoginRequest, TokenResponse, AdminInfo,
-    SiteSettings, Page, Article, ArticleCreate, Event,
-    Official, Member, MemberCreate, Designation, Lead, ContactMessage,
-    Document, Album, Testimonial, UtilityPolo, UtilityItem, EventUtilityMaterialUpdate,
-    DesignationSyncRequest, ArticleCategoryCreate,
-    GalleryImage, GalleryImageCreate, GalleryImageUpdate,
+    LoginRequest,
+    TokenResponse,
+    AdminInfo,
+    SiteSettings,
+    Page,
+    Article,
+    ArticleCreate,
+    Event,
+    Official,
+    Member,
+    MemberCreate,
+    Designation,
+    Lead,
+    ContactMessage,
+    Document,
+    Album,
+    Testimonial,
+    UtilityPolo,
+    UtilityItem,
+    EventUtilityMaterialUpdate,
+    DesignationSyncRequest,
+    ArticleCategoryCreate,
+    GalleryImage,
+    GalleryImageCreate,
+    GalleryImageUpdate,
 )
 from ..designations_sync import sync_from_aia_lombardia
 from ..designations_import import import_designations_from_file, IMPORT_TEMPLATE_CSV
 from ..designations_import_extract import SUPPORTED_EXTENSIONS
-from ..members_import import import_members_from_file, IMPORT_TEMPLATE_CSV as MEMBERS_IMPORT_TEMPLATE_CSV
+from ..members_import import (
+    import_members_from_file,
+    IMPORT_TEMPLATE_CSV as MEMBERS_IMPORT_TEMPLATE_CSV,
+)
 from ..sanitize import sanitize_html
 
 logger = logging.getLogger(__name__)
@@ -39,8 +62,13 @@ async def login(payload: LoginRequest):
     admin = await db.admin_users.find_one({"email": payload.email.lower()}, {"_id": 0})
     if not admin or not verify_password(payload.password, admin["passwordHash"]):
         raise HTTPException(status_code=401, detail="Credenziali non valide")
-    token = create_token({"sub": admin["email"], "role": "admin", "name": admin.get("name", "Admin")})
-    return TokenResponse(token=token, admin=AdminInfo(email=admin["email"], name=admin.get("name", "Admin")))
+    token = create_token(
+        {"sub": admin["email"], "role": "admin", "name": admin.get("name", "Admin")}
+    )
+    return TokenResponse(
+        token=token,
+        admin=AdminInfo(email=admin["email"], name=admin.get("name", "Admin")),
+    )
 
 
 @router.get("/me")
@@ -66,28 +94,64 @@ async def dashboard(admin=Depends(require_admin)):
     db = get_db()
     today = datetime.now(timezone.utc).strftime("%Y-%m-%d")
     season_clause = event_date_in_season_clause()
-    event_q = merge_mongo_queries(season_clause, {"date": {"$gte": today}}) if season_clause else {"date": {"$gte": today}}
-    next_rows = await db.events.find(event_q, {"_id": 0}).sort("date", 1).limit(1).to_list(1)
+    event_q = (
+        merge_mongo_queries(season_clause, {"date": {"$gte": today}})
+        if season_clause
+        else {"date": {"$gte": today}}
+    )
+    next_rows = (
+        await db.events.find(event_q, {"_id": 0}).sort("date", 1).limit(1).to_list(1)
+    )
     next_event = None
     if next_rows:
         ev = next_rows[0]
         next_event = {**ev, "attachments": resolve_attachments(ev.get("attachments"))}
 
-    settings = await db.site_settings.find_one({"id": "site-settings"}, {"_id": 0, "lastDesignationsSync": 1}) or {}
+    settings = (
+        await db.site_settings.find_one(
+            {"id": "site-settings"}, {"_id": 0, "lastDesignationsSync": 1}
+        )
+        or {}
+    )
     des_q = designations_page_query(settings.get("lastDesignationsSync"))
-    public_designations = await db.designations.find(des_q, {"_id": 0}).sort("matchDate", 1).limit(80).to_list(80)
+    public_designations = (
+        await db.designations.find(des_q, {"_id": 0})
+        .sort("matchDate", 1)
+        .limit(80)
+        .to_list(80)
+    )
     members = await db.members.find(
         legacy_arbitri_query(),
-        {"_id": 0, "id": 1, "slug": 1, "firstName": 1, "lastName": 1, "kind": 1, "memberRole": 1},
+        {
+            "_id": 0,
+            "id": 1,
+            "slug": 1,
+            "firstName": 1,
+            "lastName": 1,
+            "kind": 1,
+            "memberRole": 1,
+        },
     ).to_list(2000)
     slug_by_id, member_by_name = build_member_lookups(members)
     for item in public_designations:
         enrich_designation(item, slug_by_id, member_by_name)
 
-    latest_rows = await db.comunicazioni_interne.find(
-        {},
-        {"_id": 0, "id": 1, "title": 1, "bodyHtml": 1, "createdAt": 1, "publishedAt": 1},
-    ).sort("createdAt", -1).limit(1).to_list(1)
+    latest_rows = (
+        await db.comunicazioni_interne.find(
+            {},
+            {
+                "_id": 0,
+                "id": 1,
+                "title": 1,
+                "bodyHtml": 1,
+                "createdAt": 1,
+                "publishedAt": 1,
+            },
+        )
+        .sort("createdAt", -1)
+        .limit(1)
+        .to_list(1)
+    )
     latest_comunicazione = latest_rows[0] if latest_rows else None
 
     return {
@@ -100,15 +164,23 @@ async def dashboard(admin=Depends(require_admin)):
         "members": await db.members.count_documents({}),
         "designations": await db.designations.count_documents({}),
         "comunicazioni": await db.comunicazioni_interne.count_documents({}),
-        "galleryApproved": await db.gallery_images.count_documents({"status": "approved"}),
-        "galleryPending": await db.gallery_images.count_documents({"status": "pending"}),
-        "testimonialsPending": await db.testimonials.count_documents({"status": "pending"}),
+        "galleryApproved": await db.gallery_images.count_documents(
+            {"status": "approved"}
+        ),
+        "galleryPending": await db.gallery_images.count_documents(
+            {"status": "pending"}
+        ),
+        "testimonialsPending": await db.testimonials.count_documents(
+            {"status": "pending"}
+        ),
         "leadsNew": await db.leads.count_documents({"status": "new"}),
         "leadsTotal": await db.leads.count_documents({}),
         "messagesNew": await db.contact_messages.count_documents({"status": "new"}),
         "messagesTotal": await db.contact_messages.count_documents({}),
         "albums": await db.albums.count_documents({}),
-        "menuPages": await db.pages.count_documents({"status": "published", "showInMenu": True}),
+        "menuPages": await db.pages.count_documents(
+            {"status": "published", "showInMenu": True}
+        ),
         "presenzeEventi": len(await db.presenze_evento.distinct("eventId")),
         "stagione": current_season_label(),
         "nextEvent": next_event,
@@ -130,7 +202,9 @@ async def admin_put_settings(payload: SiteSettings, admin=Depends(require_admin)
     db = get_db()
     payload.updatedAt = datetime.now(timezone.utc).isoformat()
     doc = payload.model_dump()
-    await db.site_settings.update_one({"id": "site-settings"}, {"$set": doc}, upsert=True)
+    await db.site_settings.update_one(
+        {"id": "site-settings"}, {"$set": doc}, upsert=True
+    )
     return doc
 
 
@@ -139,7 +213,13 @@ async def admin_put_settings(payload: SiteSettings, admin=Depends(require_admin)
 async def admin_list_pages(admin=Depends(require_admin)):
     db = get_db()
     pages = await db.pages.find({}, {"_id": 0}).to_list(200)
-    pages.sort(key=lambda p: (0 if p.get("template") == "system" else 1, p.get("menuOrder", 100), p.get("title", "")))
+    pages.sort(
+        key=lambda p: (
+            0 if p.get("template") == "system" else 1,
+            p.get("menuOrder", 100),
+            p.get("title", ""),
+        )
+    )
     return pages
 
 
@@ -151,7 +231,13 @@ async def admin_reconcile_system_pages(admin=Depends(require_admin)):
     result = await ensure_all_system_pages()
     db = get_db()
     pages = await db.pages.find({}, {"_id": 0}).to_list(200)
-    pages.sort(key=lambda p: (0 if p.get("template") == "system" else 1, p.get("menuOrder", 100), p.get("title", "")))
+    pages.sort(
+        key=lambda p: (
+            0 if p.get("template") == "system" else 1,
+            p.get("menuOrder", 100),
+            p.get("title", ""),
+        )
+    )
     return {"ok": True, **result, "pages": pages}
 
 
@@ -189,6 +275,7 @@ async def admin_update_page(page_id: str, payload: Page, admin=Depends(require_a
     payload.id = page_id
     payload.bodyHtml = sanitize_html(payload.bodyHtml)
     from ..blocks_sanitize import sanitize_blocks
+
     payload.blocks = sanitize_blocks(payload.blocks)
     payload.updatedAt = datetime.now(timezone.utc).isoformat()
     doc = payload.model_dump()
@@ -209,6 +296,7 @@ async def admin_create_page(payload: Page, admin=Depends(require_admin)):
         payload.slug = f"{base}-{i}"
     payload.bodyHtml = sanitize_html(payload.bodyHtml)
     from ..blocks_sanitize import sanitize_blocks
+
     payload.blocks = sanitize_blocks(payload.blocks)
     doc = payload.model_dump()
     await db.pages.insert_one(doc.copy())
@@ -237,7 +325,9 @@ async def admin_list_article_categories(admin=Depends(require_admin)):
 
 
 @router.post("/article-categories")
-async def admin_add_article_category(payload: ArticleCategoryCreate, admin=Depends(require_admin)):
+async def admin_add_article_category(
+    payload: ArticleCategoryCreate, admin=Depends(require_admin)
+):
     from ..article_categories import add_article_category, normalize_category
 
     name = normalize_category(payload.name)
@@ -308,16 +398,22 @@ async def admin_create_article(payload: ArticleCreate, admin=Depends(require_adm
 
 
 @router.put("/articles/{article_id}")
-async def admin_update_article(article_id: str, payload: Article, admin=Depends(require_admin)):
+async def admin_update_article(
+    article_id: str, payload: Article, admin=Depends(require_admin)
+):
     from ..article_categories import ensure_category_exists
     from ..article_sanitize import sanitize_article_html
 
     db = get_db()
-    existing = await db.articles.find_one({"id": article_id}, {"_id": 0, "id": 1, "legacyWpId": 1})
+    existing = await db.articles.find_one(
+        {"id": article_id}, {"_id": 0, "id": 1, "legacyWpId": 1}
+    )
     if not existing:
         raise HTTPException(404, "Articolo non trovato")
     payload.id = article_id
-    payload.category = await ensure_category_exists(db, payload.category) or payload.category
+    payload.category = (
+        await ensure_category_exists(db, payload.category) or payload.category
+    )
     legacy = bool(payload.legacyWpId or existing.get("legacyWpId"))
     payload.bodyHtml = sanitize_article_html(payload.bodyHtml, legacy=legacy)
     payload.updatedAt = datetime.now(timezone.utc).isoformat()
@@ -369,7 +465,9 @@ async def admin_list_event_types(admin=Depends(require_admin)):
 
 
 @router.post("/event-types")
-async def admin_add_event_type(payload: ArticleCategoryCreate, admin=Depends(require_admin)):
+async def admin_add_event_type(
+    payload: ArticleCategoryCreate, admin=Depends(require_admin)
+):
     from ..event_categories import add_event_type, normalize_event_type
 
     name = normalize_event_type(payload.name)
@@ -408,7 +506,9 @@ async def admin_create_event(payload: Event, admin=Depends(require_admin)):
 
 
 @router.put("/events/{event_id}")
-async def admin_update_event(event_id: str, payload: Event, admin=Depends(require_admin)):
+async def admin_update_event(
+    event_id: str, payload: Event, admin=Depends(require_admin)
+):
     db = get_db()
     from ..event_reminders import normalize_event_time
     from ..event_categories import ensure_event_type_exists
@@ -452,7 +552,9 @@ async def admin_create_official(payload: Official, admin=Depends(require_admin))
 
 
 @router.put("/officials/{official_id}")
-async def admin_update_official(official_id: str, payload: Official, admin=Depends(require_admin)):
+async def admin_update_official(
+    official_id: str, payload: Official, admin=Depends(require_admin)
+):
     db = get_db()
     payload.id = official_id
     payload.bioHtml = sanitize_html(payload.bioHtml)
@@ -470,13 +572,19 @@ async def admin_delete_official(official_id: str, admin=Depends(require_admin)):
 
 # ---- Members ----
 @router.get("/members")
-async def admin_list_members(memberRole: Optional[str] = None, admin=Depends(require_admin)):
+async def admin_list_members(
+    memberRole: Optional[str] = None, admin=Depends(require_admin)
+):
     db = get_db()
     from ..media_urls import resolve_media_fields
     from ..member_roles import normalize_member
 
     query = {"memberRole": memberRole} if memberRole else {}
-    items = await db.members.find(query, {"_id": 0}).sort([("lastName", 1), ("firstName", 1)]).to_list(500)
+    items = (
+        await db.members.find(query, {"_id": 0})
+        .sort([("lastName", 1), ("firstName", 1)])
+        .to_list(500)
+    )
     for item in items:
         normalize_member(item)
         resolve_media_fields(item)
@@ -530,7 +638,9 @@ async def admin_create_member(payload: MemberCreate, admin=Depends(require_admin
 
 
 @router.put("/members/{member_id}")
-async def admin_update_member(member_id: str, payload: Member, admin=Depends(require_admin)):
+async def admin_update_member(
+    member_id: str, payload: Member, admin=Depends(require_admin)
+):
     db = get_db()
     payload.id = member_id
     payload.updatedAt = datetime.now(timezone.utc).isoformat()
@@ -571,7 +681,9 @@ async def admin_members_import_template(admin=Depends(require_admin)):
     return Response(
         content=MEMBERS_IMPORT_TEMPLATE_CSV,
         media_type="text/csv; charset=utf-8",
-        headers={"Content-Disposition": 'attachment; filename="anagrafica_modello.csv"'},
+        headers={
+            "Content-Disposition": 'attachment; filename="anagrafica_modello.csv"'
+        },
     )
 
 
@@ -616,29 +728,51 @@ def _designation_list_query() -> dict:
 
 
 async def _validate_designation_payload(db, doc: dict) -> None:
-    from ..member_roles import is_observer_designation_role, has_designations, normalize_member
+    from ..member_roles import (
+        is_observer_designation_role,
+        has_designations,
+        normalize_member,
+    )
 
     if is_observer_designation_role(doc.get("role")):
-        raise HTTPException(status_code=400, detail="Le designazioni con ruolo Osservatore non sono gestite qui")
+        raise HTTPException(
+            status_code=400,
+            detail="Le designazioni con ruolo Osservatore non sono gestite qui",
+        )
     mid = doc.get("memberId")
     if mid:
         m = await db.members.find_one({"id": mid}, {"_id": 0})
         if m:
             normalize_member(m)
             if not has_designations(m.get("memberRole")):
-                raise HTTPException(status_code=400, detail="Il nominativo deve essere un arbitro o assistente")
+                raise HTTPException(
+                    status_code=400,
+                    detail="Il nominativo deve essere un arbitro o assistente",
+                )
 
 
 @router.get("/designations")
 async def admin_list_designations(admin=Depends(require_admin)):
     db = get_db()
-    items = await db.designations.find(_designation_list_query(), {"_id": 0}).sort("matchDate", -1).to_list(500)
+    items = (
+        await db.designations.find(_designation_list_query(), {"_id": 0})
+        .sort("matchDate", -1)
+        .to_list(500)
+    )
     from ..designation_enrich import build_member_lookups, enrich_designation
     from ..member_roles import legacy_arbitri_query
 
     members = await db.members.find(
         legacy_arbitri_query(),
-        {"_id": 0, "id": 1, "slug": 1, "firstName": 1, "lastName": 1, "kind": 1, "memberRole": 1},
+        {
+            "_id": 0,
+            "id": 1,
+            "slug": 1,
+            "firstName": 1,
+            "lastName": 1,
+            "kind": 1,
+            "memberRole": 1,
+        },
     ).to_list(2000)
     slug_by_id, member_by_name = build_member_lookups(members)
     for item in items:
@@ -669,7 +803,9 @@ async def admin_create_designation(payload: Designation, admin=Depends(require_a
 
 
 @router.put("/designations/{des_id}")
-async def admin_update_designation(des_id: str, payload: Designation, admin=Depends(require_admin)):
+async def admin_update_designation(
+    des_id: str, payload: Designation, admin=Depends(require_admin)
+):
     db = get_db()
     payload.id = des_id
     doc = payload.model_dump()
@@ -711,7 +847,9 @@ async def admin_designations_import_template(admin=Depends(require_admin)):
     return Response(
         content=IMPORT_TEMPLATE_CSV,
         media_type="text/csv; charset=utf-8",
-        headers={"Content-Disposition": 'attachment; filename="designazioni_modello.csv"'},
+        headers={
+            "Content-Disposition": 'attachment; filename="designazioni_modello.csv"'
+        },
     )
 
 
@@ -744,7 +882,9 @@ async def admin_import_designations_file(
 @router.get("/designations/sync-status")
 async def admin_designations_sync_status(admin=Depends(require_admin)):
     db = get_db()
-    settings = await db.site_settings.find_one({"id": "site-settings"}, {"_id": 0, "lastDesignationsSync": 1})
+    settings = await db.site_settings.find_one(
+        {"id": "site-settings"}, {"_id": 0, "lastDesignationsSync": 1}
+    )
     return settings.get("lastDesignationsSync") if settings else {}
 
 
@@ -756,7 +896,9 @@ async def admin_list_leads(admin=Depends(require_admin)):
 
 
 @router.put("/leads/{lead_id}")
-async def admin_update_lead_status(lead_id: str, payload: dict, admin=Depends(require_admin)):
+async def admin_update_lead_status(
+    lead_id: str, payload: dict, admin=Depends(require_admin)
+):
     db = get_db()
     status = payload.get("status", "new")
     await db.leads.update_one({"id": lead_id}, {"$set": {"status": status}})
@@ -774,11 +916,17 @@ async def admin_delete_lead(lead_id: str, admin=Depends(require_admin)):
 @router.get("/messages")
 async def admin_list_messages(admin=Depends(require_admin)):
     db = get_db()
-    return await db.contact_messages.find({}, {"_id": 0}).sort("createdAt", -1).to_list(1000)
+    return (
+        await db.contact_messages.find({}, {"_id": 0})
+        .sort("createdAt", -1)
+        .to_list(1000)
+    )
 
 
 @router.put("/messages/{msg_id}")
-async def admin_update_message(msg_id: str, payload: dict, admin=Depends(require_admin)):
+async def admin_update_message(
+    msg_id: str, payload: dict, admin=Depends(require_admin)
+):
     db = get_db()
     status = payload.get("status", "new")
     await db.contact_messages.update_one({"id": msg_id}, {"$set": {"status": status}})
@@ -812,7 +960,9 @@ async def _enrich_document(doc: dict) -> dict:
     from ..media_urls import file_size_label_for_media_url
 
     db = get_db()
-    section = await normalize_document_category(db, doc.get("category"), doc.get("section"))
+    section = await normalize_document_category(
+        db, doc.get("category"), doc.get("section")
+    )
     doc["category"] = section
     doc["section"] = section
     await ensure_section_exists(db, section)
@@ -832,7 +982,9 @@ async def admin_list_document_sections(admin=Depends(require_admin)):
 
 
 @router.post("/document-sections")
-async def admin_add_document_section(payload: ArticleCategoryCreate, admin=Depends(require_admin)):
+async def admin_add_document_section(
+    payload: ArticleCategoryCreate, admin=Depends(require_admin)
+):
     from ..document_sections import add_document_section, normalize_section_name
 
     name = normalize_section_name(payload.name)
@@ -854,7 +1006,9 @@ async def admin_create_document(payload: Document, admin=Depends(require_admin))
 
 
 @router.put("/documents/{doc_id}")
-async def admin_update_document(doc_id: str, payload: Document, admin=Depends(require_admin)):
+async def admin_update_document(
+    doc_id: str, payload: Document, admin=Depends(require_admin)
+):
     db = get_db()
     payload.id = doc_id
     doc = await _enrich_document(payload.model_dump())
@@ -878,8 +1032,12 @@ async def admin_get_utility(admin=Depends(require_admin)):
     from ..designation_filters import event_date_in_season_clause, merge_mongo_queries
 
     db = get_db()
-    settings = await db.site_settings.find_one({"id": "site-settings"}, {"_id": 0, "utilityPolo": 1})
-    items = await db.utility_items.find({}, {"_id": 0}).sort("sortOrder", 1).to_list(500)
+    settings = await db.site_settings.find_one(
+        {"id": "site-settings"}, {"_id": 0, "utilityPolo": 1}
+    )
+    items = (
+        await db.utility_items.find({}, {"_id": 0}).sort("sortOrder", 1).to_list(500)
+    )
     polo = (settings or {}).get("utilityPolo") or {"bodyHtml": ""}
     polo = {"bodyHtml": polo.get("bodyHtml") or ""}
     material_count = await db.events.count_documents(
@@ -921,7 +1079,9 @@ async def admin_create_utility_item(payload: UtilityItem, admin=Depends(require_
 
 
 @router.put("/utility-items/{item_id}")
-async def admin_update_utility_item(item_id: str, payload: UtilityItem, admin=Depends(require_admin)):
+async def admin_update_utility_item(
+    item_id: str, payload: UtilityItem, admin=Depends(require_admin)
+):
     section = (payload.section or "").strip()
     if section not in _UTILITY_SECTIONS:
         raise HTTPException(400, "Sezione non valida")
@@ -977,7 +1137,9 @@ async def admin_update_utility_event_material(
     if not ev:
         raise HTTPException(status_code=404, detail="Evento non trovato")
     material = [a.model_dump() for a in (payload.utilityMaterial or [])]
-    await db.events.update_one({"id": event_id}, {"$set": {"utilityMaterial": material}})
+    await db.events.update_one(
+        {"id": event_id}, {"$set": {"utilityMaterial": material}}
+    )
     return {"ok": True, "utilityMaterial": resolve_attachments(material)}
 
 
@@ -997,7 +1159,9 @@ async def admin_import_legnano_documents(admin=Depends(require_admin)):
     from ..scrapers.aia_legnano_downloads import import_legnano_downloads
 
     db = get_db()
-    result = await import_legnano_downloads(db, download_files=True, replace_existing=True)
+    result = await import_legnano_downloads(
+        db, download_files=True, replace_existing=True
+    )
     return {"ok": True, **result}
 
 
@@ -1009,7 +1173,9 @@ async def admin_import_all_documents(admin=Depends(require_admin)):
 
     db = get_db()
     figc = await import_aia_downloads(db, download_files=True, replace_existing=True)
-    legnano = await import_legnano_downloads(db, download_files=True, replace_existing=True)
+    legnano = await import_legnano_downloads(
+        db, download_files=True, replace_existing=True
+    )
     return {
         "ok": True,
         "figc": figc,
@@ -1037,7 +1203,9 @@ async def admin_create_album(payload: Album, admin=Depends(require_admin)):
 
 
 @router.put("/albums/{album_id}")
-async def admin_update_album(album_id: str, payload: Album, admin=Depends(require_admin)):
+async def admin_update_album(
+    album_id: str, payload: Album, admin=Depends(require_admin)
+):
     db = get_db()
     payload.id = album_id
     doc = payload.model_dump()
@@ -1079,7 +1247,9 @@ async def admin_create_testimonial(payload: Testimonial, admin=Depends(require_a
 
 
 @router.put("/testimonials/{t_id}")
-async def admin_update_testimonial(t_id: str, payload: Testimonial, admin=Depends(require_admin)):
+async def admin_update_testimonial(
+    t_id: str, payload: Testimonial, admin=Depends(require_admin)
+):
     db = get_db()
     payload.id = t_id
     doc = await _attach_testimonial_member(db, payload.model_dump())
@@ -1117,16 +1287,24 @@ async def admin_list_gallery(
         q.setdefault("photoDate", {})["$gte"] = dateFrom
     if dateTo:
         q.setdefault("photoDate", {})["$lte"] = dateTo
-    return await db.gallery_images.find(q, {"_id": 0}).sort([("photoDate", -1), ("createdAt", -1)]).to_list(500)
+    return (
+        await db.gallery_images.find(q, {"_id": 0})
+        .sort([("photoDate", -1), ("createdAt", -1)])
+        .to_list(500)
+    )
 
 
 @router.post("/gallery")
-async def admin_create_gallery_image(payload: GalleryImageCreate, admin=Depends(require_admin)):
+async def admin_create_gallery_image(
+    payload: GalleryImageCreate, admin=Depends(require_admin)
+):
     from ..article_categories import ensure_category_exists
     from ..gallery import save_uploaded_gallery_image
 
     db = get_db()
-    category = await ensure_category_exists(db, payload.category) if payload.category else ""
+    category = (
+        await ensure_category_exists(db, payload.category) if payload.category else ""
+    )
     return await save_uploaded_gallery_image(
         db,
         url=payload.url,
@@ -1193,7 +1371,9 @@ async def admin_gallery_source_image(image_id: str, admin=Depends(require_admin)
                 r = await client.get(resolved)
                 r.raise_for_status()
             except httpx.HTTPError as exc:
-                raise HTTPException(502, f"Impossibile scaricare l'immagine: {exc}") from exc
+                raise HTTPException(
+                    502, f"Impossibile scaricare l'immagine: {exc}"
+                ) from exc
             ctype = r.headers.get("content-type", "image/jpeg")
             return Response(content=r.content, media_type=ctype)
 
@@ -1218,7 +1398,11 @@ async def admin_update_gallery_image(
     if payload.category is not None:
         from ..article_categories import ensure_category_exists
 
-        upd["category"] = await ensure_category_exists(db, payload.category) if payload.category else ""
+        upd["category"] = (
+            await ensure_category_exists(db, payload.category)
+            if payload.category
+            else ""
+        )
     if payload.url is not None:
         upd["url"] = payload.url
     if payload.path is not None:
@@ -1231,7 +1415,11 @@ async def admin_update_gallery_image(
         upd["aspect"] = _normalize_aspect(payload.aspect)
     if payload.memberIds is not None:
         upd["memberIds"] = list(payload.memberIds)
-    if payload.url is not None or payload.path is not None or payload.aspect is not None:
+    if (
+        payload.url is not None
+        or payload.path is not None
+        or payload.aspect is not None
+    ):
         upd["cropEdited"] = True
     await db.gallery_images.update_one({"id": image_id}, {"$set": upd})
     return await db.gallery_images.find_one({"id": image_id}, {"_id": 0})
@@ -1242,7 +1430,12 @@ async def admin_approve_gallery_image(image_id: str, admin=Depends(require_admin
     db = get_db()
     res = await db.gallery_images.update_one(
         {"id": image_id},
-        {"$set": {"status": "approved", "updatedAt": datetime.now(timezone.utc).isoformat()}},
+        {
+            "$set": {
+                "status": "approved",
+                "updatedAt": datetime.now(timezone.utc).isoformat(),
+            }
+        },
     )
     if not res.matched_count:
         raise HTTPException(404, "Immagine non trovata")
@@ -1254,7 +1447,12 @@ async def admin_reject_gallery_image(image_id: str, admin=Depends(require_admin)
     db = get_db()
     res = await db.gallery_images.update_one(
         {"id": image_id},
-        {"$set": {"status": "rejected", "updatedAt": datetime.now(timezone.utc).isoformat()}},
+        {
+            "$set": {
+                "status": "rejected",
+                "updatedAt": datetime.now(timezone.utc).isoformat(),
+            }
+        },
     )
     if not res.matched_count:
         raise HTTPException(404, "Immagine non trovata")
@@ -1279,7 +1477,9 @@ async def admin_sync_instagram_gallery(
     from ..instagram_gallery import parse_instagram_username, sync_instagram_gallery
 
     db = get_db()
-    settings = await db.settings.find_one({"_id": "site"}, {"_id": 0, "instagramUrl": 1}) or {}
+    settings = (
+        await db.settings.find_one({"_id": "site"}, {"_id": 0, "instagramUrl": 1}) or {}
+    )
     session_id = os.getenv("INSTAGRAM_SESSION_ID", "").strip()
     if not session_id:
         raise HTTPException(
@@ -1297,12 +1497,16 @@ async def admin_sync_instagram_gallery(
 
 
 @router.post("/gallery/import-instagram-batch")
-async def admin_import_instagram_batch(payload: list[dict], admin=Depends(require_admin)):
+async def admin_import_instagram_batch(
+    payload: list[dict], admin=Depends(require_admin)
+):
     """Import batch da browser (imageDataUrl base64 + metadati post)."""
     from ..instagram_gallery import import_instagram_batch, parse_instagram_username
 
     db = get_db()
-    settings = await db.settings.find_one({"_id": "site"}, {"_id": 0, "instagramUrl": 1}) or {}
+    settings = (
+        await db.settings.find_one({"_id": "site"}, {"_id": 0, "instagramUrl": 1}) or {}
+    )
     username = parse_instagram_username(settings.get("instagramUrl") or "aia_legnano")
     return await import_instagram_batch(db, payload, username=username)
 
@@ -1349,6 +1553,7 @@ async def admin_upload_gallery_image(
 @router.post("/upload")
 async def admin_upload(file: UploadFile = File(...), admin=Depends(require_admin)):
     import uuid as _u
+
     ext = Path(file.filename or "").suffix.lower() or ".bin"
     if ext not in {".jpg", ".jpeg", ".png", ".webp", ".gif", ".svg"}:
         raise HTTPException(400, "Formato non supportato")
@@ -1374,13 +1579,29 @@ async def admin_upload(file: UploadFile = File(...), admin=Depends(require_admin
 
 
 @router.post("/upload-attachment")
-async def admin_upload_attachment(file: UploadFile = File(...), admin=Depends(require_admin)):
+async def admin_upload_attachment(
+    file: UploadFile = File(...), admin=Depends(require_admin)
+):
     import uuid as _u
 
     allowed = {
-        ".jpg", ".jpeg", ".png", ".webp", ".gif",
-        ".pdf", ".doc", ".docx", ".xls", ".xlsx", ".ppt", ".pptx", ".txt", ".zip",
-        ".mp4", ".webm", ".mov",
+        ".jpg",
+        ".jpeg",
+        ".png",
+        ".webp",
+        ".gif",
+        ".pdf",
+        ".doc",
+        ".docx",
+        ".xls",
+        ".xlsx",
+        ".ppt",
+        ".pptx",
+        ".txt",
+        ".zip",
+        ".mp4",
+        ".webm",
+        ".mov",
     }
     video_ext = {".mp4", ".webm", ".mov"}
     ext = Path(file.filename or "").suffix.lower() or ".bin"
@@ -1394,7 +1615,9 @@ async def admin_upload_attachment(file: UploadFile = File(...), admin=Depends(re
     if target.stat().st_size > max_bytes:
         target.unlink(missing_ok=True)
         limit_mb = max_bytes // (1024 * 1024)
-        raise HTTPException(status_code=400, detail=f"File troppo grande (max {limit_mb} MB)")
+        raise HTTPException(
+            status_code=400, detail=f"File troppo grande (max {limit_mb} MB)"
+        )
     from ..media_urls import resolve_media_url
 
     rel_path = f"/api/uploads/{name}"

@@ -1,4 +1,5 @@
 """Scraper hub designazioni nazionali C.A.N. (canc, cand, can5, … — esclusa /can Serie A)."""
+
 from __future__ import annotations
 
 import logging
@@ -48,8 +49,20 @@ class NationalHub:
 
 # /designazioni/can/ (Serie A, dettaglio.asp) escluso: solo cognomi, poco affidabile per la sezione.
 NATIONAL_HUBS: tuple[NationalHub, ...] = (
-    NationalHub("canc", "https://www.aia-figc.it/designazioni/canc/", "gir_des", "aia-figc-canc", "C.A.N. C"),
-    NationalHub("cand", "https://www.aia-figc.it/designazioni/cand/", "gir_des", "aia-figc-cand", "C.A.N. D"),
+    NationalHub(
+        "canc",
+        "https://www.aia-figc.it/designazioni/canc/",
+        "gir_des",
+        "aia-figc-canc",
+        "C.A.N. C",
+    ),
+    NationalHub(
+        "cand",
+        "https://www.aia-figc.it/designazioni/cand/",
+        "gir_des",
+        "aia-figc-cand",
+        "C.A.N. D",
+    ),
     NationalHub(
         "can5elite",
         "https://www.aia-figc.it/designazioni/can5elite/",
@@ -57,8 +70,20 @@ NATIONAL_HUBS: tuple[NationalHub, ...] = (
         "aia-figc-can5elite",
         "C.A.N. 5 Elite",
     ),
-    NationalHub("can5", "https://www.aia-figc.it/designazioni/can5/", "gir_des", "aia-figc-can5", "C.A.N. 5"),
-    NationalHub("canbs", "https://www.aia-figc.it/designazioni/canbs/", "gir_des", "aia-figc-canbs", "C.A.N. BS"),
+    NationalHub(
+        "can5",
+        "https://www.aia-figc.it/designazioni/can5/",
+        "gir_des",
+        "aia-figc-can5",
+        "C.A.N. 5",
+    ),
+    NationalHub(
+        "canbs",
+        "https://www.aia-figc.it/designazioni/canbs/",
+        "gir_des",
+        "aia-figc-canbs",
+        "C.A.N. BS",
+    ),
 )
 
 
@@ -118,7 +143,9 @@ def _parse_national_officials(refs: str) -> list[tuple[str, str]]:
     return out
 
 
-def parse_dettaglio_page(html: str, page_url: str, detail_id: str, hub: NationalHub) -> list[ScrapedDesignation]:
+def parse_dettaglio_page(
+    html: str, page_url: str, detail_id: str, hub: NationalHub
+) -> list[ScrapedDesignation]:
     """Parse dettaglio.asp (testo libero, es. Serie A su /designazioni/can/)."""
     soup = BeautifulSoup(html, "html.parser")
     championship = ""
@@ -224,7 +251,9 @@ def scrape_national_hubs(
                 for did in detail_ids:
                     try:
                         time.sleep(request_delay)
-                        url = urljoin("https://www.aia-figc.it/", f"dettaglio.asp?ID={did}")
+                        url = urljoin(
+                            "https://www.aia-figc.it/", f"dettaglio.asp?ID={did}"
+                        )
                         dhtml = client.get(url, follow_redirects=True).text
                         combined.pages_fetched += 1
                         rows = parse_dettaglio_page(dhtml, url, did, hub)
@@ -241,5 +270,3 @@ def scrape_national_hubs(
         len(combined.errors),
     )
     return combined
-
-

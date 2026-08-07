@@ -1,4 +1,5 @@
 """Test normalizzazione gallerie BWG negli articoli."""
+
 from app.article_body import normalize_article_body_html
 
 

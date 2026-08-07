@@ -1,4 +1,5 @@
 import { AlertCircle, ArrowRight, Inbox, Loader2, Save, X } from "lucide-react";
+import { Link } from "react-router-dom";
 import { cn } from "@/lib/utils";
 import { Button, Card, PageTitle, SubsectionTitle } from "@/design-system";
 

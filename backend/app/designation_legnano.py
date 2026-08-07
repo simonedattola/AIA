@@ -1,4 +1,5 @@
 """Filtro sezione arbitrale Legnano per import e visualizzazione designazioni."""
+
 from __future__ import annotations
 
 import re
@@ -13,7 +14,11 @@ def section_matches(referee_section: str, section_filter: str | None = None) -> 
     needle = normalize_section_filter(section_filter).lower()
     if not needle:
         return True
-    hay = re.sub(r"\s+", " ", (referee_section or "").replace("\ufeff", "")).strip().lower()
+    hay = (
+        re.sub(r"\s+", " ", (referee_section or "").replace("\ufeff", ""))
+        .strip()
+        .lower()
+    )
     return needle in hay
 
 

@@ -2,6 +2,7 @@
 
 Run on startup: idempotent (only adds if collections are empty).
 """
+
 import os
 import json
 import asyncio
@@ -15,7 +16,13 @@ from .db import get_db
 from .security import hash_password
 from .sanitize import sanitize_html
 from .models import (
-    SiteSettings, Page, Article, Event, Official, Member, Designation,
+    SiteSettings,
+    Page,
+    Article,
+    Event,
+    Official,
+    Member,
+    Designation,
 )
 
 logger = logging.getLogger(__name__)
@@ -23,30 +30,39 @@ logger = logging.getLogger(__name__)
 SEED_DIR = Path(__file__).parent.parent / "seed_data"
 
 # Associati demo — non re-inserire dopo cancellazione admin.
-DEMO_MEMBER_SLUGS = frozenset({
-    "paolo-colombo",
-    "giulia-ferrari",
-    "martina-greco",
-    "chiara-neri",
-    "marco-rossi",
-    "elena-sala",
-    "davide-villa",
-})
+DEMO_MEMBER_SLUGS = frozenset(
+    {
+        "paolo-colombo",
+        "giulia-ferrari",
+        "martina-greco",
+        "chiara-neri",
+        "marco-rossi",
+        "elena-sala",
+        "davide-villa",
+    }
+)
 
-DEMO_MEMBER_NAMES = frozenset({
-    "Paolo Colombo",
-    "Giulia Ferrari",
-    "Martina Greco",
-    "Chiara Neri",
-    "Marco Rossi",
-    "Elena Sala",
-    "Davide Villa",
-})
+DEMO_MEMBER_NAMES = frozenset(
+    {
+        "Paolo Colombo",
+        "Giulia Ferrari",
+        "Martina Greco",
+        "Chiara Neri",
+        "Marco Rossi",
+        "Elena Sala",
+        "Davide Villa",
+    }
+)
 
 
 async def _seed_flag(key: str) -> bool:
     db = get_db()
-    doc = await db.site_settings.find_one({"id": "site-settings"}, {"_id": 0, "seedFlags": 1}) or {}
+    doc = (
+        await db.site_settings.find_one(
+            {"id": "site-settings"}, {"_id": 0, "seedFlags": 1}
+        )
+        or {}
+    )
     return bool((doc.get("seedFlags") or {}).get(key))
 
 
@@ -217,15 +233,20 @@ async def seed_admin():
     existing = await db.admin_users.find_one({"email": email}, {"_id": 0})
     if existing:
         # Always re-sync the password hash so env updates take effect (idempotent)
-        await db.admin_users.update_one({"email": email}, {"$set": {"passwordHash": hash_password(password), "name": name}})
+        await db.admin_users.update_one(
+            {"email": email},
+            {"$set": {"passwordHash": hash_password(password), "name": name}},
+        )
         return
-    await db.admin_users.insert_one({
-        "id": "admin-root",
-        "email": email,
-        "passwordHash": hash_password(password),
-        "name": name,
-        "createdAt": _now(),
-    })
+    await db.admin_users.insert_one(
+        {
+            "id": "admin-root",
+            "email": email,
+            "passwordHash": hash_password(password),
+            "name": name,
+            "createdAt": _now(),
+        }
+    )
 
 
 async def seed_settings():
@@ -272,7 +293,9 @@ async def _migrate_nav_items_to_pages(db):
     """Migrazione una tantum dal vecchio menu nav_items."""
     from .page_nav import MENU_PAGE_DEFAULTS, slug_from_href
 
-    settings = await db.site_settings.find_one({"id": "site-settings"}, {"_navMenuMigrated": 1})
+    settings = await db.site_settings.find_one(
+        {"id": "site-settings"}, {"_navMenuMigrated": 1}
+    )
     if settings and settings.get("_navMenuMigrated"):
         return
     defaults_by_slug = {d["slug"]: d for d in MENU_PAGE_DEFAULTS}
@@ -323,9 +346,18 @@ async def ensure_all_system_pages():
     catalog = _system_page_catalog()
     block_slugs = {"home", "diventa-arbitro"}
     patch_fields = (
-        "title", "status", "eyebrow", "heading", "summary", "image",
-        "menuLabel", "menuOrder", "showInMenu", "menuHighlight",
-        "metaTitle", "metaDescription",
+        "title",
+        "status",
+        "eyebrow",
+        "heading",
+        "summary",
+        "image",
+        "menuLabel",
+        "menuOrder",
+        "showInMenu",
+        "menuHighlight",
+        "metaTitle",
+        "metaDescription",
     )
 
     created = 0
@@ -402,7 +434,8 @@ async def ensure_all_system_pages():
         for key in patch_fields:
             new_val = (
                 menu.get(key)
-                if key in ("menuLabel", "menuOrder", "showInMenu", "menuHighlight") and menu.get(key) is not None
+                if key in ("menuLabel", "menuOrder", "showInMenu", "menuHighlight")
+                and menu.get(key) is not None
                 else src.get(key) if key in src else None
             )
             if key == "metaTitle" and not new_val:
@@ -418,7 +451,11 @@ async def ensure_all_system_pages():
             elif key == "menuOrder":
                 if (old_val is None or old_val == 100) and new_val is not None:
                     patch[key] = new_val
-            elif isinstance(new_val, str) and new_val.strip() and not (old_val or "").strip():
+            elif (
+                isinstance(new_val, str)
+                and new_val.strip()
+                and not (old_val or "").strip()
+            ):
                 patch[key] = new_val
         if patch:
             await db.pages.update_one({"slug": slug}, {"$set": patch})
@@ -430,16 +467,20 @@ async def ensure_all_system_pages():
             continue
         if await db.pages.find_one({"slug": slug}, {"_id": 0, "id": 1}):
             continue
-        await db.pages.insert_one(Page(
-            slug=slug,
-            title=menu.get("title", slug),
-            template="system",
-            status="published",
-            showInMenu=menu.get("showInMenu", False),
-            menuLabel=menu.get("menuLabel", ""),
-            menuOrder=menu.get("menuOrder", 100),
-            menuHighlight=menu.get("menuHighlight", False),
-        ).model_dump().copy())
+        await db.pages.insert_one(
+            Page(
+                slug=slug,
+                title=menu.get("title", slug),
+                template="system",
+                status="published",
+                showInMenu=menu.get("showInMenu", False),
+                menuLabel=menu.get("menuLabel", ""),
+                menuOrder=menu.get("menuOrder", 100),
+                menuHighlight=menu.get("menuHighlight", False),
+            )
+            .model_dump()
+            .copy()
+        )
         created += 1
         logger.info("Pagina sistema creata: %s", slug)
 
@@ -450,7 +491,12 @@ async def ensure_all_system_pages():
     await ensure_home_hero_no_secondary_cta(db)
     blocks_seeded = await ensure_system_page_blocks(db)
     logos_fixed = await ensure_section_logo_in_blocks(db)
-    return {"created": created, "updated": updated, "blocksSeeded": blocks_seeded, "logosFixed": logos_fixed}
+    return {
+        "created": created,
+        "updated": updated,
+        "blocksSeeded": blocks_seeded,
+        "logosFixed": logos_fixed,
+    }
 
 
 SECTION_LOGO_URL = "/brand/logo-aia-legnano.png"
@@ -462,7 +508,9 @@ async def ensure_section_logo_in_blocks(db=None):
     if db is None:
         db = get_db()
     fixed = 0
-    pages = await db.pages.find({"blocks.0": {"$exists": True}}, {"_id": 0, "slug": 1, "blocks": 1}).to_list(200)
+    pages = await db.pages.find(
+        {"blocks.0": {"$exists": True}}, {"_id": 0, "slug": 1, "blocks": 1}
+    ).to_list(200)
     for page in pages:
         blocks = page.get("blocks") or []
         changed = False
@@ -474,7 +522,9 @@ async def ensure_section_logo_in_blocks(db=None):
                 cfg["badgeLogoUrl"] = SECTION_LOGO_URL
                 changed = True
         if changed:
-            await db.pages.update_one({"slug": page["slug"]}, {"$set": {"blocks": blocks}})
+            await db.pages.update_one(
+                {"slug": page["slug"]}, {"$set": {"blocks": blocks}}
+            )
             fixed += 1
             logger.info("Logo sezionale: %s", page["slug"])
     if fixed:
@@ -571,7 +621,11 @@ async def ensure_system_page_blocks(db=None):
 
 def suggested_page_content(slug: str, page: dict | None = None) -> dict:
     """Blocchi e campi intestazione suggeriti per il ripristino da admin."""
-    from .system_page_blocks import COMPACT_HEADER_SLUGS, FIXED_LAYOUT_SLUGS, default_blocks_for_slug
+    from .system_page_blocks import (
+        COMPACT_HEADER_SLUGS,
+        FIXED_LAYOUT_SLUGS,
+        default_blocks_for_slug,
+    )
     from .blocks_sanitize import sanitize_blocks
 
     if slug in FIXED_LAYOUT_SLUGS:
@@ -686,11 +740,17 @@ async def ensure_chi_siamo_content():
     from .sanitize import sanitize_html
 
     db = get_db()
-    settings = await db.site_settings.find_one({"id": "site-settings"}, {"_chiSiamoSeeded": 1})
+    settings = await db.site_settings.find_one(
+        {"id": "site-settings"}, {"_chiSiamoSeeded": 1}
+    )
     if settings and settings.get("_chiSiamoSeeded"):
         return
-    existing = await db.pages.find_one({"slug": "chi-siamo"}, {"bodyHtml": 1, "blocks": 1})
-    if existing and ((existing.get("bodyHtml") or "").strip() or existing.get("blocks")):
+    existing = await db.pages.find_one(
+        {"slug": "chi-siamo"}, {"bodyHtml": 1, "blocks": 1}
+    )
+    if existing and (
+        (existing.get("bodyHtml") or "").strip() or existing.get("blocks")
+    ):
         await db.site_settings.update_one(
             {"id": "site-settings"},
             {"$set": {"_chiSiamoSeeded": True}},
@@ -786,7 +846,9 @@ async def ensure_diventa_arbitro_text_image_aspect():
             cfg["imageAspect"] = "3:4"
             changed = True
     if changed:
-        await db.pages.update_one({"slug": "diventa-arbitro"}, {"$set": {"blocks": blocks}})
+        await db.pages.update_one(
+            {"slug": "diventa-arbitro"}, {"$set": {"blocks": blocks}}
+        )
 
 
 async def ensure_compact_header_pages(db=None):
@@ -863,12 +925,15 @@ async def ensure_diventa_arbitro_testimonials():
     blocks = page.get("blocks") or []
     if any(b.get("type") == "testimonials" for b in blocks):
         return
-    testimonials = _block("testimonials", {
-        "eyebrow": "Voci dalla sezione",
-        "title": "Cosa dicono gli arbitri",
-        "useGlobal": True,
-        "items": [],
-    })
+    testimonials = _block(
+        "testimonials",
+        {
+            "eyebrow": "Voci dalla sezione",
+            "title": "Cosa dicono gli arbitri",
+            "useGlobal": True,
+            "items": [],
+        },
+    )
     insert_at = len(blocks)
     for i, block in enumerate(blocks):
         if block.get("type") == "cta":
@@ -883,7 +948,9 @@ async def seed_pages():
     # Convert original simple pages into modern block-based system pages
     system_pages = build_system_pages()
     for sp in system_pages:
-        existing = await db.pages.find_one({"slug": sp["slug"]}, {"_id": 0, "blocks": 1, "template": 1})
+        existing = await db.pages.find_one(
+            {"slug": sp["slug"]}, {"_id": 0, "blocks": 1, "template": 1}
+        )
         if existing and existing.get("blocks"):
             # already seeded with blocks - keep admin edits
             continue
@@ -895,7 +962,12 @@ async def seed_pages():
 
 
 def _block(t, cfg, enabled=True):
-    return {"id": str(__import__("uuid").uuid4()), "type": t, "config": cfg, "enabled": enabled}
+    return {
+        "id": str(__import__("uuid").uuid4()),
+        "type": t,
+        "config": cfg,
+        "enabled": enabled,
+    }
 
 
 def _diventa_arbitro_block_configs():
@@ -1115,14 +1187,20 @@ def _diventa_arbitro_blocks():
     """Blocchi pagina Diventa Arbitro (testi AIA FIGC + immagini seed)."""
     cfg = _diventa_arbitro_block_configs()
     return [
-        _block("hero", {
-            **cfg["hero"],
-            "backgroundImage": "https://images.unsplash.com/photo-1574629810360-7efbbe195018?q=85&w=2000&auto=format&fit=crop",
-        }),
-        _block("text_image", {
-            **cfg["text_image"],
-            "imageUrl": "https://images.unsplash.com/photo-1577471488278-16eec37ffcc2?q=85&w=750&h=1000&auto=format&fit=crop",
-        }),
+        _block(
+            "hero",
+            {
+                **cfg["hero"],
+                "backgroundImage": "https://images.unsplash.com/photo-1574629810360-7efbbe195018?q=85&w=2000&auto=format&fit=crop",
+            },
+        ),
+        _block(
+            "text_image",
+            {
+                **cfg["text_image"],
+                "imageUrl": "https://images.unsplash.com/photo-1577471488278-16eec37ffcc2?q=85&w=750&h=1000&auto=format&fit=crop",
+            },
+        ),
         _block("stats", cfg["stats"]),
         _block("timeline", cfg["timeline"]),
         _block("testimonials", cfg["testimonials"]),
@@ -1135,7 +1213,12 @@ def _apply_diventa_arbitro_texts(blocks: list) -> list:
     """Aggiorna solo i testi dei blocchi Diventa Arbitro, preserva id e media."""
     cfg = _diventa_arbitro_block_configs()
     media_keys = {
-        "hero": ("backgroundImage", "backgroundImageSource", "badgeLogoUrl", "badgeLogoSource"),
+        "hero": (
+            "backgroundImage",
+            "backgroundImageSource",
+            "badgeLogoUrl",
+            "badgeLogoSource",
+        ),
         "text_image": ("imageUrl", "imageUrlSource"),
         "cta": ("backgroundImage", "backgroundImageSource"),
     }
@@ -1183,47 +1266,62 @@ async def ensure_diventa_arbitro_content_aia():
 def build_system_pages():
     """Initial block-based content for Home and Diventa Arbitro."""
     home_blocks = [
-        _block("hero", {
-            "eyebrow": "Sezione AIA Legnano · Dal 1927",
-            "title": "Ogni decisione nasce da preparazione e coraggio.",
-            "subtitle": "Sezione Associazione Italiana Arbitri di Legnano. Punto di riferimento per arbitri, osservatori e aspiranti del territorio dell'Alto Milanese.",
-            "backgroundImage": "https://images.unsplash.com/photo-1551958219-acbc608c6377?q=85&w=2560&auto=format&fit=crop",
-            "overlay": "navy",
-            "height": "tall",
-            "badgeLogoUrl": "/brand/logo-aia-legnano.png",
-            "primaryCta": {"label": "Diventa Arbitro", "href": "/diventa-arbitro"},
-            "secondaryCta": {"label": "", "href": ""},
-            "showStats": True,
-        }),
-        _block("news_slider", {
-            "eyebrow": "Aggiornamenti",
-            "title": "Vita sezionale e successi",
-            "limit": 3,
-            "category": "",
-            "ctaLabel": "Tutte le news",
-            "ctaHref": "/news",
-        }),
-        _block("events_list", {
-            "eyebrow": "Calendario sezionale",
-            "title": "Prossimi eventi",
-            "limit": 3,
-            "upcomingOnly": True,
-            "ctaLabel": "Tutti gli eventi",
-            "ctaHref": "/eventi",
-            "showInstagramWidget": True,
-            "showPresidentCard": False,
-            "instagramTitle": "AIA Legnano",
-            "instagramSubtitle": "Foto, aggiornamenti e vita della sezione su Instagram.",
-        }),
-        _block("cta", {
-            "eyebrow": "Corso Arbitri · Iscrizioni aperte",
-            "title": "Vivi il calcio da protagonista.",
-            "description": "Il percorso formativo gratuito della Sezione AIA Legnano. Regolamento, video, preparazione atletica e testimonianze di associati esperti.",
-            "backgroundImage": "/images/home-corso-arbitri.png",
-            "backgroundImageSource": "/images/home-corso-arbitri.png",
-            "primaryCta": {"label": "Inizia il tuo percorso", "href": "/diventa-arbitro"},
-            "style": "navy",
-        }),
+        _block(
+            "hero",
+            {
+                "eyebrow": "Sezione AIA Legnano · Dal 1927",
+                "title": "Ogni decisione nasce da preparazione e coraggio.",
+                "subtitle": "Sezione Associazione Italiana Arbitri di Legnano. Punto di riferimento per arbitri, osservatori e aspiranti del territorio dell'Alto Milanese.",
+                "backgroundImage": "https://images.unsplash.com/photo-1551958219-acbc608c6377?q=85&w=2560&auto=format&fit=crop",
+                "overlay": "navy",
+                "height": "tall",
+                "badgeLogoUrl": "/brand/logo-aia-legnano.png",
+                "primaryCta": {"label": "Diventa Arbitro", "href": "/diventa-arbitro"},
+                "secondaryCta": {"label": "", "href": ""},
+                "showStats": True,
+            },
+        ),
+        _block(
+            "news_slider",
+            {
+                "eyebrow": "Aggiornamenti",
+                "title": "Vita sezionale e successi",
+                "limit": 3,
+                "category": "",
+                "ctaLabel": "Tutte le news",
+                "ctaHref": "/news",
+            },
+        ),
+        _block(
+            "events_list",
+            {
+                "eyebrow": "Calendario sezionale",
+                "title": "Prossimi eventi",
+                "limit": 3,
+                "upcomingOnly": True,
+                "ctaLabel": "Tutti gli eventi",
+                "ctaHref": "/eventi",
+                "showInstagramWidget": True,
+                "showPresidentCard": False,
+                "instagramTitle": "AIA Legnano",
+                "instagramSubtitle": "Foto, aggiornamenti e vita della sezione su Instagram.",
+            },
+        ),
+        _block(
+            "cta",
+            {
+                "eyebrow": "Corso Arbitri · Iscrizioni aperte",
+                "title": "Vivi il calcio da protagonista.",
+                "description": "Il percorso formativo gratuito della Sezione AIA Legnano. Regolamento, video, preparazione atletica e testimonianze di associati esperti.",
+                "backgroundImage": "/images/home-corso-arbitri.png",
+                "backgroundImageSource": "/images/home-corso-arbitri.png",
+                "primaryCta": {
+                    "label": "Inizia il tuo percorso",
+                    "href": "/diventa-arbitro",
+                },
+                "style": "navy",
+            },
+        ),
     ]
     diventa_blocks = _diventa_arbitro_blocks()
     return [
@@ -1239,11 +1337,15 @@ def build_system_pages():
             "image": "",
             "bodyHtml": "",
             "blocks": home_blocks,
-            "primaryCtaLabel": "", "primaryCtaHref": "",
-            "secondaryCtaLabel": "", "secondaryCtaHref": "",
+            "primaryCtaLabel": "",
+            "primaryCtaHref": "",
+            "secondaryCtaLabel": "",
+            "secondaryCtaHref": "",
             "metaTitle": "AIA Legnano · Sezione Associazione Italiana Arbitri",
             "metaDescription": "Sito ufficiale della Sezione AIA di Legnano. News, designazioni, corso arbitri, attività della sezione dell'Alto Milanese.",
-            "showInMenu": True, "menuLabel": "Home", "menuOrder": 1,
+            "showInMenu": True,
+            "menuLabel": "Home",
+            "menuOrder": 1,
             "updatedAt": _now(),
         },
         {
@@ -1258,11 +1360,15 @@ def build_system_pages():
             "image": "",
             "bodyHtml": "",
             "blocks": diventa_blocks,
-            "primaryCtaLabel": "", "primaryCtaHref": "",
-            "secondaryCtaLabel": "", "secondaryCtaHref": "",
+            "primaryCtaLabel": "",
+            "primaryCtaHref": "",
+            "secondaryCtaLabel": "",
+            "secondaryCtaHref": "",
             "metaTitle": "Diventa Arbitro · AIA Legnano",
             "metaDescription": "Corso arbitri gratuito AIA Legnano: iscrizioni aperte, formazione completa, kit e rimborsi.",
-            "showInMenu": False, "menuLabel": "", "menuOrder": 0,
+            "showInMenu": False,
+            "menuLabel": "",
+            "menuOrder": 0,
             "updatedAt": _now(),
         },
     ]
@@ -1418,12 +1524,28 @@ async def seed_testimonials():
         await _set_seed_flag("testimonials")
         return
     items = [
-        {"name": "Francesca Conti", "role": "Arbitra promossa al ruolo nazionale", "quote": "Il corso arbitri a Legnano è stata la scelta migliore della mia vita sportiva. Ho trovato persone vere, una formazione seria e un percorso che mi ha portato fino al ruolo nazionale.", "photoUrl": "https://images.unsplash.com/photo-1494790108377-be9c29b29330?auto=format&fit=crop&w=400&q=80"},
-        {"name": "Matteo Colombo", "role": "Arbitro Eccellenza · Premio Arbitro dell'Anno", "quote": "Quando ho iniziato non sapevo cosa aspettarmi. Oggi arbitro in Eccellenza e ho ricevuto il premio sezionale. Tutto è iniziato qui, con questo corso.", "photoUrl": "https://images.unsplash.com/photo-1506794778202-cad84cf45f1d?auto=format&fit=crop&w=400&q=80"},
-        {"name": "Elena Sala", "role": "Referente Corso Arbitri", "quote": "Dirigere il corso a Legnano significa accompagnare ragazze e ragazzi in un percorso che cambia il modo di vedere il calcio. È un onore vedere quanti giovani crescono ogni anno.", "photoUrl": "https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?auto=format&fit=crop&w=400&q=80"},
+        {
+            "name": "Francesca Conti",
+            "role": "Arbitra promossa al ruolo nazionale",
+            "quote": "Il corso arbitri a Legnano è stata la scelta migliore della mia vita sportiva. Ho trovato persone vere, una formazione seria e un percorso che mi ha portato fino al ruolo nazionale.",
+            "photoUrl": "https://images.unsplash.com/photo-1494790108377-be9c29b29330?auto=format&fit=crop&w=400&q=80",
+        },
+        {
+            "name": "Matteo Colombo",
+            "role": "Arbitro Eccellenza · Premio Arbitro dell'Anno",
+            "quote": "Quando ho iniziato non sapevo cosa aspettarmi. Oggi arbitro in Eccellenza e ho ricevuto il premio sezionale. Tutto è iniziato qui, con questo corso.",
+            "photoUrl": "https://images.unsplash.com/photo-1506794778202-cad84cf45f1d?auto=format&fit=crop&w=400&q=80",
+        },
+        {
+            "name": "Elena Sala",
+            "role": "Referente Corso Arbitri",
+            "quote": "Dirigere il corso a Legnano significa accompagnare ragazze e ragazzi in un percorso che cambia il modo di vedere il calcio. È un onore vedere quanti giovani crescono ogni anno.",
+            "photoUrl": "https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?auto=format&fit=crop&w=400&q=80",
+        },
     ]
     for i, t in enumerate(items):
         from .models import Testimonial as TM
+
         await db.testimonials.insert_one(TM(**t, sortOrder=i).model_dump().copy())
     await _set_seed_flag("testimonials")
 
@@ -1434,12 +1556,34 @@ async def seed_documents():
     if await db.documents.count_documents({}) > 0:
         return
     items = [
-        {"title": "Regolamento del Gioco del Calcio 2025/26", "description": "Edizione ufficiale FIGC con aggiornamenti annuali.", "fileUrl": "https://www.figc.it/", "fileSize": "2.4 MB", "category": "regolamento", "sortOrder": 1},
-        {"title": "Modulo iscrizione corso arbitri", "description": "PDF da compilare per la pre-iscrizione cartacea.", "fileUrl": "#", "fileSize": "180 KB", "category": "modulistica", "sortOrder": 2},
-        {"title": "Linee guida atletica arbitrale", "description": "Programma di preparazione atletica per associati.", "fileUrl": "#", "fileSize": "1.1 MB", "category": "tecnica", "sortOrder": 3},
+        {
+            "title": "Regolamento del Gioco del Calcio 2025/26",
+            "description": "Edizione ufficiale FIGC con aggiornamenti annuali.",
+            "fileUrl": "https://www.figc.it/",
+            "fileSize": "2.4 MB",
+            "category": "regolamento",
+            "sortOrder": 1,
+        },
+        {
+            "title": "Modulo iscrizione corso arbitri",
+            "description": "PDF da compilare per la pre-iscrizione cartacea.",
+            "fileUrl": "#",
+            "fileSize": "180 KB",
+            "category": "modulistica",
+            "sortOrder": 2,
+        },
+        {
+            "title": "Linee guida atletica arbitrale",
+            "description": "Programma di preparazione atletica per associati.",
+            "fileUrl": "#",
+            "fileSize": "1.1 MB",
+            "category": "tecnica",
+            "sortOrder": 3,
+        },
     ]
     for it in items:
         from .models import Document as Doc
+
         await db.documents.insert_one(Doc(**it).model_dump().copy())
 
 
@@ -1457,7 +1601,10 @@ async def ensure_aia_download_documents():
 
 async def ensure_document_section_categories():
     """Allinea category/section e catalogo sezioni in site_settings."""
-    from .document_sections import ensure_document_sections_seed, migrate_legacy_document_categories
+    from .document_sections import (
+        ensure_document_sections_seed,
+        migrate_legacy_document_categories,
+    )
 
     db = get_db()
     updated = await migrate_legacy_document_categories(db)
@@ -1474,7 +1621,9 @@ async def ensure_aia_legnano_download_documents():
     from .scrapers.aia_legnano_downloads import import_legnano_downloads
 
     db = get_db()
-    result = await import_legnano_downloads(db, download_files=True, replace_existing=True)
+    result = await import_legnano_downloads(
+        db, download_files=True, replace_existing=True
+    )
     await _set_seed_flag("aia_legnano_download_documents")
     return result.get("imported", 0)
 
@@ -1539,10 +1688,13 @@ async def ensure_instagram_gallery_sync() -> dict | None:
     from .instagram_gallery import sync_instagram_gallery
 
     db = get_db()
-    settings = await db.settings.find_one({"_id": "site"}, {"_id": 0, "instagramUrl": 1}) or {}
+    settings = (
+        await db.settings.find_one({"_id": "site"}, {"_id": 0, "instagramUrl": 1}) or {}
+    )
     result = await sync_instagram_gallery(
         db,
-        username=settings.get("instagramUrl") or "https://www.instagram.com/aia_legnano/",
+        username=settings.get("instagramUrl")
+        or "https://www.instagram.com/aia_legnano/",
         session_id=session_id,
         since_year=2021,
         limit=0,
