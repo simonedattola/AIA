@@ -11,7 +11,7 @@ ROOT_DIR = Path(__file__).parent
 load_dotenv(ROOT_DIR / '.env')
 
 from app.db import get_db, close_db
-from app.paths import UPLOAD_DIR
+from app.paths import UPLOAD_DIR, use_object_storage
 from app.routes.public import router as public_router
 from app.routes.admin import router as admin_router
 from app.routes.portal import router as portal_router
@@ -38,9 +38,27 @@ app.include_router(public_router)
 app.include_router(admin_router)
 app.include_router(portal_router)
 
-# Uploads static
-UPLOAD_DIR.mkdir(parents=True, exist_ok=True)
-app.mount("/api/uploads", StaticFiles(directory=str(UPLOAD_DIR)), name="uploads")
+# Uploads: local StaticFiles, or S3/R2 proxy (CDN URLs preferred when configured)
+if use_object_storage():
+    from fastapi import HTTPException
+    from fastapi.responses import RedirectResponse, Response
+    from app import storage as upload_storage
+
+    @app.get("/api/uploads/{name:path}")
+    async def serve_object_upload(name: str):
+        cdn = upload_storage.public_cdn_url(name)
+        if cdn:
+            return RedirectResponse(cdn, status_code=302)
+        data = upload_storage.read_bytes(name)
+        if data is None:
+            raise HTTPException(404, "File non trovato")
+        import mimetypes
+
+        ctype = mimetypes.guess_type(name)[0] or "application/octet-stream"
+        return Response(content=data, media_type=ctype)
+else:
+    UPLOAD_DIR.mkdir(parents=True, exist_ok=True)
+    app.mount("/api/uploads", StaticFiles(directory=str(UPLOAD_DIR)), name="uploads")
 
 app.add_middleware(
     CORSMiddleware,

@@ -6,7 +6,6 @@ from datetime import datetime, timezone
 from typing import Optional, List
 
 from pathlib import Path
-import shutil
 
 from fastapi import APIRouter, Depends, HTTPException, UploadFile, File, Form
 from pydantic import BaseModel, Field
@@ -51,7 +50,6 @@ from ..designation_level import highest_championship_label
 from ..portal_password import member_can_use_portal, default_portal_password
 from ..portal_member import member_public, is_staff_portal
 from ..media_urls import resolve_media_fields, resolve_attachments
-from ..paths import UPLOAD_DIR
 from ..member_roles import MEMBER_ROLES, normalize_member
 from ..comunicazioni_helpers import (
     comunicazione_destinatari,
@@ -689,14 +687,11 @@ async def portal_upload_allegato(file: UploadFile = File(...), auth=Depends(requ
     ext = Path(file.filename or "").suffix.lower() or ".bin"
     if ext not in allowed:
         raise HTTPException(status_code=400, detail="Formato file non supportato")
-    UPLOAD_DIR.mkdir(parents=True, exist_ok=True)
-    name = f"msg_{uuid.uuid4().hex}{ext}"
-    target = UPLOAD_DIR / name
-    with target.open("wb") as f:
-        shutil.copyfileobj(file.file, f)
+    from .. import storage as upload_storage
     from ..media_urls import resolve_media_url
 
-    rel_path = f"/api/uploads/{name}"
+    name = f"msg_{uuid.uuid4().hex}{ext}"
+    rel_path = upload_storage.save_fileobj(name, file.file, content_type=file.content_type)
     mime = file.content_type or ""
     tipo = "image" if mime.startswith("image/") or ext in {".jpg", ".jpeg", ".png", ".webp", ".gif"} else "file"
     return {
@@ -815,22 +810,19 @@ async def portal_gallery_upload(
     ext = Path(file.filename or "").suffix.lower() or ".bin"
     if ext not in {".jpg", ".jpeg", ".png", ".webp", ".gif"}:
         raise HTTPException(status_code=400, detail="Formato non supportato")
-    UPLOAD_DIR.mkdir(parents=True, exist_ok=True)
-    name = f"{uuid.uuid4().hex}{ext}"
-    target = UPLOAD_DIR / name
-    with target.open("wb") as f:
-        shutil.copyfileobj(file.file, f)
+    from .. import storage as upload_storage
     from ..article_categories import validate_member_category_choice
     from ..media_urls import resolve_media_url
     from ..gallery import save_uploaded_gallery_image
 
+    name = f"{uuid.uuid4().hex}{ext}"
+    rel_path = upload_storage.save_fileobj(name, file.file, content_type=file.content_type)
     db = get_db()
     try:
         category_resolved = await validate_member_category_choice(db, category)
     except ValueError as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from exc
     m = await _get_member(db, auth["memberId"])
-    rel_path = f"/api/uploads/{name}"
     url = resolve_media_url(rel_path)
     member_name = f"{m.get('firstName', '')} {m.get('lastName', '')}".strip()
     doc = await save_uploaded_gallery_image(
@@ -852,14 +844,11 @@ async def portal_upload_foto(file: UploadFile = File(...), auth=Depends(require_
     ext = Path(file.filename or "").suffix.lower() or ".bin"
     if ext not in {".jpg", ".jpeg", ".png", ".webp", ".gif"}:
         raise HTTPException(status_code=400, detail="Formato non supportato")
-    UPLOAD_DIR.mkdir(parents=True, exist_ok=True)
-    name = f"{uuid.uuid4().hex}{ext}"
-    target = UPLOAD_DIR / name
-    with target.open("wb") as f:
-        shutil.copyfileobj(file.file, f)
+    from .. import storage as upload_storage
     from ..media_urls import resolve_media_url
 
-    rel_path = f"/api/uploads/{name}"
+    name = f"{uuid.uuid4().hex}{ext}"
+    rel_path = upload_storage.save_fileobj(name, file.file, content_type=file.content_type)
     url = resolve_media_url(rel_path)
     db = get_db()
     await db.members.update_one(
@@ -878,11 +867,12 @@ async def portal_delete_foto(auth=Depends(require_member)):
         {"id": auth["memberId"]},
         {"$set": {"photoUrl": "", "updatedAt": _now()}},
     )
+    from .. import storage as upload_storage
     from ..media_urls import upload_basename
 
     name = upload_basename(old)
     if name:
-        (UPLOAD_DIR / name).unlink(missing_ok=True)
+        upload_storage.delete(name)
     return {"ok": True, "photoUrl": ""}
 
 

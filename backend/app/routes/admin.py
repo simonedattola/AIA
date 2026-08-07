@@ -1,7 +1,6 @@
 """Admin routes - CRUD over all resources. Requires JWT admin token."""
 import logging
 import os
-import shutil
 from pathlib import Path
 from datetime import datetime, timezone
 from typing import Optional
@@ -11,7 +10,6 @@ from slugify import slugify
 
 from ..db import get_db
 from ..security import require_admin, verify_password, create_token
-from ..paths import UPLOAD_DIR
 from ..models import (
     LoginRequest, TokenResponse, AdminInfo,
     SiteSettings, Page, Article, ArticleCreate, Event,
@@ -28,8 +26,6 @@ from ..sanitize import sanitize_html
 
 logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/api/admin", tags=["admin"])
-
-UPLOAD_DIR.mkdir(parents=True, exist_ok=True)
 
 
 # ---- Auth ----
@@ -1157,23 +1153,31 @@ async def admin_gallery_source_image(image_id: str, admin=Depends(require_admin)
     if not src:
         raise HTTPException(404, "Sorgente non disponibile")
 
-    def _local_upload_response(path_value: str) -> FileResponse | None:
+    def _stored_upload_response(path_value: str) -> Response | None:
+        from .. import storage as upload_storage
+
         name = path_value.rstrip("/").split("/")[-1]
         if not name:
             return None
-        local = UPLOAD_DIR / name
-        if local.is_file():
+        local = upload_storage.local_path(name)
+        if local is not None:
             return FileResponse(local)
+        data = upload_storage.read_bytes(name)
+        if data is not None:
+            import mimetypes
+
+            ctype = mimetypes.guess_type(name)[0] or "image/jpeg"
+            return Response(content=data, media_type=ctype)
         return None
 
     for candidate in (src, doc.get("url") or "", doc.get("path") or ""):
         c = (candidate or "").strip()
         if c.startswith("/api/uploads/"):
-            found = _local_upload_response(c)
+            found = _stored_upload_response(c)
             if found:
                 return found
         if "/api/uploads/" in c:
-            found = _local_upload_response(c.split("/api/uploads/")[-1])
+            found = _stored_upload_response(c.split("/api/uploads/")[-1])
             if found:
                 return found
 
@@ -1183,7 +1187,7 @@ async def admin_gallery_source_image(image_id: str, admin=Depends(require_admin)
     if base and resolved.startswith(base):
         rel = resolved[len(base) :]
         if rel.startswith("/api/uploads/"):
-            found = _local_upload_response(rel)
+            found = _stored_upload_response(rel)
             if found:
                 return found
 
@@ -1325,10 +1329,9 @@ async def admin_upload_gallery_image(
     if ext not in {".jpg", ".jpeg", ".png", ".webp", ".gif"}:
         raise HTTPException(400, "Formato non supportato")
     name = f"{_u.uuid4().hex}{ext}"
-    target = UPLOAD_DIR / name
-    with target.open("wb") as f:
-        shutil.copyfileobj(file.file, f)
-    rel_path = f"/api/uploads/{name}"
+    from .. import storage as upload_storage
+
+    rel_path = upload_storage.save_fileobj(name, file.file, content_type=file.content_type)
     url = resolve_media_url(rel_path)
     db = get_db()
     return await save_uploaded_gallery_image(
@@ -1353,12 +1356,10 @@ async def admin_upload(file: UploadFile = File(...), admin=Depends(require_admin
     if ext not in {".jpg", ".jpeg", ".png", ".webp", ".gif", ".svg"}:
         raise HTTPException(400, "Formato non supportato")
     name = f"{_u.uuid4().hex}{ext}"
-    target = UPLOAD_DIR / name
-    with target.open("wb") as f:
-        shutil.copyfileobj(file.file, f)
+    from .. import storage as upload_storage
     from ..media_urls import resolve_media_url
 
-    rel_path = f"/api/uploads/{name}"
+    rel_path = upload_storage.save_fileobj(name, file.file, content_type=file.content_type)
     abs_url = resolve_media_url(rel_path)
     # Persist record
     db = get_db()
@@ -1388,22 +1389,22 @@ async def admin_upload_attachment(file: UploadFile = File(...), admin=Depends(re
         raise HTTPException(status_code=400, detail="Formato file non supportato")
     max_bytes = 50 * 1024 * 1024 if ext in video_ext else 10 * 1024 * 1024
     name = f"att_{_u.uuid4().hex}{ext}"
-    target = UPLOAD_DIR / name
-    with target.open("wb") as f:
-        shutil.copyfileobj(file.file, f)
-    if target.stat().st_size > max_bytes:
-        target.unlink(missing_ok=True)
-        limit_mb = max_bytes // (1024 * 1024)
-        raise HTTPException(status_code=400, detail=f"File troppo grande (max {limit_mb} MB)")
+    from .. import storage as upload_storage
     from ..media_urls import resolve_media_url
 
-    rel_path = f"/api/uploads/{name}"
+    data = file.file.read()
+    if isinstance(data, str):
+        data = data.encode("utf-8")
+    if len(data) > max_bytes:
+        limit_mb = max_bytes // (1024 * 1024)
+        raise HTTPException(status_code=400, detail=f"File troppo grande (max {limit_mb} MB)")
+    rel_path = upload_storage.save_bytes(name, data, content_type=file.content_type)
     return {
         "id": _u.uuid4().hex,
         "fileName": file.filename or name,
         "fileUrl": rel_path,
         "url": resolve_media_url(rel_path),
-        "fileSize": target.stat().st_size,
+        "fileSize": len(data),
         "mimeType": file.content_type or "",
     }
 

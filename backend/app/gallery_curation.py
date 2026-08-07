@@ -13,8 +13,6 @@ from typing import Any
 import httpx
 from PIL import Image, ImageOps
 
-from .paths import UPLOAD_DIR
-
 logger = logging.getLogger(__name__)
 
 MIN_WIDTH = 480
@@ -133,10 +131,9 @@ async def load_image_bytes(url: str) -> bytes | None:
     def _read_local(name: str) -> bytes | None:
         if not name:
             return None
-        path = UPLOAD_DIR / name
-        if path.is_file():
-            return path.read_bytes()
-        return None
+        from . import storage as upload_storage
+
+        return upload_storage.read_bytes(name)
 
     if "/api/uploads/" in u:
         data = _read_local(u.split("/")[-1])
@@ -195,12 +192,11 @@ def process_gallery_image(data: bytes, aspect: str) -> tuple[bytes, str]:
 
 
 def save_curated_upload(data: bytes) -> tuple[str, str]:
+    from . import storage as upload_storage
     from .media_urls import resolve_media_url
 
-    UPLOAD_DIR.mkdir(parents=True, exist_ok=True)
     name = f"gallery-curated-{uuid.uuid4().hex[:12]}.jpg"
-    rel = f"/api/uploads/{name}"
-    (UPLOAD_DIR / name).write_bytes(data)
+    rel = upload_storage.save_bytes(name, data, content_type="image/jpeg")
     return rel, resolve_media_url(rel)
 
 

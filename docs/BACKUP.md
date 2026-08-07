@@ -81,6 +81,42 @@ Store cron output / dump directories on a volume that is itself snapshotted.
 5. Start API → confirm `GET /api/health` returns `database: connected`.
 6. Log in to `/admin` and open a member profile + one article with images.
 
+## Production object storage (AWS S3 / Cloudflare R2)
+
+Local `UPLOAD_DIR` is the default. For production, set:
+
+```bash
+STORAGE_BACKEND=s3
+S3_BUCKET=aia-legnano-uploads
+S3_ENDPOINT_URL=https://<accountid>.r2.cloudflarestorage.com   # omit for AWS S3
+S3_REGION=auto                    # or eu-west-1, etc.
+S3_ACCESS_KEY_ID=...
+S3_SECRET_ACCESS_KEY=...
+S3_PREFIX=uploads                 # optional key prefix
+S3_PUBLIC_BASE_URL=https://cdn.example.com   # CloudFront / R2 custom domain
+```
+
+See `app/paths.py` and `app/storage.py`. With `S3_PUBLIC_BASE_URL`, media URLs resolve to the CDN; without it the API streams/redirects from `/api/uploads/{name}`.
+
+### Migrating existing files to the bucket
+
+```bash
+# Example: sync local uploads into an S3/R2 bucket (AWS CLI / rclone)
+aws s3 sync backend/uploads/ s3://aia-legnano-uploads/uploads/ \
+  --endpoint-url "$S3_ENDPOINT_URL"
+```
+
+Then point the app at object storage (`STORAGE_BACKEND=s3`) and keep a final local tarball for rollback.
+
+### Backing up a bucket
+
+Prefer **bucket versioning + lifecycle rules**. Periodic inventory copy:
+
+```bash
+aws s3 sync s3://aia-legnano-uploads ./backups/s3-$(date +%Y%m%d) \
+  --endpoint-url "$S3_ENDPOINT_URL"
+```
+
 ## Indexes after restore
 
 On startup the API runs `app.db_indexes.create_indexes()` (idempotent).  
