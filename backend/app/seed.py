@@ -811,7 +811,7 @@ async def ensure_home_hero_no_secondary_cta(db=None):
 
 
 async def ensure_home_events_limit():
-    """Home: massimo 3 prossimi eventi nel blocco events_list."""
+    """Home: massimo 3 prossimi eventi nel blocco events_list + widget Instagram."""
     db = get_db()
     page = await db.pages.find_one({"slug": "home"}, {"_id": 0, "blocks": 1})
     if not page:
@@ -824,10 +824,33 @@ async def ensure_home_events_limit():
         cfg = dict(block.get("config") or {})
         if cfg.get("limit") != 3:
             cfg["limit"] = 3
-            block["config"] = cfg
             changed = True
+        if cfg.get("showInstagramWidget") is False:
+            cfg["showInstagramWidget"] = True
+            changed = True
+        block["config"] = cfg
     if changed:
         await db.pages.update_one({"slug": "home"}, {"$set": {"blocks": blocks}})
+
+
+async def ensure_eventi_list_layout():
+    """Pagina /eventi: lista card come in home, senza calendario mensile."""
+    from .system_page_blocks import default_blocks_for_slug
+    from .blocks_sanitize import sanitize_blocks
+
+    db = get_db()
+    page = await db.pages.find_one({"slug": "eventi"}, {"_id": 0, "blocks": 1})
+    if not page:
+        return 0
+    blocks = page.get("blocks") or []
+    needs = (not blocks) or any(b.get("type") == "events_calendar" for b in blocks)
+    if not needs:
+        # Also migrate events_calendar-like config if still showCalendar true on wrong type
+        return 0
+    new_blocks = sanitize_blocks(default_blocks_for_slug("eventi", page))
+    await db.pages.update_one({"slug": "eventi"}, {"$set": {"blocks": new_blocks}})
+    logger.info("Eventi: layout lista (senza calendario) applicato")
+    return 1
 
 
 async def ensure_diventa_arbitro_text_image_aspect():
@@ -1729,6 +1752,7 @@ async def run_all():
     await ensure_event_types_seed()
     await ensure_raduni_article_categories()
     await ensure_home_events_limit()
+    await ensure_eventi_list_layout()
     await ensure_home_corso_arbitri_cta_image()
     await ensure_diventa_arbitro_content_aia()
     await ensure_diventa_arbitro_testimonials()

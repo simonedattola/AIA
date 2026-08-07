@@ -28,12 +28,12 @@ PageTitle.propTypes = {
   variant: PropTypes.oneOf(["compact"]),
 };
 
-/** Titolo hero full-bleed — text-4xl → text-5xl → text-6xl */
+/** Titolo hero full-bleed — stessa scala leggibile anche su mobile (≈ text-5xl → text-6xl) */
 export function HeroTitle({ as: Component = "h1", className, children, ...props }) {
   return (
     <Component
       className={cn(
-        "font-display text-ds-hero sm:text-ds-hero-sm lg:text-ds-hero-lg tracking-tight leading-[1.05] text-navy-700",
+        "font-display text-ds-hero-sm lg:text-ds-hero-lg tracking-tight leading-[1.05] text-navy-700",
         className
       )}
       {...props}

@@ -115,14 +115,16 @@ def default_blocks_for_slug(slug: str, page: dict | None = None) -> list[dict]:
     if slug == "eventi":
         return [
             _block(
-                "events_calendar",
+                "events_list",
                 {
-                    "eyebrow": "",
-                    "title": "",
-                    "intro": "",
-                    "listTitle": "Prossimi appuntamenti",
-                    "listLimit": 3,
-                    "showCalendar": True,
+                    "eyebrow": "Calendario sezionale",
+                    "title": "Prossimi eventi",
+                    "limit": 50,
+                    "upcomingOnly": True,
+                    "ctaLabel": "",
+                    "ctaHref": "/eventi",
+                    "showInstagramWidget": False,
+                    "showPresidentCard": False,
                 },
             ),
         ]

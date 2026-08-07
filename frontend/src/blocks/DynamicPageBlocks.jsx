@@ -215,13 +215,55 @@ export function NewsGridBlock({ config: c }) {
   );
 }
 
+const EVENT_MONTHS_SHORT = ["GEN", "FEB", "MAR", "APR", "MAG", "GIU", "LUG", "AGO", "SET", "OTT", "NOV", "DIC"];
+
+/** Card evento allineata alla home (`events_list`). */
+function PublicEventCard({ e, onClick }) {
+  const d = new Date(e.date);
+  return (
+    <Card
+      as="button"
+      type="button"
+      interactive
+      padding="default"
+      className="w-full text-left flex flex-col sm:flex-row gap-4 sm:gap-5 items-start p-4 sm:p-5"
+      onClick={onClick}
+    >
+      <div className="flex flex-col items-center justify-center bg-navy-600 text-white rounded-md w-16 h-16 flex-shrink-0">
+        <div className="text-2xl font-bold leading-none">{d.getDate().toString().padStart(2, "0")}</div>
+        <Eyebrow as="div" className="text-[10px] tracking-wider mt-1 text-gold-400">
+          {EVENT_MONTHS_SHORT[d.getMonth()]}
+        </Eyebrow>
+      </div>
+      <div className="flex-1 min-w-0">
+        {e.tipo && (
+          <Eyebrow as="div" className="inline-block tracking-wider text-gold-400 mb-1.5">
+            {e.tipo}
+          </Eyebrow>
+        )}
+        <CardTitle as="h3" className="text-lg">{e.titolo}</CardTitle>
+        {e.descrizione && <p className="text-slate-600 text-sm mt-1.5 line-clamp-2">{e.descrizione}</p>}
+        {e.luogo && (
+          <div className="flex items-center gap-1.5 text-xs text-slate-500 mt-2">
+            <MapPin className="h-3.5 w-3.5" /> {e.luogo}
+          </div>
+        )}
+        {!e.tipo && (
+          <Eyebrow as="div" className="text-gold-600 mt-2">{formatEventDateTimeIt(e.date, e.orario)}</Eyebrow>
+        )}
+      </div>
+    </Card>
+  );
+}
+
 export function EventsCalendarBlock({ config: c }) {
   const [items, setItems] = useState([]);
   const [loading, setLoading] = useState(true);
   const [viewMonth, setViewMonth] = useState(() => { const n = new Date(); return new Date(n.getFullYear(), n.getMonth(), 1); });
   const [selectedId, setSelectedId] = useState(null);
   const [modalEvent, setModalEvent] = useState(null);
-  const listLimit = c.listLimit || 3;
+  const listLimit = c.listLimit || 50;
+  const showCalendar = c.showCalendar === true;
 
   useEffect(() => {
     fetchEvents({ limit: 500 }).then((data) => { setItems(data); setLoading(false); });
@@ -238,43 +280,56 @@ export function EventsCalendarBlock({ config: c }) {
     });
   };
 
-  const handleCalendarSelect = (event) => {
+  const handleSelect = (event) => {
     setSelectedId(event.id);
-    const [y, m] = eventDateKey(event.date).split("-");
-    setViewMonth(new Date(Number(y), Number(m) - 1, 1));
-    setModalEvent(listIds.has(event.id) ? null : event);
+    setModalEvent(event);
+    if (showCalendar) {
+      const [y, m] = eventDateKey(event.date).split("-");
+      setViewMonth(new Date(Number(y), Number(m) - 1, 1));
+    }
   };
 
   return (
     <section className="site-section bg-background bg-pattern-stadio" data-testid="events-calendar-block">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <SectionIntro eyebrow={c.eyebrow} title={c.title} intro={c.intro} />
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 lg:gap-10">
-          <div className="lg:col-span-6">
-            <SubsectionTitle as="h3" className="mb-6">{c.listTitle || "Prossimi appuntamenti"}</SubsectionTitle>
-            {loading ? <p className="text-slate-500">Caricamento…</p> : listEvents.length === 0 ? <p className="text-slate-500">Nessun evento in programma.</p> : (
-              <ul className="space-y-4">
+        <SectionIntro
+          eyebrow={c.eyebrow || (showCalendar ? "" : "Calendario sezionale")}
+          title={c.title || (showCalendar ? "" : "Prossimi eventi")}
+          intro={c.intro}
+        />
+        <div className={cn("grid grid-cols-1 gap-8 lg:gap-10", showCalendar && "lg:grid-cols-12")}>
+          <div className={showCalendar ? "lg:col-span-6" : "max-w-3xl"}>
+            {showCalendar && (
+              <SubsectionTitle as="h3" className="mb-6">{c.listTitle || "Prossimi appuntamenti"}</SubsectionTitle>
+            )}
+            {loading ? (
+              <p className="text-slate-500">Caricamento…</p>
+            ) : listEvents.length === 0 ? (
+              <p className="text-slate-500">Nessun evento in programma.</p>
+            ) : (
+              <ul className="space-y-3">
                 {listEvents.map((e) => (
-                  <li key={e.id} onClick={() => handleCalendarSelect(e)}>
-                    <Card
-                      padding="default"
-                      className={cn(
-                        "cursor-pointer transition-colors",
-                        selectedId === e.id ? "border-navy-600 shadow-ds-md" : "hover:border-navy-300"
-                      )}
-                    >
-                    <Eyebrow as="div" className="text-gold-600 mb-1">{formatEventDateTimeIt(e.date, e.orario)}</Eyebrow>
-                    <CardTitle as="div">{e.titolo}</CardTitle>
-                    {e.luogo && <div className="text-sm text-slate-600 mt-1 flex items-center gap-1"><MapPin className="h-3.5 w-3.5" />{e.luogo}</div>}
-                    </Card>
+                  <li key={e.id}>
+                    <PublicEventCard e={e} onClick={() => handleSelect(e)} />
                   </li>
                 ))}
               </ul>
             )}
           </div>
-          {c.showCalendar !== false && (
+          {showCalendar && (
             <div className="lg:col-span-6">
-              <EventsMonthCalendar events={items} month={viewMonth} onMonthChange={shiftViewMonth} selectedEventId={selectedId} onSelectEvent={handleCalendarSelect} />
+              <EventsMonthCalendar
+                events={items}
+                month={viewMonth}
+                onMonthChange={shiftViewMonth}
+                selectedEventId={selectedId}
+                onSelectEvent={(event) => {
+                  setSelectedId(event.id);
+                  const [y, m] = eventDateKey(event.date).split("-");
+                  setViewMonth(new Date(Number(y), Number(m) - 1, 1));
+                  setModalEvent(listIds.has(event.id) ? event : event);
+                }}
+              />
             </div>
           )}
         </div>

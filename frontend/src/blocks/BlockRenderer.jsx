@@ -86,28 +86,34 @@ export function HeroBlock({ config: c, stats }) {
       <div className="relative z-10 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-20 grid grid-cols-1 lg:grid-cols-12 gap-12 items-center w-full text-white">
         <div className={c.showStats ? "lg:col-span-7" : "lg:col-span-12"}>
           {(c.badgeLogoUrl || c.eyebrow) && (
-            <div className="inline-flex items-center gap-2.5 sm:gap-3 mb-6 px-3 sm:px-4 py-2 rounded-full bg-white/10 backdrop-blur-md border border-white/20">
-              {c.badgeLogoUrl && (
+            <div className="mb-6 sm:mb-8" data-testid="hero-brand-stack">
+              <div className="flex items-center gap-3 sm:gap-4 mb-3">
+                {c.badgeLogoUrl && (
+                  <img
+                    src={resolveSectionLogo(c.badgeLogoUrl)}
+                    alt="AIA Legnano"
+                    className={`${SECTION_LOGO_CLASS.md} ring-2 ring-white/30`}
+                    data-testid="hero-section-logo"
+                  />
+                )}
                 <img
-                  src={resolveSectionLogo(c.badgeLogoUrl)}
-                  alt="AIA Legnano"
-                  className={SECTION_LOGO_CLASS.badge}
-                  data-testid="hero-section-logo"
+                  src={NATIONAL_LOGO}
+                  alt="AIA Nazionale"
+                  className={`${NATIONAL_LOGO_CLASS.md} ring-2 ring-white/30`}
+                  data-testid="hero-national-logo"
                 />
+              </div>
+              {c.eyebrow && (
+                <Eyebrow className="tracking-[0.2em] font-medium text-white/90">
+                  {c.eyebrow}
+                </Eyebrow>
               )}
-              <img
-                src={NATIONAL_LOGO}
-                alt="AIA Nazionale"
-                className={NATIONAL_LOGO_CLASS.sm}
-                data-testid="hero-national-logo"
-              />
-              {c.eyebrow && <Eyebrow className="tracking-[0.22em] font-medium text-white">{c.eyebrow}</Eyebrow>}
             </div>
           )}
-          <HeroTitle className="text-white mb-6 whitespace-pre-line">
+          <HeroTitle className="text-white mb-5 sm:mb-6 whitespace-pre-line">
             {c.title}
           </HeroTitle>
-          {c.subtitle && <p className="text-lg sm:text-xl text-slate-200 max-w-2xl leading-relaxed mb-10">{c.subtitle}</p>}
+          {c.subtitle && <p className="text-base sm:text-xl text-slate-200 max-w-2xl leading-relaxed mb-8 sm:mb-10">{c.subtitle}</p>}
           <div className="flex flex-wrap items-center gap-4">
             {c.primaryCta?.label && (
               <CtaLink href={c.primaryCta.href || "/"} variant="secondary" className="group" data-testid="hero-cta-primary">
@@ -123,15 +129,18 @@ export function HeroBlock({ config: c, stats }) {
         </div>
 
         {c.showStats && stats && (
-          <div className="lg:col-span-5">
-            <div className="bg-white/95 backdrop-blur-md rounded-lg shadow-2xl p-8 border-t-4 border-gold-400 text-slate-900">
-              <Eyebrow className="mb-2 tracking-[0.25em]">La nostra sezione</Eyebrow>
-              <SubsectionTitle as="div" className="mb-6">In numeri</SubsectionTitle>
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-ds-grid">
-                <Stat icon="Users" value={stats.members} label="Associati"/>
-                <Stat icon="Trophy" value={stats.yearsActive} label="Anni di attività"/>
-                <Stat icon="Whistle" value={stats.matchesThisSeason ?? 0} label="Partite arbitrate questa stagione"/>
-                <Stat icon="CalendarDays" value={stats.eventsUpcoming} label="Prossimi eventi"/>
+          <div className="lg:col-span-5 w-full max-w-md lg:max-w-none">
+            <div
+              className="bg-white/95 backdrop-blur-md rounded-xl shadow-2xl p-5 sm:p-6 border-t-4 border-gold-400 text-slate-900"
+              data-testid="hero-stats-widget"
+            >
+              <Eyebrow className="mb-1 tracking-[0.22em]">La nostra sezione</Eyebrow>
+              <SubsectionTitle as="div" className="mb-4 text-xl sm:text-2xl">In numeri</SubsectionTitle>
+              <div className="grid grid-cols-2 gap-3">
+                <Stat icon="Users" value={stats.members} label="Associati" />
+                <Stat icon="Trophy" value={stats.yearsActive} label="Anni di attività" />
+                <Stat icon="Whistle" value={stats.matchesThisSeason ?? 0} label="Partite stagione" />
+                <Stat icon="CalendarDays" value={stats.eventsUpcoming} label="Prossimi eventi" />
               </div>
             </div>
           </div>
@@ -144,10 +153,14 @@ export function HeroBlock({ config: c, stats }) {
 function Stat({ icon, value, label }) {
   const I = Icons[icon] || Icons.Trophy;
   return (
-    <div>
-      <I className="h-5 w-5 text-navy-600 mb-1" />
-      <SubsectionTitle as="div" className="text-3xl leading-none">{value}</SubsectionTitle>
-      <Eyebrow as="div" className="tracking-wider text-slate-500 mt-1 normal-case">{label}</Eyebrow>
+    <div className="rounded-lg bg-slate-50 border border-slate-100 px-3 py-3.5 min-h-[5.5rem] flex flex-col">
+      <I className="h-4 w-4 text-navy-600 mb-2 shrink-0" aria-hidden />
+      <div className="font-display text-2xl sm:text-3xl font-bold text-navy-700 leading-none tabular-nums">
+        {value}
+      </div>
+      <div className="text-[11px] sm:text-xs font-medium uppercase tracking-wide text-slate-500 mt-1.5 leading-snug">
+        {label}
+      </div>
     </div>
   );
 }
@@ -522,19 +535,23 @@ export function NewsSliderBlock({ config: c }) {
   return (
     <section className="site-section bg-background" data-testid="news-slider-block">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="flex flex-col md:flex-row md:items-end justify-between gap-6 mb-12">
-          <div>
-            {c.eyebrow && <Eyebrow as="div" className="mb-3 tracking-[0.25em]">{c.eyebrow}</Eyebrow>}
-            {c.title && <CtaTitle className="leading-tight">{c.title}</CtaTitle>}
-            <span className="gold-divider mt-4 block" />
-          </div>
-          {c.ctaLabel && <Button to={c.ctaHref || "/news"} variant="outline" size="sm">{c.ctaLabel} <ArrowRight className="h-4 w-4"/></Button>}
+        <div className="mb-10 md:mb-12">
+          {c.eyebrow && <Eyebrow as="div" className="mb-3 tracking-[0.25em]">{c.eyebrow}</Eyebrow>}
+          {c.title && <CtaTitle className="leading-tight">{c.title}</CtaTitle>}
+          <span className="gold-divider mt-4 block" />
         </div>
         <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
           {items.map((a) => (
             <NewsArticleCard key={a.slug} article={a} showReadMore={false} />
           ))}
         </div>
+        {c.ctaLabel && (
+          <div className="mt-10 flex justify-center md:justify-start">
+            <Button to={c.ctaHref || "/news"} variant="outline" size="sm" data-testid="news-slider-cta">
+              {c.ctaLabel} <ArrowRight className="h-4 w-4" />
+            </Button>
+          </div>
+        )}
       </div>
     </section>
   );
@@ -549,8 +566,10 @@ function parseInstagramHandle(url) {
 }
 
 function eventsListShowSidebar(c) {
-  if (c.showInstagramWidget === false || c.showPresidentCard === false) return false;
-  return c.showInstagramWidget === true || c.showPresidentCard === true;
+  // Instagram e card presidente sono indipendenti: non nascondere IG se il presidente è off.
+  const showIg = c.showInstagramWidget !== false;
+  const showPres = c.showPresidentCard === true;
+  return showIg || showPres;
 }
 
 function InstagramProfileWidget({ profileUrl, handle, title, subtitle, className = "" }) {
