@@ -6,8 +6,13 @@ import requests
 
 BASE_URL = os.environ.get("REACT_APP_BACKEND_URL", "").rstrip("/")
 API = f"{BASE_URL}/api"
-ADMIN_EMAIL = "admin@aia-legnano.it"
-ADMIN_PASSWORD = "AiaLegnano2026!"
+ADMIN_EMAIL = os.environ.get("ADMIN_EMAIL", "admin@aia-legnano.it")
+ADMIN_PASSWORD = os.environ.get("ADMIN_PASSWORD", "")
+if not ADMIN_PASSWORD:
+    raise RuntimeError(
+        "ADMIN_PASSWORD non impostato: esporta la variabile (o carica backend/.env) "
+        "prima di eseguire i test di integrazione."
+    )
 
 
 @pytest.fixture(scope="session")

@@ -13,23 +13,26 @@ services:
       context: ./backend
     container_name: aia-backend
     restart: unless-stopped
+    # Secret e config da file `.env` in root (Compose lo usa per l'interpolazione ${...}).
+    # Copia `.env.example` → `.env` e genera JWT_SECRET / ADMIN_PASSWORD reali.
+    # Non inserire mai password o secret letterali in questo file.
     environment:
-      MONGO_URL: mongodb://mongo:27017
-      DB_NAME: aia_legnano
-      JWT_SECRET: change-me-in-production
-      JWT_ALGORITHM: HS256
-      JWT_EXPIRE_HOURS: 24
-      ADMIN_EMAIL: admin@aia-legnano.it
-      ADMIN_PASSWORD: AiaLegnano2026!
-      ADMIN_NAME: Amministratore
-      CORS_ORIGINS: http://localhost:3000,http://127.0.0.1:3000
-      PUBLIC_API_URL: http://localhost:8000
+      MONGO_URL: ${MONGO_URL:-mongodb://mongo:27017}
+      DB_NAME: ${DB_NAME:-aia_legnano}
+      JWT_SECRET: ${JWT_SECRET:?Set JWT_SECRET in .env — see .env.example}
+      JWT_ALGORITHM: ${JWT_ALGORITHM:-HS256}
+      JWT_EXPIRE_HOURS: ${JWT_EXPIRE_HOURS:-24}
+      ADMIN_EMAIL: ${ADMIN_EMAIL:?Set ADMIN_EMAIL in .env — see .env.example}
+      ADMIN_PASSWORD: ${ADMIN_PASSWORD:?Set ADMIN_PASSWORD in .env — see .env.example}
+      ADMIN_NAME: ${ADMIN_NAME:-Amministratore}
+      CORS_ORIGINS: ${CORS_ORIGINS:-http://localhost:3000,http://127.0.0.1:3000}
+      PUBLIC_API_URL: ${PUBLIC_API_URL:-http://localhost:8000}
       UPLOAD_DIR: /app/backend/uploads
-      DESIGNATIONS_CRAWL_ALL_HUBS: "false"
-      DESIGNATIONS_NATIONAL_HUBS: canc,cand,can5elite,can5,canbs
-      DESIGNATIONS_FILTER_SECTION: Legnano
-      # Cookie sessionid Instagram (per import completo galleria): vedi Admin o scripts/import_instagram_gallery.py
-      INSTAGRAM_SESSION_ID: ""
+      DESIGNATIONS_CRAWL_ALL_HUBS: ${DESIGNATIONS_CRAWL_ALL_HUBS:-false}
+      DESIGNATIONS_NATIONAL_HUBS: ${DESIGNATIONS_NATIONAL_HUBS:-canc,cand,can5elite,can5,canbs}
+      DESIGNATIONS_FILTER_SECTION: ${DESIGNATIONS_FILTER_SECTION:-Legnano}
+      # Cookie sessionid Instagram (import galleria): Admin o scripts/import_instagram_gallery.py
+      INSTAGRAM_SESSION_ID: ${INSTAGRAM_SESSION_ID:-}
     volumes:
       - backend-uploads:/app/backend/uploads
       - ./backend/app:/app/backend/app
@@ -45,7 +48,7 @@ services:
     container_name: aia-frontend
     restart: unless-stopped
     environment:
-      REACT_APP_BACKEND_URL: http://localhost:8000
+      REACT_APP_BACKEND_URL: ${REACT_APP_BACKEND_URL:-http://localhost:8000}
       WDS_SOCKET_PORT: 3000
       CHOKIDAR_USEPOLLING: "true"
       WATCHPACK_POLLING: "true"

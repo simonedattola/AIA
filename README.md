@@ -10,19 +10,43 @@ Sito istituzionale e pannello admin per la Sezione AIA di Legnano (React + FastA
 
 ## Configurazione
 
-1. Copia le variabili d'ambiente del backend:
+### Secret e variabili d'ambiente
+
+**Non committare mai file `.env` con password o JWT reali.** I template nel repo usano solo placeholder.
+
+1. **Sviluppo locale (uvicorn senza Docker)** — copia il template backend:
 
 ```bash
 cp backend/.env.example backend/.env
 ```
 
-Modifica `backend/.env` (almeno `MONGO_URL`, `DB_NAME`, `JWT_SECRET`, credenziali admin).
+Modifica `backend/.env` e imposta almeno:
 
-2. Frontend – crea `frontend/.env`:
+| Variabile | Note |
+|-----------|------|
+| `MONGO_URL` | es. `mongodb://localhost:27017` |
+| `DB_NAME` | es. `aia_legnano` |
+| `JWT_SECRET` | stringa casuale lunga (≥32 caratteri). Es: `openssl rand -base64 48` |
+| `ADMIN_EMAIL` | email admin seed |
+| `ADMIN_PASSWORD` | password forte (obbligatoria; niente default in codice) |
+
+2. **Docker Compose** — usa il template in root:
+
+```bash
+cp .env.example .env
+# genera secret, poi:
+docker compose up --build
+```
+
+Compose legge `.env` in root e **richiede** `JWT_SECRET`, `ADMIN_EMAIL` e `ADMIN_PASSWORD` (nessun valore hardcoded in `docker-compose.yml`).
+
+3. Frontend — crea `frontend/.env` (non secret):
 
 ```
 REACT_APP_BACKEND_URL=http://localhost:8000
 ```
+
+Per i test di integrazione backend, esporta le stesse credenziali admin (`ADMIN_PASSWORD`, opzionalmente `ADMIN_EMAIL`) prima di `pytest`.
 
 ## Area riservata associati (integrata, porta 3000)
 
@@ -116,5 +140,6 @@ REACT_APP_BACKEND_URL=http://localhost:8000 pytest tests/ -v
 
 ## Credenziali admin (seed)
 
-- Email: valore di `ADMIN_EMAIL` in `.env` (default `admin@aia-legnano.it`)
-- Password: valore di `ADMIN_PASSWORD` in `.env`
+- Email: valore di `ADMIN_EMAIL` in `.env` / `backend/.env`
+- Password: valore di `ADMIN_PASSWORD` (obbligatorio; senza default in codice)
+- All'avvio il seed sincronizza l'hash della password admin dall'env

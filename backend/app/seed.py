@@ -206,8 +206,13 @@ ARTICLE_BODIES = {
 
 async def seed_admin():
     db = get_db()
-    email = os.environ.get("ADMIN_EMAIL", "admin@aia-legnano.it").lower()
-    password = os.environ.get("ADMIN_PASSWORD", "AiaLegnano2026!")
+    email = (os.environ.get("ADMIN_EMAIL") or "admin@aia-legnano.it").strip().lower()
+    password = (os.environ.get("ADMIN_PASSWORD") or "").strip()
+    if not password:
+        raise RuntimeError(
+            "ADMIN_PASSWORD non configurato. Impostalo in backend/.env "
+            "(vedi backend/.env.example) oppure in .env per docker compose."
+        )
     name = os.environ.get("ADMIN_NAME", "Amministratore")
     existing = await db.admin_users.find_one({"email": email}, {"_id": 0})
     if existing:
