@@ -80,6 +80,26 @@ All'avvio viene eseguito il seed idempotente (dati demo + utente admin).
 
 API: `http://localhost:8000/api/`
 
+### Health & Monitoring
+
+- **Health endpoint:** `GET /api/health` — returns service status (`database`, `cache`) and UTC timestamp
+- **Logs:** Structured JSON logs to stdout (aggregate with ELK / Datadog / CloudWatch). Set `LOG_LEVEL` (default `INFO`).
+- **Metrics:** Prometheus-style gauges at `GET /metrics` (`aia_api_up`, `aia_api_uptime_seconds`, `aia_api_database_up`)
+
+Example health payload:
+
+```json
+{
+  "status": "healthy",
+  "timestamp": "2026-08-07T20:00:00Z",
+  "services": {
+    "database": "connected",
+    "cache": "N/A"
+  }
+}
+```
+
+
 ## Frontend
 
 ```bash
