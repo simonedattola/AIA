@@ -142,7 +142,7 @@ export function MembersGridBlock({ config: c }) {
           </div>
         </div>
         {loading ? <p className="text-slate-500">Caricamento…</p> : (
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-ds-grid">
+          <div className="grid grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-ds-grid">
             {filtered.map((m) => (
               <MemberGridCard key={m.id} member={m} />
             ))}
@@ -424,7 +424,7 @@ export function OrganigrammaBlock({ config: c, stats }) {
         {others.length > 0 && (
           <div className="mb-12">
             <SubsectionTitle as="h3" className="mb-8 text-center">Consiglio Direttivo</SubsectionTitle>
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-ds-grid">
+            <div className="grid grid-cols-2 lg:grid-cols-4 gap-ds-grid">
               {others.map((m) => <OrganigramPersonCard key={m.id} member={m} subtitle={m.boardTitle || "Consiglio Direttivo"} />)}
             </div>
           </div>
@@ -432,7 +432,7 @@ export function OrganigrammaBlock({ config: c, stats }) {
         {observers.length > 0 && (
           <div>
             <SubsectionTitle as="h3" className="mb-8 text-center">Osservatori</SubsectionTitle>
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-ds-grid">
+            <div className="grid grid-cols-2 lg:grid-cols-4 gap-ds-grid">
               {observers.map((m) => <OrganigramPersonCard key={m.id} member={m} subtitle={memberRoleLabel(m)} />)}
             </div>
           </div>

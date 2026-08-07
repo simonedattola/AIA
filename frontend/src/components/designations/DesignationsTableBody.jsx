@@ -42,7 +42,7 @@ export default function DesignationsTableBody({
   const colSpan = 4 + (showNominativoCol ? 1 : 0) + (showActionsCol ? 1 : 0);
 
   return (
-    <table className="w-full min-w-[680px]" data-testid={tableTestId}>
+    <table className="w-full min-w-0 md:min-w-[680px]" data-testid={tableTestId}>
       <thead>
         <tr
           className={`bg-navy-700 text-white text-left text-xs uppercase tracking-wider${

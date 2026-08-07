@@ -1,5 +1,5 @@
 import { SITE_ICONS } from "../../lib/siteIcons";
-import DesignationsTableBody from "../designations/DesignationsTableBody";
+import DesignationsDataTable from "../designations/DesignationsDataTable";
 import { formatSeasonLabel } from "../../lib/designationsDisplay";
 import { PortalEmptyState } from "./portal-ui";
 
@@ -35,9 +35,7 @@ export default function DesignationsTable({
       {designations.length === 0 ? (
         <PortalEmptyState icon={SITE_ICONS.designations}>{emptyMessage}</PortalEmptyState>
       ) : (
-        <div className="border border-slate-200 rounded-xl overflow-hidden shadow-sm overflow-x-auto">
-          <DesignationsTableBody designations={designations} />
-        </div>
+        <DesignationsDataTable designations={designations} tableTestId="portal-designations-table" />
       )}
     </>
   );
