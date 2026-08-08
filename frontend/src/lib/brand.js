@@ -26,6 +26,7 @@ export const SECTION_LOGO_CLASS = {
 export const NATIONAL_LOGO_CLASS = {
   sm: "h-10 w-10 object-contain shrink-0 bg-transparent aspect-square",
   md: "h-12 w-12 object-contain shrink-0 bg-transparent aspect-square",
+  header: "h-10 w-10 max-[1139px]:h-12 max-[1139px]:w-12 object-contain shrink-0 bg-transparent aspect-square",
   footer: "h-10 w-10 object-contain shrink-0 bg-transparent aspect-square",
   /** Affiancato al logo sezionale: stesso box del sezionale. */
   pair: `${PAIR_LOGO_SIZE} object-contain shrink-0 bg-transparent aspect-square`,
