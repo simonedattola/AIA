@@ -1,1 +1,21 @@
-[]
+[
+  {"nome": "Stefano", "cognome": "Zambon", "ruolo": "Presidente di Sezione", "foto": ""},
+  {"nome": "Andrea", "cognome": "Raspanti", "ruolo": "Vice Presidente Vicario", "foto": ""},
+  {"nome": "Giuseppe", "cognome": "Lattuada", "ruolo": "Vice Presidente", "foto": ""},
+  {"nome": "Fabio", "cognome": "Talpone", "ruolo": "Segretario", "foto": ""},
+  {"nome": "Antonino", "cognome": "Zottarelli", "ruolo": "Cassiere", "foto": ""},
+  {"nome": "Luciano", "cognome": "Canavesi", "ruolo": "Responsabile area tecnica O.T.S.", "foto": ""},
+  {"nome": "Antonio", "cognome": "Galli", "ruolo": "Gestione designazioni", "foto": ""},
+  {"nome": "Ivan", "cognome": "Cucco", "ruolo": "Responsabile O.A.", "foto": ""},
+  {"nome": "Gaetano", "cognome": "Pignataro", "ruolo": "Referente atletico", "foto": ""},
+  {"nome": "Fabrizio", "cognome": "Giorgi", "ruolo": "Gestione designazioni S.G.S.", "foto": ""},
+  {"nome": "Anita", "cognome": "Costa", "ruolo": "Referente Corso Arbitri", "foto": ""},
+  {"nome": "Stefano", "cognome": "Re Depaolini", "ruolo": "Responsabile R.T.O.", "foto": ""},
+  {"nome": "Luca", "cognome": "Colombo", "ruolo": "Referente canali social", "foto": ""},
+  {"nome": "Cesare", "cognome": "Zoia", "ruolo": "Area Comunicazione", "foto": ""},
+  {"nome": "Gaetano", "cognome": "Stillitano", "ruolo": "Area Amministrativa-finanziaria", "foto": ""},
+  {"nome": "Massimiliano", "cognome": "Gualla", "ruolo": "Area Designazioni S.G.S.", "foto": ""},
+  {"nome": "Gianluca", "cognome": "Facchetti", "ruolo": "Organo di Revisione – Presidente", "foto": ""},
+  {"nome": "Rosario", "cognome": "Barbieri Frandanisa", "ruolo": "Organo di Revisione – Componente", "foto": ""},
+  {"nome": "Gianluigi", "cognome": "Scazzoso", "ruolo": "Organo di Revisione – Componente", "foto": ""}
+]

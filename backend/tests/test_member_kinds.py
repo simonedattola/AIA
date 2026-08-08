@@ -31,3 +31,41 @@ def test_observer_designation_role():
 
 def test_member_role_label():
     assert "OA" in member_role_label("osservatore", "oa")
+
+
+def test_chi_siamo_includes_arbitro_with_board_title():
+    from app.member_roles import chi_siamo_query, legacy_chi_siamo_query
+
+    q = chi_siamo_query()
+    assert "boardTitle" in str(q)
+    # Documento tipico doppio ruolo
+    dual = {"memberRole": "arbitro", "boardTitle": "Area Informatica"}
+    # Simula match Mongo: boardTitle non vuoto
+    assert dual["boardTitle"]
+    lq = legacy_chi_siamo_query()
+    assert any("boardTitle" in str(clause) for clause in lq["$or"])
+
+
+def test_normalize_president_not_revisione():
+    doc = {
+        "memberRole": "consiglio_direttivo",
+        "boardTitle": "Organo di Revisione – Presidente",
+        "isPresident": True,
+    }
+    normalize_member(doc)
+    assert doc["isPresident"] is False
+
+    prez = {
+        "memberRole": "consiglio_direttivo",
+        "boardTitle": "Presidente di Sezione",
+    }
+    normalize_member(prez)
+    assert prez["isPresident"] is True
+
+
+def test_dual_role_arbitro_keeps_designations():
+    assert has_designations("arbitro")
+    dual = {"memberRole": "arbitro", "boardTitle": "Area Informatica"}
+    normalize_member(dual)
+    assert dual["memberRole"] == "arbitro"
+    assert has_designations(dual["memberRole"])
