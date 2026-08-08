@@ -375,72 +375,94 @@ export default function AdminEventsPage() {
         </AdminFormModal>
       )}
 
-      <div className="bg-white rounded-lg border border-slate-200 overflow-hidden overflow-x-auto">
-        <table className="w-full min-w-[720px]">
-          <thead>
-            <tr className="bg-slate-50 text-xs uppercase text-slate-500 text-left">
-              <th className="px-4 py-3">Data</th>
-              <th className="px-4 py-3">Titolo</th>
-              <th className="px-4 py-3">Tipo</th>
-              <th className="px-4 py-3">Visibilità</th>
-              <th className="px-4 py-3">Invitati</th>
-              <th className="px-4 py-3">Luogo</th>
-              <th className="px-4 py-3 text-right">Azioni</th>
-            </tr>
-          </thead>
-          <tbody>
-            {items.map((e) => (
-              <tr
-                key={e.id}
-                className="border-t border-slate-100 hover:bg-slate-50"
-                data-testid={`event-row-${e.id}`}
-              >
-                <td className="px-4 py-3 text-sm">{formatEventDateTimeIt(e.date, e.orario)}</td>
-                <td className="px-4 py-3 font-medium text-navy-700">{e.titolo}</td>
-                <td className="px-4 py-3">
-                  <span className="text-xs bg-slate-100 px-2 py-0.5 rounded">{e.tipo}</span>
-                </td>
-                <td className="px-4 py-3 text-sm">
-                  {e.portalOnly ? (
-                    <span className="text-xs bg-amber-50 text-amber-800 px-2 py-0.5 rounded font-medium">Solo associati</span>
-                  ) : (
-                    <span className="text-xs bg-emerald-50 text-emerald-800 px-2 py-0.5 rounded font-medium">Pubblico</span>
-                  )}
-                </td>
-                <td className="px-4 py-3 text-sm text-slate-600">
-                  {invitedCount(e) ? `${invitedCount(e)} selezionati` : "Tutti"}
-                </td>
-                <td className="px-4 py-3 text-sm text-slate-600">{e.luogo || "—"}</td>
-                <td className="px-4 py-3 text-right whitespace-nowrap">
-                  <button
-                    type="button"
-                    onClick={() => openEdit(e, "details")}
-                    className="p-1.5 rounded text-navy-600 hover:bg-navy-50"
-                    data-testid={`event-edit-${e.id}`}
-                    title="Modifica"
-                  >
-                    <Pencil className="h-4 w-4" />
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => remove(e.id, e.titolo)}
-                    className="p-1.5 text-red-600 hover:bg-red-50 rounded ml-1"
-                    data-testid={`event-delete-${e.id}`}
-                  >
-                    <Trash2 className="h-4 w-4" />
-                  </button>
-                </td>
-              </tr>
-            ))}
-            {items.length === 0 && (
-              <tr>
-                <td colSpan={7} className="p-4">
-                  <AdminEmptyState icon={SITE_ICONS.events} title="Nessun evento." />
-                </td>
-              </tr>
-            )}
-          </tbody>
-        </table>
+      <div className="bg-white rounded-lg border border-slate-200 overflow-hidden">
+        {items.length === 0 ? (
+          <div className="p-4">
+            <AdminEmptyState icon={SITE_ICONS.events} title="Nessun evento." />
+          </div>
+        ) : (
+          <>
+            <ul className="divide-y divide-slate-100 lg:hidden">
+              {items.map((e) => (
+                <li key={e.id} className="p-4" data-testid={`event-row-${e.id}`}>
+                  <div className="flex items-start justify-between gap-3">
+                    <div className="min-w-0 flex-1">
+                      <div className="font-medium text-navy-700 break-words">{e.titolo}</div>
+                      <div className="text-sm text-slate-600 mt-1">{formatEventDateTimeIt(e.date, e.orario)}</div>
+                      <div className="flex flex-wrap gap-1.5 mt-2">
+                        <span className="text-xs bg-slate-100 px-2 py-0.5 rounded">{e.tipo}</span>
+                        {e.portalOnly ? (
+                          <span className="text-xs bg-amber-50 text-amber-800 px-2 py-0.5 rounded font-medium">Solo associati</span>
+                        ) : (
+                          <span className="text-xs bg-emerald-50 text-emerald-800 px-2 py-0.5 rounded font-medium">Pubblico</span>
+                        )}
+                      </div>
+                      {(e.luogo || invitedCount(e)) && (
+                        <div className="text-xs text-slate-500 mt-1.5 break-words">
+                          {e.luogo || "—"}
+                          {" · "}
+                          {invitedCount(e) ? `${invitedCount(e)} invitati` : "Tutti"}
+                        </div>
+                      )}
+                    </div>
+                    <div className="flex shrink-0">
+                      <button type="button" onClick={() => openEdit(e, "details")} className="p-2 rounded text-navy-600 hover:bg-navy-50" data-testid={`event-edit-${e.id}`} title="Modifica">
+                        <Pencil className="h-4 w-4" />
+                      </button>
+                      <button type="button" onClick={() => remove(e.id, e.titolo)} className="p-2 text-red-600 hover:bg-red-50 rounded" data-testid={`event-delete-${e.id}`}>
+                        <Trash2 className="h-4 w-4" />
+                      </button>
+                    </div>
+                  </div>
+                </li>
+              ))}
+            </ul>
+
+            <div className="hidden lg:block overflow-x-auto">
+              <table className="w-full table-fixed">
+                <thead>
+                  <tr className="bg-slate-50 text-xs uppercase text-slate-500 text-left">
+                    <th className="px-4 py-3 w-[18%]">Data</th>
+                    <th className="px-4 py-3 w-[42%]">Evento</th>
+                    <th className="px-4 py-3 w-[20%]">Visibilità</th>
+                    <th className="px-4 py-3 w-[20%] text-right">Azioni</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {items.map((e) => (
+                    <tr key={e.id} className="border-t border-slate-100 hover:bg-slate-50" data-testid={`event-row-desktop-${e.id}`}>
+                      <td className="px-4 py-3 text-sm">{formatEventDateTimeIt(e.date, e.orario)}</td>
+                      <td className="px-4 py-3 min-w-0">
+                        <div className="font-medium text-navy-700 truncate">{e.titolo}</div>
+                        <div className="text-xs text-slate-500 mt-0.5 truncate">
+                          <span className="bg-slate-100 px-1.5 py-0.5 rounded mr-1.5">{e.tipo}</span>
+                          {e.luogo || "—"}
+                          {" · "}
+                          {invitedCount(e) ? `${invitedCount(e)} invitati` : "Tutti"}
+                        </div>
+                      </td>
+                      <td className="px-4 py-3 text-sm">
+                        {e.portalOnly ? (
+                          <span className="text-xs bg-amber-50 text-amber-800 px-2 py-0.5 rounded font-medium">Solo associati</span>
+                        ) : (
+                          <span className="text-xs bg-emerald-50 text-emerald-800 px-2 py-0.5 rounded font-medium">Pubblico</span>
+                        )}
+                      </td>
+                      <td className="px-4 py-3 text-right whitespace-nowrap">
+                        <button type="button" onClick={() => openEdit(e, "details")} className="p-1.5 rounded text-navy-600 hover:bg-navy-50" data-testid={`event-edit-${e.id}`} title="Modifica">
+                          <Pencil className="h-4 w-4" />
+                        </button>
+                        <button type="button" onClick={() => remove(e.id, e.titolo)} className="p-1.5 text-red-600 hover:bg-red-50 rounded ml-1" data-testid={`event-delete-${e.id}`}>
+                          <Trash2 className="h-4 w-4" />
+                        </button>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </>
+        )}
       </div>
     </div>
   );

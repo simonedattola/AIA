@@ -94,13 +94,15 @@ export default function AssociatoLayout() {
           <button type="button" onClick={() => setOpen(true)} className="p-2 text-white" aria-label="Apri menu">
             <Menu className="h-5 w-5" />
           </button>
-          <div className="font-display font-bold text-white">Area associati</div>
+          <Link to={R.root} className="font-display font-bold text-white hover:text-gold-300 transition-colors">
+            Area Associati
+          </Link>
           <Link to={R.comunicazioniInterne} className="p-2 text-gold-300" aria-label="Comunicazioni interne">
             <ComunicazioniIcon className="h-5 w-5" />
           </Link>
         </header>
         <main
-          className={`flex-1 overflow-x-auto ${isMessaggi ? "p-0" : "p-4 sm:p-6 lg:p-10"}`}
+          className={`flex-1 overflow-x-hidden ${isMessaggi ? "p-0" : "p-3 sm:p-6 lg:p-10"}`}
         >
           <Outlet context={{ member }} />
         </main>

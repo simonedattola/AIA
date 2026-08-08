@@ -128,7 +128,7 @@ export function HeroBlock({ config: c, stats }) {
                 {c.eyebrow}
               </Eyebrow>
             )}
-            <HeroTitle className="text-white mb-7 sm:mb-6 min-[1140px]:mb-5 whitespace-pre-line max-lg:!text-[2.85rem] max-lg:leading-[1.08] sm:max-lg:!text-[3.35rem]">
+            <HeroTitle className="text-white font-extrabold mb-7 sm:mb-6 min-[1140px]:mb-5 whitespace-pre-line max-lg:!text-[2.85rem] max-lg:leading-[1.08] sm:max-lg:!text-[3.35rem]">
               {c.title}
             </HeroTitle>
             {c.subtitle && (
