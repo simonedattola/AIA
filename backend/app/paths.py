@@ -5,7 +5,8 @@ import os
 from pathlib import Path
 
 BACKEND_ROOT = Path(__file__).resolve().parent.parent
-UPLOAD_DIR = Path(os.environ.get("UPLOAD_DIR", str(BACKEND_ROOT / "uploads")))
+_upload_env = (os.environ.get("UPLOAD_DIR") or "").strip()
+UPLOAD_DIR = Path(_upload_env) if _upload_env else (BACKEND_ROOT / "uploads")
 
 # STORAGE_BACKEND=local (default) | s3
 # When s3: works with AWS S3 or S3-compatible APIs (Cloudflare R2, MinIO).
