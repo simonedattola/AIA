@@ -113,7 +113,7 @@ export function HeroBlock({ config: c, stats }) {
                 <MobileNavMenu tone="onDark" />
               </div>
               {c.eyebrow && (
-                <Eyebrow className="tracking-[0.2em] font-medium text-white/90">
+                <Eyebrow className="text-sm sm:text-base lg:text-lg tracking-[0.14em] sm:tracking-[0.16em] font-semibold text-white/90">
                   {c.eyebrow}
                 </Eyebrow>
               )}

@@ -4,7 +4,8 @@
  */
 export const typography = {
   pageTitle: "font-display text-ds-page sm:text-ds-page-lg text-navy-700",
-  heroTitle: "font-display text-ds-hero sm:text-ds-hero-sm lg:text-ds-hero-lg tracking-tight leading-[1.05] text-navy-700",
+  heroTitle:
+    "font-display text-ds-hero sm:text-ds-hero-sm lg:text-ds-hero-lg tracking-tight leading-[1.05] text-navy-700",
   ctaTitle: "font-display text-ds-cta sm:text-ds-cta-md lg:text-ds-cta-lg leading-[1.1] text-navy-700",
   sectionTitle: "font-display text-ds-section sm:text-ds-section-lg text-navy-700",
   subsectionTitle: "font-display text-ds-subsection text-navy-700",

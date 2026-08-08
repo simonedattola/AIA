@@ -5,11 +5,11 @@
 
 :root {
   /* Typography — font sizes */
-  --ds-text-page: 2.25rem;       /* 36px */
-  --ds-text-page-lg: 2.5rem;     /* 40px */
-  --ds-text-hero: 2.25rem;       /* 36px — text-4xl */
-  --ds-text-hero-sm: 3rem;       /* 48px — text-5xl */
-  --ds-text-hero-lg: 3.75rem;    /* 60px — text-6xl */
+  --ds-text-page: 2.5rem;        /* 40px — titoli pagina su verticale */
+  --ds-text-page-lg: 2.75rem;    /* 44px */
+  --ds-text-hero: 2.75rem;       /* 44px — hero / titoli pagina su mobile */
+  --ds-text-hero-sm: 3.5rem;     /* 56px — hero sotto lg */
+  --ds-text-hero-lg: 4rem;       /* 64px — hero desktop */
   --ds-text-cta: 1.875rem;       /* 30px — text-3xl */
   --ds-text-cta-md: 2.25rem;     /* 36px — text-4xl */
   --ds-text-cta-lg: 3rem;        /* 48px — text-5xl */
