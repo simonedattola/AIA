@@ -1,4 +1,5 @@
 """Ruoli sezionali unificati (gestiti dalla pagina Associati in admin)."""
+
 from __future__ import annotations
 
 import re
@@ -61,7 +62,11 @@ def infer_organigramma_kind(doc: dict) -> str:
     low = bt.lower()
     if "revisione" in low or "revisori" in low:
         return "ors"
-    if re.match(r"^\s*collaboratore\b", low) or "collaboratore —" in low or "collaboratore -" in low:
+    if (
+        re.match(r"^\s*collaboratore\b", low)
+        or "collaboratore —" in low
+        or "collaboratore -" in low
+    ):
         return "collaboratore"
     if (
         "consigliere" in low
@@ -222,7 +227,11 @@ def normalize_member(doc: dict) -> dict:
 def public_member(doc: dict) -> dict:
     """Campi esposti sul sito pubblico (senza note private né codice meccanografico)."""
     normalize_member(doc)
-    out = {k: v for k, v in doc.items() if k not in ("notes", "meccanografico", "passwordHash", "portalPassword")}
+    out = {
+        k: v
+        for k, v in doc.items()
+        if k not in ("notes", "meccanografico", "passwordHash", "portalPassword")
+    }
     return out
 
 
@@ -248,7 +257,10 @@ def chi_siamo_query() -> dict:
                 "boardTitle": {
                     "$exists": True,
                     "$nin": ["", None],
-                    "$not": {"$regex": r"^\s*arbitro\s+benemerito\s*$", "$options": "i"},
+                    "$not": {
+                        "$regex": r"^\s*arbitro\s+benemerito\s*$",
+                        "$options": "i",
+                    },
                 }
             },
         ]
@@ -304,7 +316,11 @@ def member_role_label(
 
 
 def observer_subtitle(observer_type: str | None) -> str:
-    return "Organo Tecnico" if (observer_type or "").lower() == "ot" else "Osservatore Arbitrale"
+    return (
+        "Organo Tecnico"
+        if (observer_type or "").lower() == "ot"
+        else "Osservatore Arbitrale"
+    )
 
 
 def member_role_from_seed_category(category: str) -> str:

@@ -689,7 +689,9 @@ async def admin_update_member(
     if not can_have_max_category(doc):
         doc["category"] = ""
     # passwordHash non va sovrascritta da payload admin accidentale vuoto
-    existing = await db.members.find_one({"id": member_id}, {"_id": 0, "passwordHash": 1})
+    existing = await db.members.find_one(
+        {"id": member_id}, {"_id": 0, "passwordHash": 1}
+    )
     if existing and existing.get("passwordHash") and not doc.get("passwordHash"):
         doc["passwordHash"] = existing["passwordHash"]
     await db.members.update_one({"id": member_id}, {"$set": doc})

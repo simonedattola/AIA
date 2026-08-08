@@ -202,9 +202,7 @@ def _map_columns(df: pd.DataFrame) -> tuple[pd.DataFrame, dict[str, str], list[s
     warnings: list[str] = []
     col_labels = [_cell_str(c) for c in df.columns]
     named_header_score = sum(
-        _header_score(label, field)
-        for label in col_labels
-        for field in FIELD_KEYWORDS
+        _header_score(label, field) for label in col_labels for field in FIELD_KEYWORDS
     )
     # Se le colonne hanno già intestazioni utili (export HTML AIA), usale
     # senza cercare una riga-header nei dati (evita di mangiare la prima persona).
@@ -223,7 +221,9 @@ def _map_columns(df: pd.DataFrame) -> tuple[pd.DataFrame, dict[str, str], list[s
         else:
             headers = [f"col{i}" for i in range(len(df.columns))]
             body = df.copy()
-            warnings.append("Intestazioni non chiare: colonne riconosciute dal contenuto.")
+            warnings.append(
+                "Intestazioni non chiare: colonne riconosciute dal contenuto."
+            )
 
     body.columns = [f"col{i}" for i in range(len(body.columns))]
     mapping: dict[str, str] = {}
@@ -300,9 +300,7 @@ def _normalize_member_role(raw: str, category: str = "") -> tuple[str, str, str]
             board_title = board_title or "Presidente"
     elif "osservatore" in text or "organo tecnico" in cat:
         role = "osservatore"
-        observer_type = (
-            "ot" if "organo tecnico" in cat or "ot" in text else "oa"
-        )
+        observer_type = "ot" if "organo tecnico" in cat or "ot" in text else "oa"
     elif "assistente" in text or "tutor" in text:
         role = "assistente"
     else:
