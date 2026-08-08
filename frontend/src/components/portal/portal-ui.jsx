@@ -35,12 +35,12 @@ export function PortalSearchBar({ value, onChange, placeholder = "Cerca…", tes
 
 export function PortalPageHeader({ title, description, children }) {
   return (
-    <header className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4 mb-8">
+    <header className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4 mb-6 sm:mb-8">
       <div className="min-w-0">
-        <PageTitle className="text-3xl mb-1">{title}</PageTitle>
+        <PageTitle className="text-2xl sm:text-3xl font-bold tracking-tight mb-1">{title}</PageTitle>
         {description && <p className="text-slate-600 text-sm">{description}</p>}
       </div>
-      {children && <div className="flex flex-wrap items-center gap-2 shrink-0">{children}</div>}
+      {children && <div className="flex flex-wrap items-center gap-2 shrink-0 w-full sm:w-auto">{children}</div>}
     </header>
   );
 }

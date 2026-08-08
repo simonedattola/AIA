@@ -25,6 +25,7 @@ import { SECTION_LOGO, SECTION_LOGO_CLASS } from "../lib/brand";
 import { isUpcomingEvent, eventDateKey } from "../lib/eventsDisplay";
 import { resolveSectionMap } from "../lib/sectionMap";
 import SectionMapPanel from "../components/maps/SectionMapPanel";
+import { scrollPageToTop } from "../lib/scroll";
 import {
   Filter, X, Search, ChevronLeft, ChevronRight, MapPin, Phone, Mail,
   Facebook, Instagram, CheckCircle2, Crown, Lock, Hash,
@@ -214,9 +215,18 @@ export function NewsGridBlock({ config: c }) {
       .catch(() => { setItems([]); setLoading(false); });
   }, [cat, page, pageSize]);
 
+  // La query `page` non cambia il pathname: ScrollToTop non scatta — riportiamo in cima a mano.
+  useEffect(() => {
+    scrollPageToTop();
+  }, [page, cat]);
+
   const setCategory = (v) => {
     if (v) setParams({ c: v, page: "1" });
     else setParams(page > 1 ? { page: String(page) } : {});
+  };
+
+  const goPage = (next) => {
+    setParams({ ...(cat ? { c: cat } : {}), page: String(next) });
   };
 
   return (
@@ -240,12 +250,12 @@ export function NewsGridBlock({ config: c }) {
         </div>
         {!loading && items.length === 0 && <p className="text-slate-500 mt-8">Nessun articolo disponibile.</p>}
         {!loading && totalPages > 1 && (
-          <nav className="flex flex-wrap items-center justify-center gap-3 mt-12 pt-8 border-t border-slate-200">
-            <Button type="button" disabled={page <= 1} onClick={() => setParams({ ...(cat ? { c: cat } : {}), page: String(page - 1) })} variant="outline" size="sm">
+          <nav className="flex flex-wrap items-center justify-center gap-3 mt-12 pt-8 border-t border-slate-200" aria-label="Paginazione articoli">
+            <Button type="button" disabled={page <= 1} onClick={() => goPage(page - 1)} variant="outline" size="sm">
               <ChevronLeft className="h-4 w-4" aria-hidden /> Precedente
             </Button>
             <span className="text-sm text-slate-600">Pagina {page} di {totalPages}</span>
-            <Button type="button" disabled={page >= totalPages} onClick={() => setParams({ ...(cat ? { c: cat } : {}), page: String(page + 1) })} variant="outline" size="sm">
+            <Button type="button" disabled={page >= totalPages} onClick={() => goPage(page + 1)} variant="outline" size="sm">
               Successiva <ChevronRight className="h-4 w-4" aria-hidden />
             </Button>
           </nav>

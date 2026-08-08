@@ -398,19 +398,19 @@ function MemberModal({ editing, setEditing, save, saving, uploadPhoto, uploading
   const portalPassword = editing.portalPassword || defaultPortalPassword(editing.firstName, editing.lastName);
 
   return (
-    <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4 overflow-y-auto" data-testid="member-modal">
-      <div className="bg-white rounded-lg max-w-3xl w-full max-h-[92vh] overflow-y-auto my-8">
-        <div className="sticky top-0 bg-white border-b border-slate-200 p-5 flex items-center justify-between z-10">
-          <h2 className="font-display text-xl font-bold text-navy-700">
+    <div className="fixed inset-0 bg-black/50 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4 overflow-y-auto" data-testid="member-modal">
+      <div className="bg-white rounded-t-2xl sm:rounded-lg max-w-3xl w-full max-h-[96dvh] sm:max-h-[92vh] overflow-y-auto overflow-x-hidden my-0 sm:my-8 min-w-0 shadow-xl">
+        <div className="sticky top-0 bg-white border-b border-slate-200 px-4 py-4 sm:p-5 flex items-center justify-between gap-3 z-10 rounded-t-2xl sm:rounded-t-lg">
+          <h2 className="font-display text-lg sm:text-xl font-bold tracking-tight text-navy-700 min-w-0">
             {editing.id ? "Modifica profilo" : "Nuovo profilo"}
           </h2>
-          <button type="button" onClick={() => setEditing(null)} className="p-2 text-slate-400 hover:bg-slate-100 rounded">
+          <button type="button" onClick={() => setEditing(null)} className="p-2 text-slate-400 hover:bg-slate-100 rounded shrink-0" aria-label="Chiudi">
             <X className="h-5 w-5" />
           </button>
         </div>
 
-        <div className="p-6 space-y-5">
-          <div className="flex items-center gap-4">
+        <div className="px-4 py-4 sm:p-6 space-y-5 min-w-0">
+          <div className="flex flex-wrap items-center gap-4">
             {editing.photoUrl ? (
               <MediaImage src={editing.photoUrl} alt="" className="w-20 h-20 rounded-lg object-cover border-2 border-slate-200" />
             ) : (
@@ -578,9 +578,9 @@ function MemberModal({ editing, setEditing, save, saving, uploadPhoto, uploading
           )}
         </div>
 
-        <div className="sticky bottom-0 bg-white border-t border-slate-200 p-5 flex justify-end gap-3">
-          <Button type="button" onClick={() => setEditing(null)} variant="outline">Annulla</Button>
-          <Button type="button" onClick={save} disabled={saving} variant="primary" className="disabled:opacity-50" data-testid="member-save">
+        <div className="sticky bottom-0 bg-white border-t border-slate-200 px-4 py-4 sm:p-5 flex flex-col-reverse sm:flex-row justify-end gap-2 sm:gap-3">
+          <Button type="button" onClick={() => setEditing(null)} variant="outline" className="w-full sm:w-auto">Annulla</Button>
+          <Button type="button" onClick={save} disabled={saving} variant="primary" className="w-full sm:w-auto disabled:opacity-50" data-testid="member-save">
             {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />} Salva
           </Button>
         </div>

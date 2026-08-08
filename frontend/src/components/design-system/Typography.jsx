@@ -12,8 +12,8 @@ export function PageTitle({ as: Component = "h1", variant, className, children, 
     <Component
       className={cn(
         variant === "compact"
-          ? "font-display text-3xl font-bold text-navy-700"
-          : "font-display text-ds-page sm:text-ds-page-lg text-navy-700",
+          ? "font-display text-3xl font-bold tracking-tight text-navy-700"
+          : "font-display font-bold text-ds-page sm:text-ds-page-lg tracking-tight text-navy-700",
         className
       )}
       {...props}

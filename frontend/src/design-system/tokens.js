@@ -3,7 +3,7 @@
  * Utili per migrazione graduale senza sostituire subito ogni componente.
  */
 export const typography = {
-  pageTitle: "font-display text-ds-page sm:text-ds-page-lg text-navy-700",
+  pageTitle: "font-display font-bold text-ds-page sm:text-ds-page-lg tracking-tight text-navy-700",
   heroTitle:
     "font-display font-extrabold text-ds-hero sm:text-ds-hero-sm lg:text-ds-hero-lg tracking-tight leading-[1.05] text-navy-700",
   ctaTitle:

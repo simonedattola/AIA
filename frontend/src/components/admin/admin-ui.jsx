@@ -14,12 +14,12 @@ export function AdminLoading({ label = "Caricamento…" }) {
 
 export function AdminPageHeader({ title, description, children }) {
   return (
-    <header className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4 mb-8">
+    <header className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4 mb-6 sm:mb-8">
       <div className="min-w-0">
-        <PageTitle className="text-3xl mb-1">{title}</PageTitle>
+        <PageTitle className="text-2xl sm:text-3xl font-bold tracking-tight mb-1">{title}</PageTitle>
         {description && <p className="text-slate-600 text-sm">{description}</p>}
       </div>
-      {children && <div className="flex flex-wrap items-center gap-2 shrink-0">{children}</div>}
+      {children && <div className="flex flex-wrap items-center gap-2 shrink-0 w-full sm:w-auto">{children}</div>}
     </header>
   );
 }
@@ -143,30 +143,32 @@ export function AdminFormModal({
   if (!open) return null;
   return (
     <div
-      className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4 overflow-y-auto"
+      className="fixed inset-0 bg-black/50 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4 overflow-y-auto"
       data-testid={testid}
       role="dialog"
       aria-modal="true"
       aria-labelledby={testid ? `${testid}-title` : undefined}
     >
-      <div className={`bg-white rounded-lg ${maxWidth} w-full max-h-[92vh] flex flex-col my-8 shadow-xl`}>
-        <div className="sticky top-0 bg-white border-b border-slate-200 p-5 flex items-center justify-between z-10 shrink-0 rounded-t-lg">
+      <div
+        className={`bg-white rounded-t-2xl sm:rounded-lg ${maxWidth} w-full max-h-[96dvh] sm:max-h-[92vh] flex flex-col my-0 sm:my-8 shadow-xl min-w-0`}
+      >
+        <div className="sticky top-0 bg-white border-b border-slate-200 px-4 py-4 sm:p-5 flex items-center justify-between gap-3 z-10 shrink-0 rounded-t-2xl sm:rounded-t-lg">
           <h2
             id={testid ? `${testid}-title` : undefined}
-            className="font-display text-xl font-bold text-navy-700"
+            className="font-display text-lg sm:text-xl font-bold tracking-tight text-navy-700 min-w-0"
           >
             {title}
           </h2>
-          <button type="button" onClick={onClose} className="p-2 text-slate-400 hover:bg-slate-100 rounded" aria-label="Chiudi">
+          <button type="button" onClick={onClose} className="p-2 text-slate-400 hover:bg-slate-100 rounded shrink-0" aria-label="Chiudi">
             <X className="h-5 w-5" />
           </button>
         </div>
-        <div className="p-6 space-y-5 flex-1 overflow-y-auto">{children}</div>
+        <div className="px-4 py-4 sm:p-6 space-y-5 flex-1 overflow-y-auto overflow-x-hidden min-w-0">{children}</div>
         {!hideFooter && (
-          <div className="sticky bottom-0 bg-white border-t border-slate-200 p-5 flex justify-end gap-3 shrink-0 rounded-b-lg">
+          <div className="sticky bottom-0 bg-white border-t border-slate-200 px-4 py-4 sm:p-5 flex flex-col-reverse sm:flex-row justify-end gap-2 sm:gap-3 shrink-0 rounded-b-none sm:rounded-b-lg">
             {footer ?? (
               <>
-                <Button type="button" onClick={onClose} variant="outline">
+                <Button type="button" onClick={onClose} variant="outline" className="w-full sm:w-auto">
                   Annulla
                 </Button>
                 <Button
@@ -174,7 +176,7 @@ export function AdminFormModal({
                   onClick={onSave}
                   disabled={saving || saveDisabled}
                   variant="primary"
-                  className="disabled:opacity-50"
+                  className="w-full sm:w-auto disabled:opacity-50"
                 >
                   {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}{" "}
                   {saveLabel}

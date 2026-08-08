@@ -2,12 +2,10 @@ import { NavLink, Outlet, useNavigate, Navigate, Link, useLocation } from "react
 import { useEffect, useState } from "react";
 import { portalMe } from "../../lib/portal-api";
 import { portalNavLinkClass, NavActiveLabel } from "../../lib/navActive";
-import { PORTAL_NAV, PORTAL_ICONS } from "./portalNavItems";
+import { PORTAL_NAV } from "./portalNavItems";
 import { PORTAL_ROUTES as R } from "../../lib/appRoutes";
 import { SECTION_LOGO, SECTION_LOGO_CLASS } from "../../lib/brand";
-import { LogOut, ExternalLink, Menu } from "lucide-react";
-
-const ComunicazioniIcon = PORTAL_ICONS.comunicazioni;
+import { LogOut, Menu } from "lucide-react";
 
 export default function AssociatoLayout() {
   const navigate = useNavigate();
@@ -35,9 +33,13 @@ export default function AssociatoLayout() {
 
   return (
     <div className="app-canvas min-h-screen flex">
-      <aside className={`fixed lg:sticky top-0 left-0 h-screen w-72 bg-navy-700 text-white flex flex-col z-40 transform ${open ? "translate-x-0" : "-translate-x-full lg:translate-x-0"} transition-transform`}>
+      <aside
+        className={`fixed lg:sticky top-0 left-0 h-screen w-72 max-w-[85vw] bg-navy-700 text-white flex flex-col z-40 transform ${
+          open ? "translate-x-0" : "-translate-x-full lg:translate-x-0"
+        } transition-transform`}
+      >
         <div className="p-6 border-b border-white/10">
-          <Link to={R.root} className="flex items-center gap-3">
+          <Link to={R.root} className="flex items-center gap-3" onClick={() => setOpen(false)}>
             <img src={SECTION_LOGO} alt="AIA Legnano" className={SECTION_LOGO_CLASS.md} />
             <div>
               <div className="font-display font-bold text-lg leading-tight">AIA Legnano</div>
@@ -45,7 +47,7 @@ export default function AssociatoLayout() {
             </div>
           </Link>
         </div>
-        <nav className="flex-1 overflow-y-auto py-4">
+        <nav className="flex-1 overflow-y-auto py-4" aria-label="Menu area associati">
           {PORTAL_NAV.map((it) => (
             <NavLink
               key={it.to}
@@ -64,15 +66,8 @@ export default function AssociatoLayout() {
           ))}
         </nav>
         <div className="border-t border-white/10 p-4 space-y-2">
-          <a
-            href="/"
-            target="_blank"
-            rel="noopener noreferrer"
-            className="flex items-center gap-2 px-3 py-2 text-sm text-slate-300 hover:text-white hover:bg-navy-800 rounded transition-colors"
-          >
-            <ExternalLink className="h-4 w-4" /> Sito pubblico
-          </a>
           <button
+            type="button"
             onClick={logout}
             className="w-full flex items-center gap-2 px-3 py-2 text-sm text-slate-300 hover:text-white hover:bg-navy-800 rounded transition-colors"
           >
@@ -87,22 +82,29 @@ export default function AssociatoLayout() {
         </div>
       </aside>
 
-      {open && <div className="lg:hidden fixed inset-0 bg-black/50 z-30" onClick={() => setOpen(false)} />}
+      {open && (
+        <div className="lg:hidden fixed inset-0 bg-black/50 z-30" onClick={() => setOpen(false)} aria-hidden />
+      )}
+
+      {!open && (
+        <button
+          type="button"
+          onClick={() => setOpen(true)}
+          className="lg:hidden fixed top-3 left-3 z-30 inline-flex h-11 w-11 items-center justify-center rounded-lg bg-navy-700 text-white shadow-md border border-white/15"
+          aria-label="Apri menu"
+          data-testid="portal-menu-open"
+        >
+          <Menu className="h-5 w-5" />
+        </button>
+      )}
 
       <div className="flex-1 flex flex-col min-w-0">
-        <header className="lg:hidden bg-navy-700 text-white px-4 py-3 flex items-center justify-between sticky top-0 z-20">
-          <button type="button" onClick={() => setOpen(true)} className="p-2 text-white" aria-label="Apri menu">
-            <Menu className="h-5 w-5" />
-          </button>
-          <Link to={R.root} className="font-display font-bold text-white hover:text-gold-300 transition-colors">
-            Area Associati
-          </Link>
-          <Link to={R.comunicazioniInterne} className="p-2 text-gold-300" aria-label="Comunicazioni interne">
-            <ComunicazioniIcon className="h-5 w-5" />
-          </Link>
-        </header>
         <main
-          className={`flex-1 overflow-x-hidden ${isMessaggi ? "p-0" : "p-3 sm:p-6 lg:p-10"}`}
+          className={`flex-1 overflow-x-hidden min-w-0 ${
+            isMessaggi
+              ? "pt-14 lg:pt-0"
+              : "px-3 pb-6 pt-16 sm:px-6 sm:pt-16 lg:p-10"
+          }`}
         >
           <Outlet context={{ member }} />
         </main>

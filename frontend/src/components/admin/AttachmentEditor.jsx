@@ -76,7 +76,7 @@ export function AttachmentEditor({
           ))}
         </ul>
       )}
-      <div className="flex items-center gap-3">
+      <div className="flex flex-col gap-2 min-w-0">
         <input
           ref={inputRef}
           type="file"
@@ -89,12 +89,12 @@ export function AttachmentEditor({
           type="button"
           disabled={uploading}
           onClick={() => inputRef.current?.click()}
-          className="inline-flex items-center gap-2 px-3 py-2 text-sm border border-slate-300 rounded-md hover:bg-slate-50 disabled:opacity-50"
+          className="inline-flex items-center justify-center gap-2 px-3 py-2 text-sm border border-slate-300 rounded-md hover:bg-slate-50 disabled:opacity-50 w-full sm:w-auto"
         >
           {uploading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Paperclip className="h-4 w-4" />}
           {uploading ? "Caricamento…" : "Aggiungi file"}
         </button>
-        <span className="text-xs text-slate-500">{hint}</span>
+        {hint && <span className="text-xs text-slate-500 leading-relaxed break-words">{hint}</span>}
       </div>
       {error && <p className="text-sm text-red-600 mt-2">{error}</p>}
     </div>
