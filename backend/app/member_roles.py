@@ -38,7 +38,9 @@ def infer_member_role(doc: dict) -> str:
 
     if kind in ("oa", "ot") or kind == "osservatore" or "osservatore" in role:
         return "osservatore"
-    if "assistente" in role or kind == "tutor":
+    # Codice AIA AA = Assistente Arbitrale
+    code = (doc.get("role") or "").strip().upper()
+    if code == "AA" or "assistente" in role or kind == "tutor":
         return "assistente"
     if kind == "associato" and "assistente" in role:
         return "assistente"
@@ -170,8 +172,8 @@ def member_role_label(
         code = ((doc or {}).get("role") or "").strip().upper()
         if code == "AE":
             return "Arbitro Effettivo"
-        if code == "AA":
-            return "Arbitro Aspirante"
+        if code == "AFR":
+            return "Arbitro Fuori Ruolo"
         return "Arbitro"
     if r == "assistente":
         return "Assistente Arbitrale"

@@ -1,6 +1,6 @@
 export const MEMBER_ROLES = [
   { value: "arbitro", label: "Arbitro" },
-  { value: "assistente", label: "Assistente" },
+  { value: "assistente", label: "Assistente Arbitrale" },
   { value: "consiglio_direttivo", label: "Consiglio Direttivo" },
   { value: "osservatore", label: "Osservatore" },
 ];
@@ -18,7 +18,8 @@ function inferMemberRole(m) {
   if (kind === "oa" || kind === "ot" || kind === "osservatore" || role.includes("osservatore")) {
     return { memberRole: "osservatore", observerType: kind === "ot" ? "ot" : "oa" };
   }
-  if (role.includes("assistente") || kind === "tutor") {
+  const code = String(m.role || "").trim().toUpperCase();
+  if (code === "AA" || role.includes("assistente") || kind === "tutor") {
     return { memberRole: "assistente" };
   }
   if (role.includes("consiglio") || role.includes("presidente") || role.includes("segretario")) {
@@ -68,11 +69,14 @@ export function memberRoleLabel(m) {
   const r = m?.memberRole;
   const board = (m?.boardTitle || "").trim();
   const code = String(m?.role || "").trim().toUpperCase();
+  if (r === "assistente" || code === "AA") {
+    return board ? `Assistente Arbitrale · ${board}` : "Assistente Arbitrale";
+  }
   if (r === "arbitro") {
-    const base = code === "AE" ? "Arbitro Effettivo" : code === "AA" ? "Arbitro Aspirante" : "Arbitro";
+    const base =
+      code === "AE" ? "Arbitro Effettivo" : code === "AFR" ? "Arbitro Fuori Ruolo" : "Arbitro";
     return board ? `${base} · ${board}` : base;
   }
-  if (r === "assistente") return board ? `Assistente Arbitrale · ${board}` : "Assistente Arbitrale";
   if (r === "consiglio_direttivo") return board || "Consiglio Direttivo";
   if (r === "osservatore") {
     const base = m?.observerType === "ot" ? "OT · Organo Tecnico" : "OA · Osservatore Arbitrale";
