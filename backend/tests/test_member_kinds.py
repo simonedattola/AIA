@@ -34,16 +34,28 @@ def test_member_role_label():
 
 
 def test_chi_siamo_includes_arbitro_with_board_title():
-    from app.member_roles import chi_siamo_query, legacy_chi_siamo_query
+    from app.member_roles import (
+        chi_siamo_query,
+        legacy_chi_siamo_query,
+        legacy_arbitri_query,
+        osservatori_query,
+        is_arbitro_benemerito,
+        has_organigramma_board_title,
+    )
 
     q = chi_siamo_query()
     assert "boardTitle" in str(q)
+    assert "benemerito" in str(q).lower()
     # Documento tipico doppio ruolo
     dual = {"memberRole": "arbitro", "boardTitle": "Area Informatica"}
-    # Simula match Mongo: boardTitle non vuoto
-    assert dual["boardTitle"]
-    lq = legacy_chi_siamo_query()
-    assert any("boardTitle" in str(clause) for clause in lq["$or"])
+    assert has_organigramma_board_title(dual)
+    assert not has_organigramma_board_title({"boardTitle": "Arbitro Benemerito"})
+    assert is_arbitro_benemerito({"role": "AB"})
+    # Benemeriti restano nella lista arbitri; osservatori hanno query dedicata
+    aq = legacy_arbitri_query()
+    assert "arbitro" in str(aq)
+    assert osservatori_query() == {"memberRole": "osservatore"}
+    assert legacy_chi_siamo_query() == q
 
 
 def test_normalize_president_not_revisione():

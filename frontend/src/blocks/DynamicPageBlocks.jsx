@@ -99,30 +99,58 @@ export function DesignationsTableBlock({ config: c }) {
   );
 }
 
-const MEMBER_FILTERS = [
+/** Filtri pagina Arbitri (codici AIA + assistente). */
+const ARBITRI_FILTERS = [
   { key: "", label: "Tutti" },
-  { key: "arbitro", label: "Arbitri" },
-  { key: "assistente", label: "Assistenti" },
+  { key: "AE", label: "Arbitro Effettivo" },
+  { key: "ASSISTENTE", label: "Assistente Arbitrale" },
+  { key: "AB", label: "Arbitro Benemerito" },
 ];
+
+function matchesArbitriFilter(m, filterKey) {
+  if (!filterKey) return true;
+  const code = String(m.role || "").trim().toUpperCase();
+  if (filterKey === "AB") {
+    return code === "AB" || String(m.category || "").toLowerCase().includes("benemerito");
+  }
+  if (filterKey === "ASSISTENTE") {
+    return m.memberRole === "assistente" || String(m.category || "").toLowerCase().includes("assistente arbitrale");
+  }
+  if (filterKey === "AE") {
+    if (m.memberRole === "assistente") return false;
+    if (code === "AB" || String(m.category || "").toLowerCase().includes("benemerito")) return false;
+    // Codice AIA AE; senza codice: arbitri non assistenti/benemeriti
+    return !code || code === "AE" || code === "AA" || code === "AFR";
+  }
+  return true;
+}
 
 export function MembersGridBlock({ config: c }) {
   const [items, setItems] = useState([]);
   const [search, setSearch] = useState("");
   const [role, setRole] = useState(c.defaultRole || "");
+  const [qualFilter, setQualFilter] = useState("");
   const [loading, setLoading] = useState(true);
+  const isObserversPage = c.defaultRole === "osservatore";
+  const showArbitriFilters = !isObserversPage && !c.defaultRole;
 
   useEffect(() => {
     setLoading(true);
     const params = { limit: c.limit || 500 };
-    if (role) params.memberRole = role;
+    if (c.defaultRole) params.memberRole = c.defaultRole;
+    else if (role && !showArbitriFilters) params.memberRole = role;
     fetchMembers(params).then((d) => setItems(d.map(normalizeMember))).finally(() => setLoading(false));
-  }, [role, c.limit]);
+  }, [role, c.limit, c.defaultRole, showArbitriFilters]);
 
   const filtered = useMemo(() => {
+    let list = items;
+    if (showArbitriFilters) {
+      list = list.filter((m) => matchesArbitriFilter(m, qualFilter));
+    }
     const s = search.trim().toLowerCase();
-    if (!s) return items;
-    return items.filter((m) => `${m.firstName} ${m.lastName} ${m.category} ${memberRoleLabel(m)}`.toLowerCase().includes(s));
-  }, [items, search]);
+    if (!s) return list;
+    return list.filter((m) => `${m.firstName} ${m.lastName} ${m.category} ${m.role} ${memberRoleLabel(m)}`.toLowerCase().includes(s));
+  }, [items, search, qualFilter, showArbitriFilters]);
 
   return (
     <section className="site-section bg-background" data-testid="members-grid-block">
@@ -130,11 +158,13 @@ export function MembersGridBlock({ config: c }) {
         <SectionIntro eyebrow={c.eyebrow} title={c.title} intro={c.intro} />
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-8 pb-6 border-b border-slate-200">
           <div className="flex items-center gap-2 flex-wrap">
-            {MEMBER_FILTERS.map((k) => (
-              <FilterPill key={k.key || "all"} active={role === k.key} onClick={() => setRole(k.key)}>
-                {k.label}
-              </FilterPill>
-            ))}
+            {showArbitriFilters
+              ? ARBITRI_FILTERS.map((k) => (
+                  <FilterPill key={k.key || "all"} active={qualFilter === k.key} onClick={() => setQualFilter(k.key)} data-testid={`arbitri-filter-${k.key || "all"}`}>
+                    {k.label}
+                  </FilterPill>
+                ))
+              : null}
           </div>
           <div className="relative w-full md:w-72">
             <Search className="h-4 w-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
@@ -432,23 +462,56 @@ export function ContactSectionBlock({ config: c }) {
 }
 
 export function OrganigrammaBlock({ config: c, stats }) {
-  const [board, setBoard] = useState([]);
-  const [observers, setObservers] = useState([]);
+  const [people, setPeople] = useState([]);
 
   useEffect(() => {
     fetchMembers({ scope: c.scope || "chi_siamo", limit: 100 })
-      .then((all) => {
-        const list = all.map(normalizeMember);
-        setBoard(list.filter((m) => m.memberRole === "consiglio_direttivo"));
-        setObservers(list.filter((m) => m.memberRole === "osservatore"));
-      })
-      .catch(() => { setBoard([]); setObservers([]); });
+      .then((all) => setPeople(all.map(normalizeMember)))
+      .catch(() => setPeople([]));
   }, [c.scope]);
 
-  const president = board.find((m) => m.isPresident) || board.find((m) => (m.boardTitle || "").toLowerCase().includes("presidente"));
-  const others = board.filter((m) => m.id !== president?.id);
+  const president =
+    people.find((m) => m.isPresident) ||
+    people.find((m) => {
+      const t = (m.boardTitle || "").toLowerCase();
+      return t.includes("presidente di sezione") || (t.includes("presidente") && !t.includes("revisione") && !t.includes("vice"));
+    });
+  const revisione = people.filter((m) => /revisione/i.test(m.boardTitle || ""));
+  const isConsiglioTitle = (title) => {
+    const t = (title || "").toLowerCase();
+    if (!t || /revisione/i.test(t)) return false;
+    return (
+      /\bvice\b/.test(t) ||
+      t.includes("segretario") ||
+      t.includes("cassiere") ||
+      t.includes("consigliere") ||
+      (t.includes("consiglio") && !t.includes("collaboratore"))
+    );
+  };
+  const isCollaboratoreTitle = (title) => {
+    const t = (title || "").toLowerCase();
+    if (!t || /revisione/i.test(t) || isConsiglioTitle(t)) return false;
+    return (
+      t.includes("collaboratore") ||
+      t.includes("area ") ||
+      t.startsWith("area") ||
+      t.includes("referente") ||
+      t.includes("responsabile") ||
+      t.includes("gestione")
+    );
+  };
+  const consiglio = people.filter(
+    (m) => m.id !== president?.id && isConsiglioTitle(m.boardTitle)
+  );
+  const collaboratori = people.filter(
+    (m) =>
+      m.id !== president?.id &&
+      !revisione.some((x) => x.id === m.id) &&
+      !consiglio.some((x) => x.id === m.id) &&
+      (isCollaboratoreTitle(m.boardTitle) || !isConsiglioTitle(m.boardTitle))
+  );
 
-  if (!president && others.length === 0 && observers.length === 0) return null;
+  if (!president && consiglio.length === 0 && collaboratori.length === 0 && revisione.length === 0) return null;
 
   return (
     <section className="site-section bg-background bg-pattern-stadio border-t border-slate-200" data-testid="organigramma-block">
@@ -472,23 +535,34 @@ export function OrganigrammaBlock({ config: c, stats }) {
                 <p className="text-slate-600 text-lg leading-relaxed whitespace-pre-line">
                   {(president.chiSiamoText || "").trim() || c.presidentFallback || "Guida la Sezione promuovendo formazione tecnica, spirito associativo e crescita delle nuove generazioni arbitrali."}
                 </p>
+                {president.boardTitle && (
+                  <p className="text-sm text-slate-500 mt-3">{president.boardTitle}</p>
+                )}
               </div>
             </Card>
           </div>
         )}
-        {others.length > 0 && (
+        {consiglio.length > 0 && (
           <div className="mb-12">
-            <SubsectionTitle as="h3" className="mb-8 text-center">Consiglio Direttivo</SubsectionTitle>
+            <SubsectionTitle as="h3" className="mb-8 text-center">Consiglio Direttivo Sezionale</SubsectionTitle>
             <div className="grid grid-cols-2 lg:grid-cols-4 gap-ds-grid">
-              {others.map((m) => <OrganigramPersonCard key={m.id} member={m} subtitle={m.boardTitle || "Consiglio Direttivo"} />)}
+              {consiglio.map((m) => <OrganigramPersonCard key={m.id} member={m} subtitle={m.boardTitle || "Consiglio Direttivo"} />)}
             </div>
           </div>
         )}
-        {observers.length > 0 && (
-          <div>
-            <SubsectionTitle as="h3" className="mb-8 text-center">Osservatori</SubsectionTitle>
+        {collaboratori.length > 0 && (
+          <div className="mb-12">
+            <SubsectionTitle as="h3" className="mb-8 text-center">Collaboratori</SubsectionTitle>
             <div className="grid grid-cols-2 lg:grid-cols-4 gap-ds-grid">
-              {observers.map((m) => <OrganigramPersonCard key={m.id} member={m} subtitle={memberRoleLabel(m)} />)}
+              {collaboratori.map((m) => <OrganigramPersonCard key={m.id} member={m} subtitle={m.boardTitle || "Collaboratore"} />)}
+            </div>
+          </div>
+        )}
+        {revisione.length > 0 && (
+          <div>
+            <SubsectionTitle as="h3" className="mb-8 text-center">Organo di Revisione Sezionale</SubsectionTitle>
+            <div className="grid grid-cols-2 lg:grid-cols-4 gap-ds-grid">
+              {revisione.map((m) => <OrganigramPersonCard key={m.id} member={m} subtitle={m.boardTitle || "Organo di Revisione"} />)}
             </div>
           </div>
         )}

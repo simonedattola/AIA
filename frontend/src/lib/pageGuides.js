@@ -7,7 +7,7 @@ export const PAGE_GUIDES = {
   },
   "chi-siamo": {
     title: "Chi siamo",
-    edit: "Modifica titolo, storia e organigramma. I nomi nell'organigramma arrivano da Anagrafica; qui puoi cambiare titoli e testi introduttivi.",
+    edit: "Modifica titolo, storia e organigramma (Presidente, Consiglio, Collaboratori, Organo di Revisione). I nomi arrivano da Anagrafica; gli osservatori sono nella pagina Osservatori.",
   },
   designazioni: {
     title: "Designazioni",
@@ -15,7 +15,11 @@ export const PAGE_GUIDES = {
   },
   arbitri: {
     title: "Arbitri",
-    edit: "Modifica titolo e testi. L'elenco arbitri si aggiorna da Anagrafica.",
+    edit: "Modifica titolo e testi. L'elenco arbitri (effettivi, assistenti, benemeriti) si aggiorna da Anagrafica.",
+  },
+  osservatori: {
+    title: "Osservatori",
+    edit: "Modifica titolo e testi. L'elenco osservatori (OA/OT) si aggiorna da Anagrafica.",
   },
   news: {
     title: "News & Successi",

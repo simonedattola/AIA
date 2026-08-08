@@ -13,6 +13,7 @@ COMPACT_HEADER_SLUGS = frozenset(
         "chi-siamo",
         "designazioni",
         "arbitri",
+        "osservatori",
         "news",
         "eventi",
         "contatti",
@@ -94,6 +95,21 @@ def default_blocks_for_slug(slug: str, page: dict | None = None) -> list[dict]:
                     "limit": 500,
                     "searchPlaceholder": "Cerca per nome…",
                     "defaultRole": "",
+                },
+            ),
+        ]
+
+    if slug == "osservatori":
+        return [
+            _block(
+                "members_grid",
+                {
+                    "eyebrow": "",
+                    "title": "",
+                    "intro": "",
+                    "limit": 500,
+                    "searchPlaceholder": "Cerca per nome…",
+                    "defaultRole": "osservatore",
                 },
             ),
         ]

@@ -488,6 +488,7 @@ async def ensure_all_system_pages():
         logger.info("Pagine sistema: %s create, %s aggiornate", created, updated)
 
     await remove_risorse_page(db)
+    await ensure_osservatori_page(db)
     await ensure_home_hero_no_secondary_cta(db)
     blocks_seeded = await ensure_system_page_blocks(db)
     logos_fixed = await ensure_section_logo_in_blocks(db)
@@ -1738,6 +1739,69 @@ async def purge_demo_gallery_images() -> int:
     return res.deleted_count
 
 
+async def ensure_osservatori_page(db=None):
+    """Crea/aggiorna pagina Osservatori e allinea titoli Arbitri / menu."""
+    from .blocks_sanitize import sanitize_blocks
+    from .system_page_blocks import default_blocks_for_slug
+
+    if db is None:
+        db = get_db()
+
+    blocks = sanitize_blocks(default_blocks_for_slug("osservatori"))
+    desired = {
+        "title": "Osservatori",
+        "template": "system",
+        "status": "published",
+        "eyebrow": "Sezione Legnano",
+        "heading": "Osservatori",
+        "summary": "Osservatori arbitrali (OA) e Organo Tecnico (OT) della sezione.",
+        "showInMenu": True,
+        "menuLabel": "Osservatori",
+        "menuOrder": 5,
+        "menuHighlight": False,
+        "metaTitle": "Osservatori · AIA Legnano",
+        "metaDescription": "Osservatori arbitrali (OA) e Organo Tecnico (OT) della sezione.",
+    }
+    existing = await db.pages.find_one({"slug": "osservatori"}, {"_id": 0})
+    if not existing:
+        doc = Page(slug="osservatori", blocks=blocks, **desired).model_dump().copy()
+        await db.pages.insert_one(doc)
+        logger.info("Pagina sistema creata: osservatori")
+    else:
+        patch = {k: v for k, v in desired.items()}
+        if not existing.get("blocks"):
+            patch["blocks"] = blocks
+        await db.pages.update_one({"slug": "osservatori"}, {"$set": patch})
+
+    # Allinea testo pagina Arbitri (non sovrascrivere se già personalizzato con altro senso)
+    arbitri = await db.pages.find_one({"slug": "arbitri"}, {"_id": 0, "summary": 1})
+    if arbitri:
+        summary = (arbitri.get("summary") or "").lower()
+        if "chi siamo" in summary or not (arbitri.get("summary") or "").strip():
+            await db.pages.update_one(
+                {"slug": "arbitri"},
+                {
+                    "$set": {
+                        "summary": "Arbitri effettivi, assistenti arbitrali e arbitri benemeriti della sezione.",
+                    }
+                },
+            )
+
+    # Rimuovi boardTitle generico AB (non è incarico di organigramma)
+    cleared = await db.members.update_many(
+        {
+            "$or": [
+                {"role": {"$in": ["AB", "ab"]}},
+                {"category": {"$regex": "benemerito", "$options": "i"}},
+            ],
+            "boardTitle": {"$regex": r"^\s*arbitro\s+benemerito\s*$", "$options": "i"},
+        },
+        {"$set": {"boardTitle": ""}},
+    )
+    if cleared.modified_count:
+        logger.info("Puliti boardTitle Benemerito generici: %s", cleared.modified_count)
+
+
 async def run_all():
     await seed_admin()
     await seed_settings()
@@ -1745,6 +1809,7 @@ async def run_all():
     await ensure_legacy_seed_flags()
     await seed_pages()
     await ensure_all_system_pages()
+    await ensure_osservatori_page()
     await ensure_chi_siamo_content()
     await ensure_compact_header_pages()
     await ensure_chi_siamo_story_block_layout()

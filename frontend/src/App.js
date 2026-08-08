@@ -12,6 +12,7 @@ import DiventaArbitroPage from "./pages/DiventaArbitroPage";
 import ChiSiamoPage from "./pages/ChiSiamoPage";
 import DesignazioniPage from "./pages/DesignazioniPage";
 import ArbitriPage from "./pages/ArbitriPage";
+import OsservatoriPage from "./pages/OsservatoriPage";
 import AssociatoProfilePage from "./pages/AssociatoProfilePage";
 import EventiPage from "./pages/EventiPage";
 import ContattiPage from "./pages/ContattiPage";
@@ -89,6 +90,7 @@ function App() {
             <Route path="/designazioni" element={<PublicWrapper><DesignazioniPage /></PublicWrapper>} />
             <Route path="/arbitri" element={<PublicWrapper><ArbitriPage /></PublicWrapper>} />
             <Route path="/arbitri/:slug" element={<PublicWrapper><AssociatoProfilePage /></PublicWrapper>} />
+            <Route path="/osservatori" element={<PublicWrapper><OsservatoriPage /></PublicWrapper>} />
             <Route path="/associati" element={<Navigate to="/arbitri" replace />} />
             <Route path="/associati/:slug" element={<RedirectAssociatoSlug />} />
             <Route path="/news" element={<PublicWrapper><NewsListPage /></PublicWrapper>} />

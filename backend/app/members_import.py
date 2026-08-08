@@ -37,12 +37,13 @@ FIELD_KEYWORDS: dict[str, list[str]] = {
         "categoria sportiva",
     ],
     "meccanografico": [
+        "cod mecc",
+        "cod.mecc",
+        "codice meccanografico",
         "meccanografico",
         "matricola",
-        "codice",
-        "cod",
-        "mec",
         "codice aia",
+        "mec",
     ],
     "email": ["email", "e-mail", "mail", "posta"],
     "phone": ["telefono", "phone", "cellulare", "mobile", "tel"],
@@ -199,17 +200,30 @@ def _detect_header_row(df: pd.DataFrame, max_scan: int = 8) -> tuple[int, float]
 
 def _map_columns(df: pd.DataFrame) -> tuple[pd.DataFrame, dict[str, str], list[str]]:
     warnings: list[str] = []
-    header_idx, header_score = _detect_header_row(df)
-
-    if header_score >= 1.2:
-        headers = [_cell_str(v) for v in df.iloc[header_idx].tolist()]
-        body = df.iloc[header_idx + 1 :].copy()
-        if header_idx > 0:
-            warnings.append(f"Intestazioni rilevate alla riga {header_idx + 1}.")
-    else:
-        headers = [f"col{i}" for i in range(len(df.columns))]
+    col_labels = [_cell_str(c) for c in df.columns]
+    named_header_score = sum(
+        _header_score(label, field)
+        for label in col_labels
+        for field in FIELD_KEYWORDS
+    )
+    # Se le colonne hanno già intestazioni utili (export HTML AIA), usale
+    # senza cercare una riga-header nei dati (evita di mangiare la prima persona).
+    if named_header_score >= 1.2 and not all(
+        re.fullmatch(r"col\d+", label) for label in col_labels
+    ):
+        headers = col_labels
         body = df.copy()
-        warnings.append("Intestazioni non chiare: colonne riconosciute dal contenuto.")
+    else:
+        header_idx, header_score = _detect_header_row(df)
+        if header_score >= 1.2:
+            headers = [_cell_str(v) for v in df.iloc[header_idx].tolist()]
+            body = df.iloc[header_idx + 1 :].copy()
+            if header_idx > 0:
+                warnings.append(f"Intestazioni rilevate alla riga {header_idx + 1}.")
+        else:
+            headers = [f"col{i}" for i in range(len(df.columns))]
+            body = df.copy()
+            warnings.append("Intestazioni non chiare: colonne riconosciute dal contenuto.")
 
     body.columns = [f"col{i}" for i in range(len(body.columns))]
     mapping: dict[str, str] = {}
@@ -263,9 +277,15 @@ def _normalize_member_role(raw: str, category: str = "") -> tuple[str, str, str]
     board_title = ""
     raw_u = _cell_str(raw).strip().upper()
 
-    # Codici AIA: AB = Arbitro Benemerito (Chi siamo, non lista Arbitri)
+    # Codici AIA ufficiali
     if raw_u == "AB" or "benemerito" in text or "benemerito" in cat:
-        return "arbitro", "", "Arbitro Benemerito"
+        return "arbitro", "", ""
+    if raw_u == "OA" or text == "oa":
+        return "osservatore", "oa", ""
+    if raw_u == "OT" or text == "ot":
+        return "osservatore", "ot", ""
+    if raw_u == "AA" and "assistente" in (text + " " + cat):
+        return "assistente", "", ""
 
     if (
         "consiglio" in text
@@ -277,10 +297,10 @@ def _normalize_member_role(raw: str, category: str = "") -> tuple[str, str, str]
         board_title = _cell_str(raw)
         if "presidente" in text and "vice" not in text:
             board_title = board_title or "Presidente"
-    elif "osservatore" in text or text in ("oa", "ot") or "organo tecnico" in cat:
+    elif "osservatore" in text or "organo tecnico" in cat:
         role = "osservatore"
         observer_type = (
-            "ot" if text == "ot" or "organo tecnico" in cat or "ot" in text else "oa"
+            "ot" if "organo tecnico" in cat or "ot" in text else "oa"
         )
     elif "assistente" in text or "tutor" in text:
         role = "assistente"
@@ -330,7 +350,7 @@ def _row_from_mapped(
         ot = _cell_str(row.get("observerType")).lower()
         if ot in ("oa", "ot"):
             observer_type = ot
-    # AB / Benemerito: categoria esplicita per filtri Chi siamo vs Arbitri
+    # AB / Benemerito: categoria per filtro Arbitri (niente boardTitle generico)
     if (
         _cell_str(role_raw).strip().upper() == "AB"
         or "benemerito" in _normalize_name_key(role_raw)
@@ -338,13 +358,17 @@ def _row_from_mapped(
         or board_title == "Arbitro Benemerito"
     ):
         category = category or "Arbitro Benemerito"
-        if not board_title:
-            board_title = "Arbitro Benemerito"
+        if board_title == "Arbitro Benemerito":
+            board_title = ""
 
     email = _cell_str(row.get("email", ""))
     if email and not _looks_like_email(email):
         warnings.append(f"Riga {line}: email non valida — ignorata.")
         email = ""
+
+    aia_code = _cell_str(role_raw).strip().upper()
+    if aia_code not in {"AE", "AA", "AB", "OA", "OT", "AFR"}:
+        aia_code = ""
 
     return {
         "firstName": first,
@@ -356,6 +380,7 @@ def _row_from_mapped(
         and "presidente" in _normalize_name_key(board_title or role_raw)
         and "vice" not in _normalize_name_key(board_title or role_raw),
         "category": category,
+        "role": aia_code,
         "meccanografico": _cell_str(row.get("meccanografico", "")),
         "email": email,
         "phone": _cell_str(row.get("phone", "")),
@@ -542,6 +567,7 @@ async def import_members_from_file(
             boardTitle=row.get("boardTitle") or "",
             isPresident=bool(row.get("isPresident")),
             category=row.get("category") or "",
+            role=row.get("role") or "",
             yearStart=row.get("yearStart"),
             meccanografico=row.get("meccanografico") or "",
             email=row.get("email") or "",

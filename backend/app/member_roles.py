@@ -5,8 +5,11 @@ import re
 
 MEMBER_ROLES = ("arbitro", "assistente", "consiglio_direttivo", "osservatore")
 ARBITRI_ROLES = frozenset({"arbitro", "assistente"})
-CHI_SIAMO_ROLES = frozenset({"consiglio_direttivo", "osservatore"})
+CHI_SIAMO_ROLES = frozenset({"consiglio_direttivo"})
 OBSERVER_TYPES = ("oa", "ot")
+
+# boardTitle generico AB: non è incarico di organigramma
+_BENEMERITO_TITLE = re.compile(r"^\s*arbitro\s+benemerito\s*$", re.I)
 
 
 def _strip_html(text: str) -> str:
@@ -55,6 +58,27 @@ def infer_observer_type(doc: dict) -> str:
     return "oa"
 
 
+def is_arbitro_benemerito(doc: dict | None) -> bool:
+    """AIA code AB = Arbitro Benemerito (lista Arbitri + filtro dedicato)."""
+    if not doc:
+        return False
+    code = (doc.get("role") or "").strip().upper()
+    if code == "AB":
+        return True
+    cat = (doc.get("category") or "").strip().lower()
+    return "benemerito" in cat
+
+
+def has_organigramma_board_title(doc: dict | None) -> bool:
+    """Incarico sezionale reale (CD / collaboratore / revisione), non solo Benemerito."""
+    if not doc:
+        return False
+    bt = (doc.get("boardTitle") or "").strip()
+    if not bt or _BENEMERITO_TITLE.match(bt):
+        return False
+    return True
+
+
 def normalize_member(doc: dict) -> dict:
     """Allinea documento DB al modello ruoli unificato (in-place)."""
     doc["memberRole"] = infer_member_role(doc)
@@ -94,91 +118,63 @@ def is_observer_designation_role(role: str | None) -> bool:
     return "osservatore" in (role or "").lower()
 
 
-def is_arbitro_benemerito(doc: dict | None) -> bool:
-    """AIA code AB = Arbitro Benemerito (organigramma / Chi siamo, non lista Arbitri)."""
-    if not doc:
-        return False
-    code = (doc.get("role") or "").strip().upper()
-    if code == "AB":
-        return True
-    cat = (doc.get("category") or "").strip().lower()
-    return "benemerito" in cat
-
-
 def arbitri_query() -> dict:
-    # Esclude Arbitri Benemeriti (AB): vanno in Chi siamo, non in /arbitri.
-    return {
-        "memberRole": {"$in": list(ARBITRI_ROLES)},
-        "role": {"$nin": ["AB", "ab"]},
-        "category": {"$not": {"$regex": "benemerito", "$options": "i"}},
-    }
+    """Lista Arbitri: effettivi, assistenti, benemeriti (non osservatori)."""
+    return {"memberRole": {"$in": list(ARBITRI_ROLES)}}
 
 
 def chi_siamo_query() -> dict:
-    """Organigramma / Chi siamo: CD, osservatori, incarico sezionale, Arbitri Benemeriti.
+    """Chi siamo / organigramma: solo incarichi sezionali (CD, collaboratori, revisione).
 
-    Così un arbitro può restare ``memberRole=arbitro`` (lista Associati + designazioni)
-    e comparire anche in organigramma se ha ``boardTitle`` (es. Collaboratore Area Informatica).
+    Gli osservatori senza incarico stanno nella pagina Osservatori.
+    Gli Arbitri Benemeriti stanno in Arbitri (filtro dedicato).
     """
     return {
-        "$or": [
-            {"memberRole": {"$in": list(CHI_SIAMO_ROLES)}},
-            {"boardTitle": {"$exists": True, "$nin": ["", None]}},
-            {"role": {"$in": ["AB", "ab"]}},
-            {"category": {"$regex": "benemerito", "$options": "i"}},
-        ]
+        "boardTitle": {
+            "$exists": True,
+            "$nin": ["", None],
+            "$not": {"$regex": r"^\s*arbitro\s+benemerito\s*$", "$options": "i"},
+        }
     }
 
 
+def osservatori_query() -> dict:
+    """Lista pubblica Osservatori (OA/OT)."""
+    return {"memberRole": "osservatore"}
+
+
 def legacy_arbitri_query() -> dict:
-    """Compatibilità dati senza memberRole. Esclude Arbitri Benemeriti (AB)."""
+    """Compatibilità dati senza memberRole."""
     return {
-        "$and": [
+        "$or": [
+            {"memberRole": {"$in": list(ARBITRI_ROLES)}},
             {
-                "$or": [
-                    {"memberRole": {"$in": list(ARBITRI_ROLES)}},
-                    {
-                        "memberRole": {"$exists": False},
-                        "kind": {"$in": ["associato", "tutor"]},
-                    },
-                ]
-            },
-            {"role": {"$nin": ["AB", "ab"]}},
-            {
-                "$or": [
-                    {"category": {"$exists": False}},
-                    {"category": None},
-                    {"category": ""},
-                    {"category": {"$not": {"$regex": "benemerito", "$options": "i"}}},
-                ]
+                "memberRole": {"$exists": False},
+                "kind": {"$in": ["associato", "tutor"]},
             },
         ]
     }
 
 
 def legacy_chi_siamo_query() -> dict:
-    return {
-        "$or": [
-            {"memberRole": {"$in": list(CHI_SIAMO_ROLES)}},
-            {"boardTitle": {"$exists": True, "$nin": ["", None]}},
-            {"role": {"$in": ["AB", "ab"]}},
-            {"category": {"$regex": "benemerito", "$options": "i"}},
-            {
-                "memberRole": {"$exists": False},
-                "kind": {"$in": ["oa", "ot", "osservatore"]},
-            },
-        ]
-    }
+    return chi_siamo_query()
 
 
-def member_role_label(member_role: str | None, observer_type: str | None = None, doc: dict | None = None) -> str:
+def member_role_label(
+    member_role: str | None, observer_type: str | None = None, doc: dict | None = None
+) -> str:
     if is_arbitro_benemerito(doc):
         return "Arbitro Benemerito"
     r = (member_role or "").lower()
     if r == "arbitro":
+        code = ((doc or {}).get("role") or "").strip().upper()
+        if code == "AE":
+            return "Arbitro Effettivo"
+        if code == "AA":
+            return "Arbitro Aspirante"
         return "Arbitro"
     if r == "assistente":
-        return "Assistente"
+        return "Assistente Arbitrale"
     if r == "consiglio_direttivo":
         return "Consiglio Direttivo"
     if r == "osservatore":
