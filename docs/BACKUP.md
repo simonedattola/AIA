@@ -81,9 +81,19 @@ Store cron output / dump directories on a volume that is itself snapshotted.
 5. Start API → confirm `GET /api/health` returns `database: connected`.
 6. Log in to `/admin` and open a member profile + one article with images.
 
+## Production uploads (Railway)
+
+On **MongoDB Atlas** (`mongodb+srv://…`) the API defaults to **GridFS** (`STORAGE_BACKEND=auto`):
+files live in the same free Atlas database and survive Railway redeploys.
+
+- Force GridFS: `STORAGE_BACKEND=gridfs`
+- Local disk only (docker compose volume): `STORAGE_BACKEND=local`
+- Photos uploaded before this change must be **re-uploaded** (old files on the
+  ephemeral container disk are already gone).
+
 ## Production object storage (AWS S3 / Cloudflare R2)
 
-Local `UPLOAD_DIR` is the default. For production, set:
+Optional alternative to GridFS. Set:
 
 ```bash
 STORAGE_BACKEND=s3

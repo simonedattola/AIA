@@ -53,6 +53,7 @@ from ..portal_password import member_can_use_portal, default_portal_password
 from ..portal_member import member_public, is_staff_portal
 from ..media_urls import resolve_media_fields, resolve_attachments
 from ..paths import UPLOAD_DIR
+from .. import storage as upload_storage
 from ..member_roles import MEMBER_ROLES, normalize_member
 from ..comunicazioni_helpers import (
     comunicazione_destinatari,
@@ -835,14 +836,10 @@ async def portal_upload_allegato(
     ext = Path(file.filename or "").suffix.lower() or ".bin"
     if ext not in allowed:
         raise HTTPException(status_code=400, detail="Formato file non supportato")
-    UPLOAD_DIR.mkdir(parents=True, exist_ok=True)
     name = f"msg_{uuid.uuid4().hex}{ext}"
-    target = UPLOAD_DIR / name
-    with target.open("wb") as f:
-        shutil.copyfileobj(file.file, f)
     from ..media_urls import resolve_media_url
 
-    rel_path = f"/api/uploads/{name}"
+    rel_path = upload_storage.save_upload(name, file)
     mime = file.content_type or ""
     tipo = (
         "image"
@@ -981,22 +978,18 @@ async def portal_gallery_upload(
     ext = Path(file.filename or "").suffix.lower() or ".bin"
     if ext not in {".jpg", ".jpeg", ".png", ".webp", ".gif"}:
         raise HTTPException(status_code=400, detail="Formato non supportato")
-    UPLOAD_DIR.mkdir(parents=True, exist_ok=True)
     name = f"{uuid.uuid4().hex}{ext}"
-    target = UPLOAD_DIR / name
-    with target.open("wb") as f:
-        shutil.copyfileobj(file.file, f)
     from ..article_categories import validate_member_category_choice
     from ..media_urls import resolve_media_url
     from ..gallery import save_uploaded_gallery_image
 
+    rel_path = upload_storage.save_upload(name, file)
     db = get_db()
     try:
         category_resolved = await validate_member_category_choice(db, category)
     except ValueError as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from exc
     m = await _get_member(db, auth["memberId"])
-    rel_path = f"/api/uploads/{name}"
     url = resolve_media_url(rel_path)
     member_name = f"{m.get('firstName', '')} {m.get('lastName', '')}".strip()
     doc = await save_uploaded_gallery_image(
@@ -1020,14 +1013,10 @@ async def portal_upload_foto(
     ext = Path(file.filename or "").suffix.lower() or ".bin"
     if ext not in {".jpg", ".jpeg", ".png", ".webp", ".gif"}:
         raise HTTPException(status_code=400, detail="Formato non supportato")
-    UPLOAD_DIR.mkdir(parents=True, exist_ok=True)
     name = f"{uuid.uuid4().hex}{ext}"
-    target = UPLOAD_DIR / name
-    with target.open("wb") as f:
-        shutil.copyfileobj(file.file, f)
     from ..media_urls import resolve_media_url
 
-    rel_path = f"/api/uploads/{name}"
+    rel_path = upload_storage.save_upload(name, file)
     url = resolve_media_url(rel_path)
     db = get_db()
     await db.members.update_one(
@@ -1050,7 +1039,7 @@ async def portal_delete_foto(auth=Depends(require_member)):
 
     name = upload_basename(old)
     if name:
-        (UPLOAD_DIR / name).unlink(missing_ok=True)
+        upload_storage.delete(name)
     return {"ok": True, "photoUrl": ""}
 
 

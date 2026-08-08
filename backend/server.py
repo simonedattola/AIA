@@ -19,7 +19,8 @@ from app.logging_config import configure_logging, log_event
 configure_logging()
 
 from app.db import get_db, close_db
-from app.paths import UPLOAD_DIR, use_object_storage
+from app.paths import UPLOAD_DIR
+from app.storage import uses_streamed_uploads
 from app.routes.public import router as public_router
 from app.routes.admin import router as admin_router
 from app.routes.portal import router as portal_router
@@ -143,8 +144,8 @@ async def metrics():
     return "\n".join(lines)
 
 
-# Uploads: local StaticFiles, or S3/R2 proxy (CDN when configured)
-if use_object_storage():
+# Uploads: local StaticFiles, or GridFS / S3/R2 streamed by the app
+if uses_streamed_uploads():
     from app import storage as upload_storage
 
     @app.get("/api/uploads/{name:path}")
