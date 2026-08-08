@@ -72,8 +72,9 @@ export default function MemberProfileContent({ memberSlug }) {
   const hasBio = !!(m.bio && m.bio.trim());
   const hasPresidentLongBio = !!(m.isPresident && m.presidentLongBio && m.presidentLongBio.trim());
   const showDesignations = hasDesignations(m.memberRole);
-  const back = profileBackPath(m.memberRole);
-  const backLabel = m.memberRole === "consiglio_direttivo" || m.memberRole === "osservatore" ? "Chi siamo" : "Arbitri";
+  const back = profileBackPath(m.memberRole, m);
+  const backLabel =
+    back === "/chi-siamo" ? "Chi siamo" : back === "/osservatori" ? "Osservatori" : "Arbitri";
 
   return (
     <div data-testid="member-profile-content" className="bg-background">

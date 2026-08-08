@@ -41,7 +41,7 @@ export default function AssociatiPage() {
       <PageHeader
         eyebrow="Sezione Legnano"
         title="Associati"
-        description="Arbitri, assistenti e tutor della sezione. Gli osservatori (OA/OT) sono nell'organigramma in Chi siamo."
+        description="Arbitri, assistenti e tutor della sezione. Gli osservatori (OA/OT) sono nella pagina Osservatori."
       />
 
       <section className="site-section bg-background">

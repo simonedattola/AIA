@@ -60,15 +60,19 @@ function isArbitroBenemerito(m) {
 export function memberRoleLabel(m) {
   if (isArbitroBenemerito(m)) {
     const board = (m?.boardTitle || "").trim();
-    if (board && board.toLowerCase() !== "arbitro benemerito") {
+    if (board && !/^arbitro\s+benemerito$/i.test(board)) {
       return `Arbitro Benemerito · ${board}`;
     }
     return "Arbitro Benemerito";
   }
   const r = m?.memberRole;
   const board = (m?.boardTitle || "").trim();
-  if (r === "arbitro") return board ? `Arbitro · ${board}` : "Arbitro";
-  if (r === "assistente") return board ? `Assistente · ${board}` : "Assistente";
+  const code = String(m?.role || "").trim().toUpperCase();
+  if (r === "arbitro") {
+    const base = code === "AE" ? "Arbitro Effettivo" : code === "AA" ? "Arbitro Aspirante" : "Arbitro";
+    return board ? `${base} · ${board}` : base;
+  }
+  if (r === "assistente") return board ? `Assistente Arbitrale · ${board}` : "Assistente Arbitrale";
   if (r === "consiglio_direttivo") return board || "Consiglio Direttivo";
   if (r === "osservatore") {
     const base = m?.observerType === "ot" ? "OT · Organo Tecnico" : "OA · Osservatore Arbitrale";
@@ -78,11 +82,9 @@ export function memberRoleLabel(m) {
 }
 
 export function profileBackPath(memberRole, member) {
-  if (isArbitroBenemerito(member)) return "/chi-siamo";
-  if (memberRole === "consiglio_direttivo" || memberRole === "osservatore") {
-    return "/chi-siamo";
-  }
-  if ((member?.boardTitle || "").trim()) return "/chi-siamo";
-  // Arbitro/assistente con incarico sezionale: resta sul percorso associati
+  if (memberRole === "osservatore") return "/osservatori";
+  const board = (member?.boardTitle || "").trim();
+  if (board && !/^arbitro\s+benemerito$/i.test(board)) return "/chi-siamo";
+  if (memberRole === "consiglio_direttivo") return "/chi-siamo";
   return "/arbitri";
 }

@@ -42,7 +42,45 @@ def _read_csv_bytes(content: bytes) -> pd.DataFrame:
     return pd.read_csv(io.StringIO(text), sep=sep, dtype=str, header=None)
 
 
+def _looks_like_html(content: bytes) -> bool:
+    head = content.lstrip()[:200].lower()
+    return head.startswith(b"<") or b"<table" in head or b"<!doctype html" in head
+
+
+def _flatten_html_columns(df: pd.DataFrame) -> pd.DataFrame:
+    """Pulisce intestazioni MultiIndex tipiche degli export HTML AIA."""
+    out = df.copy()
+    if isinstance(out.columns, pd.MultiIndex):
+        out.columns = [
+            _cell_str(col[-1] if isinstance(col, tuple) else col) for col in out.columns
+        ]
+    else:
+        out.columns = [_cell_str(c) for c in out.columns]
+    # Se la prima riga ripete le intestazioni, lasciala: _map_columns la rileva.
+    return out
+
+
+def _read_html_tables(content: bytes) -> list[pd.DataFrame]:
+    """AIA espone spesso elenchi come HTML con estensione .xls."""
+    for encoding in ("utf-8-sig", "utf-8", "latin-1", "cp1252"):
+        try:
+            text = content.decode(encoding)
+            break
+        except UnicodeDecodeError:
+            text = None
+    if text is None:
+        raise ValueError("Codifica HTML non supportata.")
+    # header=0: usa la riga intestazioni (o MultiIndex se c'è un titolo sopra)
+    try:
+        tables = pd.read_html(io.StringIO(text), flavor="bs4")
+    except ValueError:
+        tables = pd.read_html(io.StringIO(text), header=None, flavor="bs4")
+    return [_flatten_html_columns(df) for df in tables if not df.empty]
+
+
 def _read_excel_bytes(content: bytes) -> list[pd.DataFrame]:
+    if _looks_like_html(content):
+        return _read_html_tables(content)
     xls = pd.ExcelFile(io.BytesIO(content))
     out: list[pd.DataFrame] = []
     for sheet in xls.sheet_names:
@@ -135,9 +173,10 @@ def extract_raw_tables(content: bytes, filename: str) -> tuple[list[pd.DataFrame
     """Restituisce tabelle grezze e il tipo di file rilevato."""
     lower = (filename or "").lower()
     if lower.endswith((".xlsx", ".xls", ".xlsm")):
+        kind = "html-xls" if _looks_like_html(content) else "excel"
         return [
             _normalize_table(df) for df in _read_excel_bytes(content) if not df.empty
-        ], "excel"
+        ], kind
     if lower.endswith(".csv"):
         return [_normalize_table(_read_csv_bytes(content))], "csv"
     if lower.endswith(".pdf"):

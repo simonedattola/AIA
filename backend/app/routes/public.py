@@ -197,12 +197,16 @@ async def list_members(
     scope: Optional[str] = None,
     limit: int = 200,
 ):
-    """Lista membri. Default: arbitri+assistenti. scope=chi_siamo per CD/osservatori."""
+    """Lista membri. Default: arbitri+assistenti+benemeriti. scope=chi_siamo per organigramma."""
     db = get_db()
     if memberRole:
         query = {"memberRole": memberRole}
     elif scope in ("chi_siamo", "organigramma"):
         query = legacy_chi_siamo_query()
+    elif scope in ("osservatori", "osservatore"):
+        from ..member_roles import osservatori_query
+
+        query = osservatori_query()
     else:
         query = legacy_arbitri_query()
     if category:
