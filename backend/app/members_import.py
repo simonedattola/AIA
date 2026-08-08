@@ -261,6 +261,11 @@ def _normalize_member_role(raw: str, category: str = "") -> tuple[str, str, str]
     cat = _normalize_name_key(category)
     observer_type = ""
     board_title = ""
+    raw_u = _cell_str(raw).strip().upper()
+
+    # Codici AIA: AB = Arbitro Benemerito (Chi siamo, non lista Arbitri)
+    if raw_u == "AB" or "benemerito" in text or "benemerito" in cat:
+        return "arbitro", "", "Arbitro Benemerito"
 
     if (
         "consiglio" in text
@@ -325,6 +330,16 @@ def _row_from_mapped(
         ot = _cell_str(row.get("observerType")).lower()
         if ot in ("oa", "ot"):
             observer_type = ot
+    # AB / Benemerito: categoria esplicita per filtri Chi siamo vs Arbitri
+    if (
+        _cell_str(role_raw).strip().upper() == "AB"
+        or "benemerito" in _normalize_name_key(role_raw)
+        or "benemerito" in _normalize_name_key(category)
+        or board_title == "Arbitro Benemerito"
+    ):
+        category = category or "Arbitro Benemerito"
+        if not board_title:
+            board_title = "Arbitro Benemerito"
 
     email = _cell_str(row.get("email", ""))
     if email and not _looks_like_email(email):

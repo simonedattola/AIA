@@ -94,12 +94,28 @@ def is_observer_designation_role(role: str | None) -> bool:
     return "osservatore" in (role or "").lower()
 
 
+def is_arbitro_benemerito(doc: dict | None) -> bool:
+    """AIA code AB = Arbitro Benemerito (organigramma / Chi siamo, non lista Arbitri)."""
+    if not doc:
+        return False
+    code = (doc.get("role") or "").strip().upper()
+    if code == "AB":
+        return True
+    cat = (doc.get("category") or "").strip().lower()
+    return "benemerito" in cat
+
+
 def arbitri_query() -> dict:
-    return {"memberRole": {"$in": list(ARBITRI_ROLES)}}
+    # Esclude Arbitri Benemeriti (AB): vanno in Chi siamo, non in /arbitri.
+    return {
+        "memberRole": {"$in": list(ARBITRI_ROLES)},
+        "role": {"$nin": ["AB", "ab"]},
+        "category": {"$not": {"$regex": "benemerito", "$options": "i"}},
+    }
 
 
 def chi_siamo_query() -> dict:
-    """Organigramma / Chi siamo: CD, osservatori, oppure incarico sezionale (boardTitle).
+    """Organigramma / Chi siamo: CD, osservatori, incarico sezionale, Arbitri Benemeriti.
 
     Così un arbitro può restare ``memberRole=arbitro`` (lista Associati + designazioni)
     e comparire anche in organigramma se ha ``boardTitle`` (es. Collaboratore Area Informatica).
@@ -108,18 +124,33 @@ def chi_siamo_query() -> dict:
         "$or": [
             {"memberRole": {"$in": list(CHI_SIAMO_ROLES)}},
             {"boardTitle": {"$exists": True, "$nin": ["", None]}},
+            {"role": {"$in": ["AB", "ab"]}},
+            {"category": {"$regex": "benemerito", "$options": "i"}},
         ]
     }
 
 
 def legacy_arbitri_query() -> dict:
-    """Compatibilità dati senza memberRole."""
+    """Compatibilità dati senza memberRole. Esclude Arbitri Benemeriti (AB)."""
     return {
-        "$or": [
-            {"memberRole": {"$in": list(ARBITRI_ROLES)}},
+        "$and": [
             {
-                "memberRole": {"$exists": False},
-                "kind": {"$in": ["associato", "tutor"]},
+                "$or": [
+                    {"memberRole": {"$in": list(ARBITRI_ROLES)}},
+                    {
+                        "memberRole": {"$exists": False},
+                        "kind": {"$in": ["associato", "tutor"]},
+                    },
+                ]
+            },
+            {"role": {"$nin": ["AB", "ab"]}},
+            {
+                "$or": [
+                    {"category": {"$exists": False}},
+                    {"category": None},
+                    {"category": ""},
+                    {"category": {"$not": {"$regex": "benemerito", "$options": "i"}}},
+                ]
             },
         ]
     }
@@ -130,6 +161,8 @@ def legacy_chi_siamo_query() -> dict:
         "$or": [
             {"memberRole": {"$in": list(CHI_SIAMO_ROLES)}},
             {"boardTitle": {"$exists": True, "$nin": ["", None]}},
+            {"role": {"$in": ["AB", "ab"]}},
+            {"category": {"$regex": "benemerito", "$options": "i"}},
             {
                 "memberRole": {"$exists": False},
                 "kind": {"$in": ["oa", "ot", "osservatore"]},
@@ -138,7 +171,9 @@ def legacy_chi_siamo_query() -> dict:
     }
 
 
-def member_role_label(member_role: str | None, observer_type: str | None = None) -> str:
+def member_role_label(member_role: str | None, observer_type: str | None = None, doc: dict | None = None) -> str:
+    if is_arbitro_benemerito(doc):
+        return "Arbitro Benemerito"
     r = (member_role or "").lower()
     if r == "arbitro":
         return "Arbitro"
