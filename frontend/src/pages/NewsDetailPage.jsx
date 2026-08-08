@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { Link, useParams } from "react-router-dom";
 import { fetchArticle } from "../lib/api";
 import { formatDateIt } from "../lib/format";
+import { scrollPageToTop } from "../lib/scroll";
 import { ArrowLeft, Calendar, User as UserIcon } from "lucide-react";
 import ArticleProse from "../components/ArticleProse";
 import { Button, Card, CardTitle, CtaTitle, Eyebrow, PageTitle, SectionTitle } from "@/design-system";
@@ -52,6 +53,7 @@ export default function NewsDetailPage() {
   useEffect(() => {
     setData(null);
     setError(null);
+    scrollPageToTop();
     fetchArticle(slug)
       .then(setData)
       .catch(() => setError("Articolo non trovato"));
@@ -145,7 +147,7 @@ export default function NewsDetailPage() {
                   className="overflow-hidden hover:border-navy-600"
                   data-testid={`related-news-${a.slug}`}
                 >
-                  <Link to={`/news/${a.slug}`} className="block">
+                  <Link to={`/news/${a.slug}`} className="block" onClick={() => scrollPageToTop()}>
                     {a.coverUrl && <div className="aspect-[16/10] bg-slate-100 overflow-hidden">
                       <img src={a.coverUrl} alt={a.title} className="w-full h-full object-cover" loading="lazy"/>
                     </div>}

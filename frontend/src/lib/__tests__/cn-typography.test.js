@@ -34,4 +34,13 @@ describe("cn + design-system font sizes", () => {
     expect(result).toContain("text-ds-subsection");
     expect(result).toContain("text-navy-700");
   });
+
+  it("keeps text-ds-page with font-bold and color", () => {
+    const result = cn(
+      "font-display font-bold text-ds-page sm:text-ds-page-lg tracking-tight text-navy-700",
+      "text-2xl sm:text-3xl font-bold tracking-tight mb-1"
+    );
+    expect(result).toContain("font-bold");
+    expect(result).toContain("text-navy-700");
+  });
 });

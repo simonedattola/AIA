@@ -141,9 +141,9 @@ export default function AdminArticleEditPage() {
           <ArticleProse html={form.bodyHtml} />
         </article>
       ) : (
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
-          <div className="lg:col-span-8 space-y-6">
-            <div className="bg-white rounded-lg border border-slate-200 p-6">
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-4 sm:gap-6 min-w-0">
+          <div className="lg:col-span-8 space-y-4 sm:space-y-6 min-w-0">
+            <div className="bg-white rounded-lg border border-slate-200 p-4 sm:p-6 min-w-0">
               <Field label="Titolo*">
                 <input data-testid="admin-article-title" value={form.title} onChange={onChange("title")} className={inputCls} />
               </Field>
@@ -151,7 +151,7 @@ export default function AdminArticleEditPage() {
                 <textarea data-testid="admin-article-excerpt" rows={2} value={form.excerpt} onChange={onChange("excerpt")} className={inputCls}/>
               </Field>
             </div>
-            <div className="bg-white rounded-lg border border-slate-200 p-6">
+            <div className="bg-white rounded-lg border border-slate-200 p-4 sm:p-6 min-w-0 overflow-x-hidden">
               <label className="block text-sm font-medium text-slate-700 mb-2">Contenuto</label>
               {form.legacyWpId ? (
                 <LegacyArticleBodyEditor
@@ -164,8 +164,8 @@ export default function AdminArticleEditPage() {
             </div>
           </div>
 
-          <div className="lg:col-span-4 space-y-6">
-            <div className="bg-white rounded-lg border border-slate-200 p-6 space-y-4">
+          <div className="lg:col-span-4 space-y-4 sm:space-y-6 min-w-0">
+            <div className="bg-white rounded-lg border border-slate-200 p-4 sm:p-6 space-y-4 min-w-0">
               <h3 className="font-display font-semibold text-navy-700 mb-2">Pubblicazione</h3>
               <Field label="Stato">
                 <select data-testid="admin-article-status" value={form.status} onChange={onChange("status")} className={inputCls}>
@@ -183,13 +183,13 @@ export default function AdminArticleEditPage() {
                     <option value={form.category}>{form.category}</option>
                   )}
                 </select>
-                <div className="mt-2 flex gap-2">
+                <div className="mt-2 flex flex-col sm:flex-row gap-2 min-w-0">
                   <input
                     data-testid="admin-article-new-category"
                     value={newCategory}
                     onChange={(e) => setNewCategory(e.target.value)}
                     onKeyDown={(e) => e.key === "Enter" && (e.preventDefault(), addCategory())}
-                    className={`${inputCls} flex-1`}
+                    className={`${inputCls} flex-1 min-w-0`}
                     placeholder="Nuova categoria…"
                   />
                   <Button
@@ -197,7 +197,7 @@ export default function AdminArticleEditPage() {
                     onClick={addCategory}
                     disabled={addingCategory || !newCategory.trim()}
                     variant="outline"
-                    className="shrink-0 disabled:opacity-50"
+                    className="w-full sm:w-auto shrink-0 disabled:opacity-50"
                     data-testid="admin-article-add-category"
                   >
                     <Plus className="h-4 w-4"/> {addingCategory ? "…" : "Aggiungi"}

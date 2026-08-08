@@ -142,13 +142,13 @@ function EventEditForm({
                   <option value={editing.tipo}>{editing.tipo}</option>
                 )}
               </select>
-              <div className="flex flex-wrap items-center gap-2 mt-2">
+              <div className="flex flex-col sm:flex-row sm:flex-wrap sm:items-center gap-2 mt-2 min-w-0">
                 <input
                   data-testid="event-new-tipo"
                   value={newTipo}
                   onChange={(e) => setNewTipo(e.target.value)}
                   placeholder="Nuovo tipo…"
-                  className={`${inputCls} flex-1 min-w-[160px]`}
+                  className={`${inputCls} flex-1 min-w-0`}
                 />
                 <Button
                   type="button"
@@ -157,6 +157,7 @@ function EventEditForm({
                   onClick={onAddTipo}
                   disabled={addingTipo || !newTipo.trim()}
                   data-testid="event-add-tipo"
+                  className="w-full sm:w-auto shrink-0"
                 >
                   {addingTipo ? "Aggiunta…" : "Aggiungi tipo"}
                 </Button>
