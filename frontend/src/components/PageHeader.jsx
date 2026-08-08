@@ -13,11 +13,11 @@ export default function PageHeader({ eyebrow, title, description, bg }) {
       <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 z-10">
         <PageBrandBar className="mb-6" tone="onDark" />
         {eyebrow && (
-          <Eyebrow as="div" className="text-gold-400 tracking-[0.25em] mb-4">
+          <Eyebrow as="div" className="text-gold-400 text-sm sm:text-base tracking-[0.16em] mb-4">
             {eyebrow}
           </Eyebrow>
         )}
-        <HeroTitle className="text-white mb-5 max-w-4xl">
+        <HeroTitle className="text-white mb-5 max-w-4xl text-ds-hero sm:text-ds-hero-sm lg:text-ds-hero-lg">
           {title}
         </HeroTitle>
         <span className="gold-divider mb-5 block" />
