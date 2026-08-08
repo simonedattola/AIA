@@ -53,11 +53,21 @@ export function AdminPanel({ children, className = "" }) {
 }
 
 export function AdminTableWrap({ children }) {
+  return <AdminPanel className="overflow-hidden min-w-0">{children}</AdminPanel>;
+}
+
+/** Lista schede per viewport stretti (niente scroll orizzontale). */
+export function AdminMobileList({ children, className = "", testid }) {
   return (
-    <AdminPanel className="overflow-hidden">
-      <div className="overflow-x-auto">{children}</div>
-    </AdminPanel>
+    <ul className={cn("divide-y divide-slate-100 lg:hidden", className)} data-testid={testid}>
+      {children}
+    </ul>
   );
+}
+
+/** Tabella solo da lg in su. */
+export function AdminDesktopOnly({ children, className = "" }) {
+  return <div className={cn("hidden lg:block min-w-0", className)}>{children}</div>;
 }
 
 export const adminTableHead = "bg-slate-50 text-xs uppercase text-slate-500 text-left tracking-wide";

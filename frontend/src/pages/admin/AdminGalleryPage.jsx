@@ -372,9 +372,9 @@ export default function AdminGalleryPage() {
           Carica foto per il carosello home e tagga gli associati che le vedranno in area riservata.
         </AdminEmptyState>
       ) : (
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 min-w-0">
           {carouselItems.map((img) => (
-            <div key={img.id} className="bg-white rounded-md border border-slate-200 overflow-hidden text-sm">
+            <div key={img.id} className="bg-white rounded-md border border-slate-200 overflow-hidden text-sm min-w-0">
               <div className={`bg-slate-100 ${cardAspectClass(img.aspect)}`}>
                 <MediaImage src={img.url} alt="" className="w-full h-full object-cover" />
               </div>
