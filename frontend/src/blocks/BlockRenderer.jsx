@@ -23,6 +23,7 @@ import {
 import { SECTION_LOGO_CLASS, NATIONAL_LOGO, NATIONAL_LOGO_CLASS, resolveSectionLogo } from "../lib/brand";
 // SECTION_LOGO_CLASS.pair / NATIONAL_LOGO_CLASS.pair: stesso diametro in hero
 import { parseInstagramPostEmbed, instagramPostEmbedSrc } from "../lib/instagram-embed";
+import MobileNavMenu from "../components/MobileNavMenu";
 
 /** Link CTA: route interne, anchor (#form) e scroll con offset header fisso. */
 function CtaLink({ href = "/", variant = "primary", className, children, ...rest }) {
@@ -84,29 +85,32 @@ export function HeroBlock({ config: c, stats }) {
           <div className={`absolute inset-0 ${overlayClass}`} />
         </div>
       )}
-      <div className="relative z-10 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-20 grid grid-cols-1 lg:grid-cols-12 gap-12 items-center w-full text-white">
+      <div className="relative z-10 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-8 pb-20 sm:py-20 grid grid-cols-1 lg:grid-cols-12 gap-12 items-center w-full text-white">
         <div className={c.showStats ? "lg:col-span-7" : "lg:col-span-12"}>
           {(c.badgeLogoUrl || c.eyebrow) && (
             <div className="mb-6 sm:mb-8" data-testid="hero-brand-stack">
-              <div className="flex items-center gap-3 mb-3" data-testid="hero-logo-pair">
-                {c.badgeLogoUrl && (
+              <div className="flex items-center justify-between gap-3 mb-3" data-testid="hero-logo-pair">
+                <div className="flex items-center gap-3 min-w-0">
+                  {c.badgeLogoUrl && (
+                    <img
+                      src={resolveSectionLogo(c.badgeLogoUrl)}
+                      alt="AIA Legnano"
+                      className={SECTION_LOGO_CLASS.pair}
+                      width={48}
+                      height={48}
+                      data-testid="hero-section-logo"
+                    />
+                  )}
                   <img
-                    src={resolveSectionLogo(c.badgeLogoUrl)}
-                    alt="AIA Legnano"
-                    className={SECTION_LOGO_CLASS.pair}
+                    src={NATIONAL_LOGO}
+                    alt="AIA Nazionale"
+                    className={NATIONAL_LOGO_CLASS.pair}
                     width={48}
                     height={48}
-                    data-testid="hero-section-logo"
+                    data-testid="hero-national-logo"
                   />
-                )}
-                <img
-                  src={NATIONAL_LOGO}
-                  alt="AIA Nazionale"
-                  className={NATIONAL_LOGO_CLASS.pair}
-                  width={48}
-                  height={48}
-                  data-testid="hero-national-logo"
-                />
+                </div>
+                <MobileNavMenu tone="onDark" />
               </div>
               {c.eyebrow && (
                 <Eyebrow className="tracking-[0.2em] font-medium text-white/90">
@@ -317,7 +321,7 @@ export function CTABlock({ config: c }) {
     white: "bg-background text-navy-700 border-y border-slate-200",
   };
   return (
-    <section id={c.anchor || undefined} className={`relative site-section overflow-hidden scroll-mt-20 max-[1139px]:scroll-mt-[4.5rem] ${styles[c.style] || styles.navy}`} data-testid="cta-block">
+    <section id={c.anchor || undefined} className={`relative site-section overflow-hidden scroll-mt-4 min-[1140px]:scroll-mt-20 ${styles[c.style] || styles.navy}`} data-testid="cta-block">
       {c.backgroundImage && c.style !== "white" && (
         <div className="absolute inset-0 z-0 opacity-25">
           <img src={c.backgroundImage} alt="" className="w-full h-full object-cover"/>
