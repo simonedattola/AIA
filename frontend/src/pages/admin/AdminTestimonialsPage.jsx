@@ -1,13 +1,15 @@
 import { useEffect, useState, useMemo } from "react";
 import { adminTestimonials, adminCreateTestimonial, adminUpdateTestimonial, adminDeleteTestimonial, adminUpload } from "../../lib/api";
 import { MemberSingleSelect } from "../../components/admin/MemberSelect";
-import { Plus, Pencil, Trash2, Upload, Quote } from "lucide-react";
+import { Plus, Pencil, Trash2, Upload } from "lucide-react";
 import { SITE_ICONS } from "../../lib/siteIcons";
 import {
   AdminEmptyState,
   AdminFormModal,
   AdminPageHeader,
   AdminTableWrap,
+  AdminMobileList,
+  AdminDesktopOnly,
   adminTableHead,
   AdminFilterTabs,
   AdminBadge,
@@ -167,75 +169,161 @@ export default function AdminTestimonialsPage() {
           />
         </div>
 
-        <table className="w-full text-sm">
-          <thead>
-            <tr className={adminTableHead}>
-              <th className="px-4 py-3">Nome</th>
-              <th className="px-4 py-3">Ruolo</th>
-              <th className="px-4 py-3">Citazione</th>
-              <th className="px-4 py-3">Stato</th>
-              <th className="px-4 py-3 text-right">Azioni</th>
-            </tr>
-          </thead>
-          <tbody>
-            {filtered.map((t) => (
-              <tr
-                key={t.id}
-                className={`border-t border-slate-100 ${
-                  t.status === "pending" ? "bg-gold-50/30 hover:bg-gold-50/50" : "hover:bg-slate-50/80"
-                }`}
-                data-testid={`testimonial-${t.id}`}
-              >
-                <td className="px-4 py-3.5">
-                  <div className="flex items-center gap-3">
+        {filtered.length === 0 ? (
+          <AdminEmptyState icon={SITE_ICONS.testimonials} title="Nessuna testimonianza in questa vista." />
+        ) : (
+          <>
+            <AdminMobileList>
+              {filtered.map((t) => (
+                <li
+                  key={t.id}
+                  className={`p-4 ${t.status === "pending" ? "bg-gold-50/30" : ""}`}
+                  data-testid={`testimonial-${t.id}`}
+                >
+                  <div className="flex items-start gap-3">
                     {t.photoUrl ? (
-                      <img src={t.photoUrl} alt="" className="w-10 h-10 rounded-full object-cover border border-slate-200 shrink-0" />
+                      <img
+                        src={t.photoUrl}
+                        alt=""
+                        className="w-10 h-10 rounded-full object-cover border border-slate-200 shrink-0"
+                      />
                     ) : (
                       <div className="w-10 h-10 rounded-full bg-navy-100 text-navy-600 flex items-center justify-center text-sm font-bold shrink-0">
                         {t.name?.[0]}
                       </div>
                     )}
-                    <div className="font-medium text-navy-700">{t.name}</div>
+                    <div className="min-w-0 flex-1">
+                      <div className="font-medium text-navy-700 break-words">{t.name}</div>
+                      {t.role && <div className="text-sm text-slate-600 mt-0.5 break-words">{t.role}</div>}
+                      <p className="text-sm text-slate-600 italic mt-1.5 line-clamp-3 break-words">{t.quote}</p>
+                      <div className="mt-2">
+                        {t.status === "pending" ? (
+                          <AdminBadge variant="warning">In attesa</AdminBadge>
+                        ) : (
+                          <AdminBadge variant="success">Approvata</AdminBadge>
+                        )}
+                      </div>
+                    </div>
+                    <div className="flex flex-col shrink-0 gap-1 items-end">
+                      {t.status === "pending" && (
+                        <Button
+                          type="button"
+                          onClick={() => approve(t)}
+                          variant="primary"
+                          size="sm"
+                          className="text-xs py-1 px-2.5"
+                        >
+                          Approva
+                        </Button>
+                      )}
+                      <div className="flex">
+                        <button
+                          type="button"
+                          onClick={() => setEditing(t)}
+                          className="p-2 rounded text-navy-600 hover:bg-navy-50"
+                          title="Modifica"
+                        >
+                          <Pencil className="h-4 w-4" />
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => remove(t.id, t.name)}
+                          className="p-2 text-red-600 hover:bg-red-50 rounded"
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </button>
+                      </div>
+                    </div>
                   </div>
-                </td>
-                <td className="px-4 py-3.5 text-slate-600">{t.role || "—"}</td>
-                <td className="px-4 py-3.5 text-slate-600 italic max-w-md">
-                  <span className="line-clamp-2">{t.quote}</span>
-                </td>
-                <td className="px-4 py-3.5">
-                  {t.status === "pending" ? (
-                    <AdminBadge variant="warning">In attesa</AdminBadge>
-                  ) : (
-                    <AdminBadge variant="success">Approvata</AdminBadge>
-                  )}
-                </td>
-                <td className="px-4 py-3.5">
-                  <div className="flex items-center gap-1 justify-end">
-                    {t.status === "pending" && (
-                      <Button type="button" onClick={() => approve(t)} variant="primary" size="sm" className="text-xs py-1 px-2.5">
-                        Approva
-                      </Button>
-                    )}
-                    <button
-                      type="button"
-                      onClick={() => setEditing(t)}
-                      className="p-2 rounded text-navy-600 hover:bg-navy-50"
-                      title="Modifica"
-                    >
-                      <Pencil className="h-4 w-4" />
-                    </button>
-                    <button type="button" onClick={() => remove(t.id, t.name)} className="p-2 text-red-600 hover:bg-red-50 rounded">
-                      <Trash2 className="h-4 w-4" />
-                    </button>
-                  </div>
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
+                </li>
+              ))}
+            </AdminMobileList>
 
-        {filtered.length === 0 && (
-          <AdminEmptyState icon={SITE_ICONS.testimonials} title="Nessuna testimonianza in questa vista." />
+            <AdminDesktopOnly>
+              <table className="w-full table-fixed text-sm">
+                <thead>
+                  <tr className={adminTableHead}>
+                    <th className="px-4 py-3 w-[22%]">Nome</th>
+                    <th className="px-4 py-3 w-[16%]">Ruolo</th>
+                    <th className="px-4 py-3 w-[34%]">Citazione</th>
+                    <th className="px-4 py-3 w-[12%]">Stato</th>
+                    <th className="px-4 py-3 w-[16%] text-right">Azioni</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {filtered.map((t) => (
+                    <tr
+                      key={t.id}
+                      className={`border-t border-slate-100 ${
+                        t.status === "pending" ? "bg-gold-50/30 hover:bg-gold-50/50" : "hover:bg-slate-50/80"
+                      }`}
+                      data-testid={`testimonial-desktop-${t.id}`}
+                    >
+                      <td className="px-4 py-3.5 min-w-0">
+                        <div className="flex items-center gap-3 min-w-0">
+                          {t.photoUrl ? (
+                            <img
+                              src={t.photoUrl}
+                              alt=""
+                              className="w-10 h-10 rounded-full object-cover border border-slate-200 shrink-0"
+                            />
+                          ) : (
+                            <div className="w-10 h-10 rounded-full bg-navy-100 text-navy-600 flex items-center justify-center text-sm font-bold shrink-0">
+                              {t.name?.[0]}
+                            </div>
+                          )}
+                          <div className="font-medium text-navy-700 truncate">{t.name}</div>
+                        </div>
+                      </td>
+                      <td className="px-4 py-3.5 text-slate-600 min-w-0">
+                        <div className="truncate">{t.role || "—"}</div>
+                      </td>
+                      <td className="px-4 py-3.5 text-slate-600 italic min-w-0">
+                        <span className="line-clamp-2 break-words">{t.quote}</span>
+                      </td>
+                      <td className="px-4 py-3.5">
+                        {t.status === "pending" ? (
+                          <AdminBadge variant="warning">In attesa</AdminBadge>
+                        ) : (
+                          <AdminBadge variant="success">Approvata</AdminBadge>
+                        )}
+                      </td>
+                      <td className="px-4 py-3.5">
+                        <div className="flex items-center gap-1 justify-end">
+                          {t.status === "pending" && (
+                            <Button
+                              type="button"
+                              onClick={() => approve(t)}
+                              variant="primary"
+                              size="sm"
+                              className="text-xs py-1 px-2.5"
+                            >
+                              Approva
+                            </Button>
+                          )}
+                          <button
+                            type="button"
+                            onClick={() => setEditing(t)}
+                            className="p-2 rounded text-navy-600 hover:bg-navy-50"
+                            title="Modifica"
+                          >
+                            <Pencil className="h-4 w-4" />
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => remove(t.id, t.name)}
+                            className="p-2 text-red-600 hover:bg-red-50 rounded"
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </AdminDesktopOnly>
+          </>
         )}
       </AdminTableWrap>
     </div>

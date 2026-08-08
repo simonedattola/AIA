@@ -46,8 +46,8 @@ export default function AdminSettingsPage() {
 
       {saved && <div className="bg-emerald-50 border border-emerald-200 text-emerald-700 p-3 rounded mb-5 flex items-center gap-2"><CheckCircle2 className="h-4 w-4"/> Impostazioni aggiornate.</div>}
 
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        <div className="bg-white rounded-lg border border-slate-200 p-6">
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 min-w-0">
+        <div className="bg-white rounded-lg border border-slate-200 p-4 sm:p-6 min-w-0 overflow-hidden">
           <h2 className="font-display font-bold text-navy-700 mb-5">Identità sezione</h2>
           <Field label="Nome sito"><input value={form.siteName || ""} onChange={set("siteName")} className={inputCls} data-testid="settings-siteName"/></Field>
           <Field label="Tagline"><input value={form.tagline || ""} onChange={set("tagline")} className={inputCls}/></Field>
@@ -55,20 +55,20 @@ export default function AdminSettingsPage() {
           <Field label="Anno fondazione"><input value={form.foundedYear || ""} onChange={set("foundedYear")} className={inputCls}/></Field>
         </div>
 
-        <div className="bg-white rounded-lg border border-slate-200 p-6">
+        <div className="bg-white rounded-lg border border-slate-200 p-4 sm:p-6 min-w-0 overflow-hidden">
           <h2 className="font-display font-bold text-navy-700 mb-5">Contatti</h2>
           <Field label="Indirizzo"><input value={form.address || ""} onChange={set("address")} className={inputCls} data-testid="settings-address"/></Field>
           <Field label="Telefono"><input value={form.phone || ""} onChange={set("phone")} className={inputCls}/></Field>
           <Field label="Email"><input type="email" value={form.email || ""} onChange={set("email")} className={inputCls}/></Field>
         </div>
 
-        <div className="bg-white rounded-lg border border-slate-200 p-6">
+        <div className="bg-white rounded-lg border border-slate-200 p-4 sm:p-6 min-w-0 overflow-hidden">
           <h2 className="font-display font-bold text-navy-700 mb-5">Social</h2>
           <Field label="URL Facebook"><input value={form.facebookUrl || ""} onChange={set("facebookUrl")} className={inputCls}/></Field>
           <Field label="URL Instagram"><input value={form.instagramUrl || ""} onChange={set("instagramUrl")} className={inputCls}/></Field>
         </div>
 
-        <div className="bg-white rounded-lg border border-slate-200 p-6">
+        <div className="bg-white rounded-lg border border-slate-200 p-4 sm:p-6 min-w-0 overflow-hidden">
           <h2 className="font-display font-bold text-navy-700 mb-5">SEO & Link esterni</h2>
           <Field label="Embed mappa (iframe src)"><input value={form.mapEmbedUrl || ""} onChange={set("mapEmbedUrl")} className={inputCls}/></Field>
           <Field label="URL portale formazione (AIA)"><input value={form.formationPortalUrl || ""} onChange={set("formationPortalUrl")} className={inputCls}/></Field>

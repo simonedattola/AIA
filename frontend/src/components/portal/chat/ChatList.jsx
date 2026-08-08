@@ -15,7 +15,7 @@ export default function ChatList({
   const visibility = listVisible ? "flex" : "hidden md:flex";
   return (
     <aside
-      className={`wa-chat-list-panel w-full md:w-[30%] md:min-w-[320px] md:max-w-[420px] flex flex-col shrink-0 border-r absolute md:relative inset-0 z-10 md:z-auto ${visibility}`}
+      className={`wa-chat-list-panel w-full md:w-[30%] md:min-w-0 md:max-w-[420px] flex flex-col shrink-0 border-r absolute md:relative inset-0 z-10 md:z-auto ${visibility}`}
       style={{ backgroundColor: WA.panelWhite, borderColor: WA.border }}
     >
       <header

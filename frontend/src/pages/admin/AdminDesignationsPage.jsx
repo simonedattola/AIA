@@ -321,7 +321,7 @@ export default function AdminDesignationsPage() {
               </li>
             ))}
           </ul>
-          <div className="hidden lg:block overflow-x-auto">
+          <div className="hidden lg:block min-w-0">
             <DesignationsTableBody
               designations={items}
               tableTestId="admin-designations-table"

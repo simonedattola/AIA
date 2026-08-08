@@ -11,6 +11,8 @@ import {
   adminTableHead,
   AdminBadge,
   AdminEmptyState,
+  AdminMobileList,
+  AdminDesktopOnly,
 } from "../../components/admin/admin-ui";
 import { Button } from "@/design-system";
 
@@ -83,59 +85,96 @@ export default function AdminArticlesPage() {
             ))}
           </div>
         </div>
-        <table className="w-full text-sm">
-          <thead>
-            <tr className={adminTableHead}>
-              <th className="px-4 py-3">Titolo</th>
-              <th className="px-4 py-3">Categoria</th>
-              <th className="px-4 py-3">Data</th>
-              <th className="px-4 py-3">Stato</th>
-              <th className="px-4 py-3 text-right">Azioni</th>
-            </tr>
-          </thead>
-          <tbody>
-            {filtered.map((a) => (
-              <tr key={a.id} className="border-t border-slate-100 hover:bg-slate-50/80" data-testid={`admin-article-row-${a.slug}`}>
-                <td className="px-4 py-3.5">
-                  <div className="font-medium text-navy-700">{a.title}</div>
-                  <div className="text-xs text-slate-400 mt-0.5">/{a.slug}</div>
-                </td>
-                <td className="px-4 py-3.5">
-                  <AdminBadge variant="info">{a.category}</AdminBadge>
-                </td>
-                <td className="px-4 py-3.5 text-slate-600">{formatDateIt(a.publishedAt, { short: true })}</td>
-                <td className="px-4 py-3.5">
-                  <div className="flex flex-wrap gap-1">
-                    {a.portalOnly ? (
-                      <AdminBadge variant="portal">Area associati</AdminBadge>
-                    ) : a.status === "published" ? (
-                      <AdminBadge variant="success">Pubblicato</AdminBadge>
-                    ) : (
-                      <AdminBadge variant="draft">Bozza</AdminBadge>
-                    )}
-                  </div>
-                </td>
-                <td className="px-4 py-3.5">
-                  <div className="flex items-center gap-1 justify-end">
-                    {!a.portalOnly && a.status === "published" && (
-                      <a href={`/news/${a.slug}`} target="_blank" rel="noopener noreferrer" className="p-2 text-slate-500 hover:text-navy-600 hover:bg-navy-50 rounded" title="Anteprima">
-                        <ExternalLink className="h-4 w-4" />
-                      </a>
-                    )}
-                    <Link to={R.articolo(a.id)} className="p-2 text-navy-600 hover:bg-navy-50 rounded" data-testid={`admin-article-edit-${a.slug}`}>
-                      <Pencil className="h-4 w-4" />
-                    </Link>
-                    <button type="button" onClick={() => remove(a.id, a.title)} className="p-2 text-red-600 hover:bg-red-50 rounded" data-testid={`admin-article-delete-${a.slug}`}>
-                      <Trash2 className="h-4 w-4" />
-                    </button>
-                  </div>
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-        {filtered.length === 0 && (
+        {filtered.length === 0 ? (
           <AdminEmptyState icon={SITE_ICONS.articles} title="Nessun articolo in questa vista." />
+        ) : (
+          <>
+            <AdminMobileList>
+              {filtered.map((a) => (
+                <li key={a.id} className="p-4" data-testid={`admin-article-row-${a.slug}`}>
+                  <div className="flex items-start justify-between gap-3">
+                    <div className="min-w-0 flex-1">
+                      <div className="font-medium text-navy-700 break-words">{a.title}</div>
+                      <div className="text-xs text-slate-400 mt-0.5 break-all">/{a.slug}</div>
+                      <div className="flex flex-wrap gap-1.5 mt-2">
+                        <AdminBadge variant="info">{a.category}</AdminBadge>
+                        {a.portalOnly ? (
+                          <AdminBadge variant="portal">Area Associati</AdminBadge>
+                        ) : a.status === "published" ? (
+                          <AdminBadge variant="success">Pubblicato</AdminBadge>
+                        ) : (
+                          <AdminBadge variant="draft">Bozza</AdminBadge>
+                        )}
+                      </div>
+                      <div className="text-xs text-slate-500 mt-1.5">{formatDateIt(a.publishedAt, { short: true })}</div>
+                    </div>
+                    <div className="flex shrink-0">
+                      {!a.portalOnly && a.status === "published" && (
+                        <a href={`/news/${a.slug}`} target="_blank" rel="noopener noreferrer" className="p-2 text-slate-500 hover:text-navy-600 rounded" title="Anteprima">
+                          <ExternalLink className="h-4 w-4" />
+                        </a>
+                      )}
+                      <Link to={R.articolo(a.id)} className="p-2 text-navy-600 hover:bg-navy-50 rounded" data-testid={`admin-article-edit-${a.slug}`}>
+                        <Pencil className="h-4 w-4" />
+                      </Link>
+                      <button type="button" onClick={() => remove(a.id, a.title)} className="p-2 text-red-600 hover:bg-red-50 rounded" data-testid={`admin-article-delete-${a.slug}`}>
+                        <Trash2 className="h-4 w-4" />
+                      </button>
+                    </div>
+                  </div>
+                </li>
+              ))}
+            </AdminMobileList>
+            <AdminDesktopOnly>
+              <table className="w-full text-sm table-fixed">
+                <thead>
+                  <tr className={adminTableHead}>
+                    <th className="px-4 py-3 w-[40%]">Titolo</th>
+                    <th className="px-4 py-3 w-[18%]">Categoria</th>
+                    <th className="px-4 py-3 w-[14%]">Data</th>
+                    <th className="px-4 py-3 w-[14%]">Stato</th>
+                    <th className="px-4 py-3 w-[14%] text-right">Azioni</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {filtered.map((a) => (
+                    <tr key={a.id} className="border-t border-slate-100 hover:bg-slate-50/80" data-testid={`admin-article-row-desktop-${a.slug}`}>
+                      <td className="px-4 py-3.5 min-w-0">
+                        <div className="font-medium text-navy-700 truncate">{a.title}</div>
+                        <div className="text-xs text-slate-400 mt-0.5 truncate">/{a.slug}</div>
+                      </td>
+                      <td className="px-4 py-3.5"><AdminBadge variant="info">{a.category}</AdminBadge></td>
+                      <td className="px-4 py-3.5 text-slate-600">{formatDateIt(a.publishedAt, { short: true })}</td>
+                      <td className="px-4 py-3.5">
+                        {a.portalOnly ? (
+                          <AdminBadge variant="portal">Area Associati</AdminBadge>
+                        ) : a.status === "published" ? (
+                          <AdminBadge variant="success">Pubblicato</AdminBadge>
+                        ) : (
+                          <AdminBadge variant="draft">Bozza</AdminBadge>
+                        )}
+                      </td>
+                      <td className="px-4 py-3.5">
+                        <div className="flex items-center gap-1 justify-end">
+                          {!a.portalOnly && a.status === "published" && (
+                            <a href={`/news/${a.slug}`} target="_blank" rel="noopener noreferrer" className="p-2 text-slate-500 hover:text-navy-600 hover:bg-navy-50 rounded" title="Anteprima">
+                              <ExternalLink className="h-4 w-4" />
+                            </a>
+                          )}
+                          <Link to={R.articolo(a.id)} className="p-2 text-navy-600 hover:bg-navy-50 rounded" data-testid={`admin-article-edit-${a.slug}`}>
+                            <Pencil className="h-4 w-4" />
+                          </Link>
+                          <button type="button" onClick={() => remove(a.id, a.title)} className="p-2 text-red-600 hover:bg-red-50 rounded" data-testid={`admin-article-delete-${a.slug}`}>
+                            <Trash2 className="h-4 w-4" />
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </AdminDesktopOnly>
+          </>
         )}
       </AdminTableWrap>
     </div>

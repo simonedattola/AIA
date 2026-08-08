@@ -30,7 +30,7 @@ function DesignationsMobileList({
   rowTestIdPrefix = "member-designation",
 }) {
   return (
-    <ul className="divide-y divide-slate-200 md:landscape:hidden" data-testid="designations-mobile-list">
+    <ul className="divide-y divide-slate-200 lg:hidden" data-testid="designations-mobile-list">
       {designations.map((d, idx) => (
         <li
           key={d.id || idx}
@@ -87,7 +87,7 @@ export default function DesignationsDataTable({
         rowTestIdPrefix={rowTestIdPrefix}
       />
       <div
-        className={`hidden md:landscape:block ${scrollable ? "overflow-y-auto" : ""}`}
+        className={`hidden lg:block min-w-0 ${scrollable ? "overflow-y-auto" : ""}`}
         style={scrollMaxHeight ? { maxHeight: `${scrollMaxHeight}px` } : undefined}
         data-testid={scrollable ? "designations-scroll" : undefined}
       >

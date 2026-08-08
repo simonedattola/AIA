@@ -314,7 +314,7 @@ export default function AdminMembersPage() {
               })}
             </ul>
 
-            <div className="hidden lg:block overflow-x-auto">
+            <div className="hidden lg:block min-w-0">
               <table className="w-full table-fixed">
                 <thead>
                   <tr className="bg-slate-50 text-xs uppercase text-slate-500 text-left">
