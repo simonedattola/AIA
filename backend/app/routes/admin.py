@@ -1636,7 +1636,7 @@ async def admin_upload_attachment(
         "fileName": file.filename or name,
         "fileUrl": rel_path,
         "url": resolve_media_url(rel_path),
-        "fileSize": target.stat().st_size,
+        "fileSize": len(data),
         "mimeType": file.content_type or "",
     }
 
