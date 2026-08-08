@@ -91,6 +91,7 @@ module.exports = {
         'ds-section': ['var(--ds-text-section)', { lineHeight: 'var(--ds-leading-tight)', fontWeight: '700' }],
         'ds-section-lg': ['var(--ds-text-section-lg)', { lineHeight: 'var(--ds-leading-tight)', fontWeight: '700' }],
         'ds-subsection': ['var(--ds-text-subsection)', { lineHeight: 'var(--ds-leading-snug)', fontWeight: '700' }],
+        'ds-subsection-lg': ['var(--ds-text-subsection-lg)', { lineHeight: 'var(--ds-leading-snug)', fontWeight: '700' }],
         'ds-card': ['var(--ds-text-card)', { lineHeight: 'var(--ds-leading-snug)', fontWeight: '600' }],
         'ds-body': ['var(--ds-text-body)', { lineHeight: 'var(--ds-leading-body)' }],
         'ds-small': ['var(--ds-text-small)', { lineHeight: 'var(--ds-leading-body)' }],

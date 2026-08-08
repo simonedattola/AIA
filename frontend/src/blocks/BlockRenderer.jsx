@@ -20,10 +20,8 @@ import {
   DesignationsTableBlock, MembersGridBlock, NewsGridBlock, EventsCalendarBlock,
   ContactSectionBlock, OrganigrammaBlock, MemberProfileBlock, PortalLoginBlock,
 } from "./DynamicPageBlocks";
-import { SECTION_LOGO_CLASS, NATIONAL_LOGO, NATIONAL_LOGO_CLASS, resolveSectionLogo } from "../lib/brand";
-// SECTION_LOGO_CLASS.pair / NATIONAL_LOGO_CLASS.pair: stesso diametro in hero
 import { parseInstagramPostEmbed, instagramPostEmbedSrc } from "../lib/instagram-embed";
-import MobileNavMenu from "../components/MobileNavMenu";
+import PageBrandBar from "../components/PageBrandBar";
 
 /** Link CTA: route interne, anchor (#form) e scroll con offset header fisso. */
 function CtaLink({ href = "/", variant = "primary", className, children, ...rest }) {
@@ -94,33 +92,10 @@ export function HeroBlock({ config: c, stats }) {
         <div
           className={`${c.showStats ? "lg:col-span-7" : "lg:col-span-12"} flex flex-col min-h-0 max-lg:flex-1 max-lg:justify-between max-lg:py-2`}
         >
-          {(c.badgeLogoUrl || c.eyebrow) && (
-            <div data-testid="hero-brand-stack">
-              <div className="flex items-center justify-between gap-3 mb-5 min-[1140px]:mb-6" data-testid="hero-logo-pair">
-                <div className="flex items-center gap-3 min-w-0">
-                  {c.badgeLogoUrl && (
-                    <img
-                      src={resolveSectionLogo(c.badgeLogoUrl)}
-                      alt="AIA Legnano"
-                      className={SECTION_LOGO_CLASS.pair}
-                      width={48}
-                      height={48}
-                      data-testid="hero-section-logo"
-                    />
-                  )}
-                  <img
-                    src={NATIONAL_LOGO}
-                    alt="AIA Nazionale"
-                    className={NATIONAL_LOGO_CLASS.pair}
-                    width={48}
-                    height={48}
-                    data-testid="hero-national-logo"
-                  />
-                </div>
-                <MobileNavMenu tone="onDark" />
-              </div>
-            </div>
-          )}
+          {/* Stessi due loghi + hamburger delle altre pagine (solo mobile; desktop = SiteHeader). */}
+          <div data-testid="hero-brand-stack">
+            <PageBrandBar className="mb-5" tone="onDark" />
+          </div>
 
           <div className="max-lg:flex-1 max-lg:flex max-lg:flex-col max-lg:justify-center max-lg:py-4">
             {c.eyebrow && (

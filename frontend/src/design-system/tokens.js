@@ -6,9 +6,12 @@ export const typography = {
   pageTitle: "font-display text-ds-page sm:text-ds-page-lg text-navy-700",
   heroTitle:
     "font-display font-extrabold text-ds-hero sm:text-ds-hero-sm lg:text-ds-hero-lg tracking-tight leading-[1.05] text-navy-700",
-  ctaTitle: "font-display text-ds-cta sm:text-ds-cta-md lg:text-ds-cta-lg leading-[1.1] text-navy-700",
-  sectionTitle: "font-display text-ds-section sm:text-ds-section-lg text-navy-700",
-  subsectionTitle: "font-display text-ds-subsection text-navy-700",
+  ctaTitle:
+    "font-display font-bold text-ds-cta sm:text-ds-cta-md lg:text-ds-cta-lg leading-[1.1] tracking-tight text-navy-700",
+  sectionTitle:
+    "font-display font-bold text-ds-section sm:text-ds-section-lg tracking-tight text-navy-700",
+  subsectionTitle:
+    "font-display font-bold text-ds-subsection sm:text-ds-subsection-lg tracking-tight text-navy-700",
   cardTitle: "font-display text-ds-card text-navy-700",
   body: "text-ds-body text-slate-800",
   small: "text-ds-small text-slate-600",
