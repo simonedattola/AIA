@@ -105,26 +105,32 @@ const ARBITRI_FILTERS = [
   { key: "AE", label: "Arbitro Effettivo" },
   { key: "ASSISTENTE", label: "Assistente Arbitrale" },
   { key: "AB", label: "Arbitro Benemerito" },
+  { key: "AFR", label: "Arbitro Fuori Ruolo" },
 ];
 
 function matchesArbitriFilter(m, filterKey) {
   if (!filterKey) return true;
   const code = String(m.role || "").trim().toUpperCase();
+  const cat = String(m.category || "").toLowerCase();
   if (filterKey === "AB") {
-    return code === "AB" || String(m.category || "").toLowerCase().includes("benemerito");
+    return code === "AB" || cat.includes("benemerito");
   }
   if (filterKey === "ASSISTENTE") {
     return (
       code === "AA" ||
       m.memberRole === "assistente" ||
-      String(m.category || "").toLowerCase().includes("assistente arbitrale")
+      cat.includes("assistente arbitrale")
     );
+  }
+  if (filterKey === "AFR") {
+    return code === "AFR" || cat.includes("fuori ruolo");
   }
   if (filterKey === "AE") {
     if (code === "AA" || m.memberRole === "assistente") return false;
-    if (code === "AB" || String(m.category || "").toLowerCase().includes("benemerito")) return false;
-    // Codice AIA AE / fuori ruolo; senza codice: arbitri non assistenti/benemeriti
-    return !code || code === "AE" || code === "AFR";
+    if (code === "AB" || cat.includes("benemerito")) return false;
+    if (code === "AFR" || cat.includes("fuori ruolo")) return false;
+    // Codice AIA AE; senza codice: arbitri non assistenti/benemeriti/fuori ruolo
+    return !code || code === "AE";
   }
   return true;
 }
