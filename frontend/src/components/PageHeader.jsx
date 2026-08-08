@@ -3,10 +3,10 @@ import PageBrandBar from "./PageBrandBar";
 
 export default function PageHeader({ eyebrow, title, description, bg }) {
   return (
-    <section className="relative bg-navy-700 text-white pt-6 pb-12 min-[1140px]:pt-16 lg:pb-14 overflow-hidden">
-      <div className="absolute inset-0 bg-pattern-stadio opacity-30" />
+    <section className="relative bg-navy-700 text-white pt-6 pb-12 min-[1140px]:pt-16 lg:pb-14">
+      <div className="absolute inset-0 overflow-hidden bg-pattern-stadio opacity-30" aria-hidden />
       {bg && (
-        <div className="absolute inset-0 z-0">
+        <div className="absolute inset-0 z-0 overflow-hidden">
           <img src={bg} alt="" className="w-full h-full object-cover opacity-20" />
         </div>
       )}

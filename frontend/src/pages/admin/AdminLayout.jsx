@@ -94,12 +94,12 @@ export default function AdminLayout() {
       {open && <div className="lg:hidden fixed inset-0 bg-black/50 z-30" onClick={() => setOpen(false)} aria-hidden />}
 
       <div className="flex-1 flex flex-col min-w-0">
-        <header className="lg:hidden bg-white border-b border-slate-200 px-4 py-3 flex items-center justify-between sticky top-0 z-20">
-          <button type="button" onClick={() => setOpen(true)} className="p-2 text-slate-700" aria-label="Apri menu">
+        <header className="lg:hidden bg-navy-700 text-white px-4 py-3 flex items-center justify-between sticky top-0 z-20">
+          <button type="button" onClick={() => setOpen(true)} className="p-2 text-white" aria-label="Apri menu">
             <Menu className="h-5 w-5" />
           </button>
-          <div className="font-display font-bold text-navy-700">Amministrazione</div>
-          <a href="/" target="_blank" rel="noopener noreferrer" className="p-2 text-navy-600" aria-label="Sito pubblico">
+          <div className="font-display font-bold text-white">Amministrazione</div>
+          <a href="/" target="_blank" rel="noopener noreferrer" className="p-2 text-gold-300" aria-label="Sito pubblico">
             <ExternalLink className="h-5 w-5" />
           </a>
         </header>

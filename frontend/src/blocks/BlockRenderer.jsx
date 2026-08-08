@@ -76,20 +76,27 @@ function CtaLink({ href = "/", variant = "primary", className, children, ...rest
 /* ============ HERO ============ */
 export function HeroBlock({ config: c, stats }) {
   const overlayClass = c.overlay === "dark" ? "bg-black/70" : c.overlay === "light" ? "bg-white/40" : "hero-overlay";
-  const heightCls = c.height === "tall" ? "min-h-[90vh]" : c.height === "medium" ? "min-h-[60vh]" : "min-h-[40vh]";
+  const heightCls =
+    c.height === "tall"
+      ? "min-h-[100svh] min-[1140px]:min-h-[90vh]"
+      : c.height === "medium"
+        ? "min-h-[70vh] min-[1140px]:min-h-[60vh]"
+        : "min-h-[50vh] min-[1140px]:min-h-[40vh]";
   return (
-    <section className={`relative ${heightCls} flex items-center overflow-hidden`} data-testid="hero-block">
+    <section className={`relative ${heightCls} flex items-stretch min-[1140px]:items-center`} data-testid="hero-block">
       {c.backgroundImage && (
-        <div className="absolute inset-0 z-0">
+        <div className="absolute inset-0 z-0 overflow-hidden">
           <img src={c.backgroundImage} alt="" className="w-full h-full object-cover" />
           <div className={`absolute inset-0 ${overlayClass}`} />
         </div>
       )}
-      <div className="relative z-10 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-8 pb-20 sm:py-20 grid grid-cols-1 lg:grid-cols-12 gap-12 items-center w-full text-white">
-        <div className={c.showStats ? "lg:col-span-7" : "lg:col-span-12"}>
+      <div className="relative z-10 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-6 pb-10 min-[1140px]:py-20 grid grid-cols-1 lg:grid-cols-12 gap-8 lg:gap-12 items-stretch min-[1140px]:items-center w-full text-white min-h-full">
+        <div
+          className={`${c.showStats ? "lg:col-span-7" : "lg:col-span-12"} flex flex-col min-h-0 max-lg:flex-1 max-lg:justify-between max-lg:py-2`}
+        >
           {(c.badgeLogoUrl || c.eyebrow) && (
-            <div className="mb-6 sm:mb-8" data-testid="hero-brand-stack">
-              <div className="flex items-center justify-between gap-3 mb-3" data-testid="hero-logo-pair">
+            <div data-testid="hero-brand-stack">
+              <div className="flex items-center justify-between gap-3 mb-5 min-[1140px]:mb-6" data-testid="hero-logo-pair">
                 <div className="flex items-center gap-3 min-w-0">
                   {c.badgeLogoUrl && (
                     <img
@@ -112,40 +119,56 @@ export function HeroBlock({ config: c, stats }) {
                 </div>
                 <MobileNavMenu tone="onDark" />
               </div>
-              {c.eyebrow && (
-                <Eyebrow className="text-sm sm:text-base lg:text-lg tracking-[0.14em] sm:tracking-[0.16em] font-semibold text-white/90">
-                  {c.eyebrow}
-                </Eyebrow>
-              )}
             </div>
           )}
-          <HeroTitle className="text-white mb-5 sm:mb-6 whitespace-pre-line">
-            {c.title}
-          </HeroTitle>
-          {c.subtitle && <p className="text-base sm:text-xl text-slate-200 max-w-2xl leading-relaxed mb-8 sm:mb-10">{c.subtitle}</p>}
-          <div className="flex flex-wrap items-center gap-4">
-            {c.primaryCta?.label && (
-              <CtaLink href={c.primaryCta.href || "/"} variant="secondary" className="group" data-testid="hero-cta-primary">
-                {c.primaryCta.label} <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-1" />
-              </CtaLink>
+
+          <div className="max-lg:flex-1 max-lg:flex max-lg:flex-col max-lg:justify-center max-lg:py-4">
+            {c.eyebrow && (
+              <Eyebrow className="mb-2 min-[1140px]:mb-1.5 text-sm sm:text-base lg:text-lg tracking-[0.14em] sm:tracking-[0.16em] font-semibold text-white/90">
+                {c.eyebrow}
+              </Eyebrow>
             )}
-            {c.secondaryCta?.label && (
-              <CtaLink href={c.secondaryCta.href || "/"} className="inline-flex items-center gap-2 text-white border-b-2 border-white/40 hover:border-gold-400 pb-1 font-medium transition-colors">
-                {c.secondaryCta.label} <ChevronRight className="h-4 w-4" />
-              </CtaLink>
+            <HeroTitle className="text-white mb-7 sm:mb-6 min-[1140px]:mb-5 whitespace-pre-line max-lg:!text-[2.85rem] max-lg:leading-[1.08] sm:max-lg:!text-[3.35rem]">
+              {c.title}
+            </HeroTitle>
+            {c.subtitle && (
+              <p className="text-base sm:text-xl text-slate-200 max-w-2xl leading-relaxed mb-8 sm:mb-10">
+                {c.subtitle}
+              </p>
             )}
+            <div className="flex flex-wrap items-center gap-4 max-lg:mt-2">
+              {c.primaryCta?.label && (
+                <CtaLink
+                  href={c.primaryCta.href || "/"}
+                  variant="secondary"
+                  className="group max-lg:min-h-[52px] max-lg:px-6 max-lg:text-base"
+                  data-testid="hero-cta-primary"
+                >
+                  {c.primaryCta.label}{" "}
+                  <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-1" />
+                </CtaLink>
+              )}
+              {c.secondaryCta?.label && (
+                <CtaLink
+                  href={c.secondaryCta.href || "/"}
+                  className="inline-flex items-center gap-2 text-white border-b-2 border-white/40 hover:border-gold-400 pb-1 font-medium transition-colors"
+                >
+                  {c.secondaryCta.label} <ChevronRight className="h-4 w-4" />
+                </CtaLink>
+              )}
+            </div>
           </div>
         </div>
 
         {c.showStats && stats && (
-          <div className="lg:col-span-5 w-full max-w-md lg:max-w-none">
+          <div className="lg:col-span-5 w-full max-w-md lg:max-w-none max-lg:mt-2">
             <div
-              className="bg-white/95 backdrop-blur-md rounded-xl shadow-2xl p-5 sm:p-6 border-t-4 border-gold-400 text-slate-900"
+              className="bg-navy-50 rounded-xl shadow-2xl p-5 sm:p-6 border-t-4 border-gold-400 text-slate-900"
               data-testid="hero-stats-widget"
             >
               <Eyebrow className="mb-1 tracking-[0.22em]">La nostra sezione</Eyebrow>
               <SubsectionTitle as="div" className="mb-4 text-xl sm:text-2xl">In numeri</SubsectionTitle>
-              <div className="grid grid-cols-2 gap-3">
+              <div className="grid grid-cols-2 gap-x-4 gap-y-5">
                 <Stat icon="Users" value={stats.members} label="Associati" />
                 <Stat icon="Trophy" value={stats.yearsActive} label="Anni di attività" />
                 <Stat icon="Whistle" value={stats.matchesThisSeason ?? 0} label="Partite stagione" />
@@ -162,12 +185,12 @@ export function HeroBlock({ config: c, stats }) {
 function Stat({ icon, value, label }) {
   const I = Icons[icon] || Icons.Trophy;
   return (
-    <div className="rounded-lg bg-slate-50 border border-slate-100 px-3 py-3.5 min-h-[5.5rem] flex flex-col">
+    <div className="min-h-[5rem] flex flex-col bg-transparent">
       <I className="h-4 w-4 text-navy-600 mb-2 shrink-0" aria-hidden />
       <div className="font-display text-2xl sm:text-3xl font-bold text-navy-700 leading-none tabular-nums">
         {value}
       </div>
-      <div className="text-[11px] sm:text-xs font-medium uppercase tracking-wide text-slate-500 mt-1.5 leading-snug">
+      <div className="text-[11px] sm:text-xs font-medium uppercase tracking-wide text-slate-600 mt-1.5 leading-snug">
         {label}
       </div>
     </div>
