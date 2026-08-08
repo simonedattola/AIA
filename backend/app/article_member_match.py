@@ -1,4 +1,5 @@
 """Associa articoli ai membri solo se citati per nome e cognome completi."""
+
 from __future__ import annotations
 
 import re

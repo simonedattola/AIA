@@ -1,4 +1,5 @@
 """Tag automatici associati sulle immagini galleria da articoli/notizie."""
+
 from __future__ import annotations
 
 import logging

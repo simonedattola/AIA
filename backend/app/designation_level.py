@@ -1,4 +1,5 @@
 """Ranking campionati per statistiche storico arbitrale."""
+
 from __future__ import annotations
 
 import re

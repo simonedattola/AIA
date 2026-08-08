@@ -1,13 +1,22 @@
-from app.instagram_gallery import is_designation_post, is_unsuitable_for_gallery, parse_instagram_username
+from app.instagram_gallery import (
+    is_designation_post,
+    is_unsuitable_for_gallery,
+    parse_instagram_username,
+)
 
 
 def test_parse_instagram_username():
-    assert parse_instagram_username("https://www.instagram.com/aia_legnano/") == "aia_legnano"
+    assert (
+        parse_instagram_username("https://www.instagram.com/aia_legnano/")
+        == "aia_legnano"
+    )
     assert parse_instagram_username("@aia_legnano") == "aia_legnano"
 
 
 def test_is_designation_post():
-    assert is_designation_post("Ecco le partite di questo fine settimana #aialegnano #designazioni")
+    assert is_designation_post(
+        "Ecco le partite di questo fine settimana #aialegnano #designazioni"
+    )
     assert is_designation_post("Domenica calda per i nostri associati #designazioni")
     assert not is_designation_post("4 NUOVI GIOVANI ASSOCIATI PER LA NOSTRA SEZIONE!")
     assert not is_designation_post("Anita Costa intervistata a Radio Materia")

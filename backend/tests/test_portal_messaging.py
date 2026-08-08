@@ -42,5 +42,10 @@ def test_message_editable_not_sender():
 def test_message_editable_deleted_or_attachment():
     now = datetime(2026, 5, 21, 12, 0, tzinfo=timezone.utc)
     base = {"mittenteId": "m1", "createdAt": _iso(now)}
-    assert message_editable({**base, "tipo": "text", "deletedAt": _iso(now)}, "m1", _iso(now)) is False
+    assert (
+        message_editable(
+            {**base, "tipo": "text", "deletedAt": _iso(now)}, "m1", _iso(now)
+        )
+        is False
+    )
     assert message_editable({**base, "tipo": "image"}, "m1", _iso(now)) is False

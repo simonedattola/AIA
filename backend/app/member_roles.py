@@ -64,9 +64,14 @@ def normalize_member(doc: dict) -> dict:
         legacy = (doc.get("role") or "").strip()
         if legacy and legacy.lower() not in ("arbitro", "assistente", "oa", "ot", "tutor"):
             doc["boardTitle"] = legacy
-    if doc["memberRole"] == "consiglio_direttivo":
-        bt = (doc.get("boardTitle") or "").lower()
-        if "presidente" in bt and "vice" not in bt:
+    bt = (doc.get("boardTitle") or "").strip().lower()
+    if bt:
+        # Presidente di Sezione only (not Vice, not Organo di Revisione)
+        if "revisione" in bt or "revisori" in bt or "vice" in bt:
+            doc["isPresident"] = False
+        elif "presidente di sezione" in bt or bt in ("presidente", "presidente di sezione"):
+            doc["isPresident"] = True
+        elif "presidente" in bt and "sezione" in bt:
             doc["isPresident"] = True
     bio = (doc.get("bio") or "").strip()
     if not bio and doc.get("bioHtml"):
@@ -94,7 +99,17 @@ def arbitri_query() -> dict:
 
 
 def chi_siamo_query() -> dict:
-    return {"memberRole": {"$in": list(CHI_SIAMO_ROLES)}}
+    """Organigramma / Chi siamo: CD, osservatori, oppure incarico sezionale (boardTitle).
+
+    Così un arbitro può restare ``memberRole=arbitro`` (lista Associati + designazioni)
+    e comparire anche in organigramma se ha ``boardTitle`` (es. Collaboratore Area Informatica).
+    """
+    return {
+        "$or": [
+            {"memberRole": {"$in": list(CHI_SIAMO_ROLES)}},
+            {"boardTitle": {"$exists": True, "$nin": ["", None]}},
+        ]
+    }
 
 
 def legacy_arbitri_query() -> dict:
@@ -114,6 +129,7 @@ def legacy_chi_siamo_query() -> dict:
     return {
         "$or": [
             {"memberRole": {"$in": list(CHI_SIAMO_ROLES)}},
+            {"boardTitle": {"$exists": True, "$nin": ["", None]}},
             {
                 "memberRole": {"$exists": False},
                 "kind": {"$in": ["oa", "ot", "osservatore"]},

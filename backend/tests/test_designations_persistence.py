@@ -1,5 +1,9 @@
 """Sync non deve cancellare lo storico designazioni."""
-from app.designation_filters import designations_page_query, published_referee_designations_season_query
+
+from app.designation_filters import (
+    designations_page_query,
+    published_referee_designations_season_query,
+)
 from app.designations_sync import _national_hub_slugs
 
 

@@ -89,9 +89,11 @@ export default function AdminMembersPage() {
         chiSiamoText: (editing.chiSiamoText || "").trim(),
         presidentLongBio: (editing.presidentLongBio || "").trim(),
         bioHtml: "",
-        boardTitle: editing.memberRole === "consiglio_direttivo" ? (editing.boardTitle || "").trim() : "",
+        boardTitle: (editing.boardTitle || "").trim(),
         observerType: editing.memberRole === "osservatore" ? (editing.observerType || "oa") : "",
-        isPresident: editing.memberRole === "consiglio_direttivo" && !!editing.isPresident,
+        isPresident:
+          !!editing.isPresident &&
+          (editing.memberRole === "consiglio_direttivo" || !!(editing.boardTitle || "").trim()),
         yearStart: editing.yearStart ? Number(editing.yearStart) : null,
         awards: (editing.awards || [])
           .filter((a) => (a.title || "").trim())
@@ -366,18 +368,23 @@ function MemberModal({ editing, setEditing, save, saving, uploadPhoto, uploading
                 </select>
               </Field>
             )}
-            {isCD && (
-              <>
-                <Field label="Incarico nel CD*" hint="Es. Presidente, Vice Presidente, Segretario">
-                  <input value={editing.boardTitle || ""} onChange={set("boardTitle")} className={I} />
-                </Field>
-                <Field label="Presidente di sezione">
-                  <label className="flex items-center gap-2 text-sm mt-2">
-                    <input type="checkbox" checked={!!editing.isPresident} onChange={setCheck("isPresident")} className="rounded" />
-                    Mostra in evidenza su Chi siamo
-                  </label>
-                </Field>
-              </>
+            <Field
+              label={isCD ? "Incarico nel CD*" : "Incarico in organigramma"}
+              hint={
+                isCD
+                  ? "Es. Presidente di Sezione, Segretario, Cassiere"
+                  : "Opzionale. Se compilato, il profilo compare anche in Chi siamo (es. Area Informatica) pur restando arbitro/assistente."
+              }
+            >
+              <input value={editing.boardTitle || ""} onChange={set("boardTitle")} className={I} placeholder="Es. Area Informatica" />
+            </Field>
+            {(isCD || !!(editing.boardTitle || "").trim()) && (
+              <Field label="Presidente di sezione">
+                <label className="flex items-center gap-2 text-sm mt-2">
+                  <input type="checkbox" checked={!!editing.isPresident} onChange={setCheck("isPresident")} className="rounded" />
+                  Mostra in evidenza su Chi siamo
+                </label>
+              </Field>
             )}
             {isArbitro && (
               <Field

@@ -1,4 +1,5 @@
 """Sanitizzazione HTML articoli (TipTap vs import WordPress legacy)."""
+
 from __future__ import annotations
 
 import bleach
@@ -11,7 +12,19 @@ from .sanitize import sanitize_html
 LEGACY_ARTICLE_TAGS = list(
     dict.fromkeys(
         list(TIPTAP_TAGS)
-        + ["h1", "h5", "h6", "iframe", "time", "table", "thead", "tbody", "tr", "th", "td"]
+        + [
+            "h1",
+            "h5",
+            "h6",
+            "iframe",
+            "time",
+            "table",
+            "thead",
+            "tbody",
+            "tr",
+            "th",
+            "td",
+        ]
     )
 )
 
@@ -19,7 +32,16 @@ LEGACY_ARTICLE_ATTRS = {
     **TIPTAP_ATTRS,
     "a": ["href", "title", "target", "rel"],
     "img": ["src", "alt", "title", "width", "height", "loading", "class"],
-    "iframe": ["src", "width", "height", "frameborder", "allow", "allowfullscreen", "style", "scrolling"],
+    "iframe": [
+        "src",
+        "width",
+        "height",
+        "frameborder",
+        "allow",
+        "allowfullscreen",
+        "style",
+        "scrolling",
+    ],
     "p": ["style", "class"],
     "span": ["style", "class"],
     "div": ["class", "role", "id", "style"],

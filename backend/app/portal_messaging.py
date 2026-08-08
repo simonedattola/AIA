@@ -1,4 +1,5 @@
 """Messaggistica associati — chat dirette, gruppi, allegati, reazioni."""
+
 from __future__ import annotations
 
 import uuid
@@ -86,7 +87,13 @@ def parse_chat_id(chat_id: str) -> tuple[str, str]:
 def _direct_filter(mid: str, other_id: str) -> dict:
     return {
         "$and": [
-            {"$or": [{"gruppoId": {"$exists": False}}, {"gruppoId": None}, {"gruppoId": ""}]},
+            {
+                "$or": [
+                    {"gruppoId": {"$exists": False}},
+                    {"gruppoId": None},
+                    {"gruppoId": ""},
+                ]
+            },
             {
                 "$or": [
                     {"mittenteId": mid, "destinatarioId": other_id},
@@ -97,7 +104,9 @@ def _direct_filter(mid: str, other_id: str) -> dict:
     }
 
 
-async def member_display(db, member_id: str, *, contact_panel: bool = False) -> dict[str, Any]:
+async def member_display(
+    db, member_id: str, *, contact_panel: bool = False
+) -> dict[str, Any]:
     m = await db.members.find_one(
         {"id": member_id},
         {
@@ -147,7 +156,8 @@ async def member_display(db, member_id: str, *, contact_panel: bool = False) -> 
         "slug": m.get("slug") or "",
         "firstName": m.get("firstName") or "",
         "lastName": m.get("lastName") or "",
-        "name": f"{m.get('firstName', '')} {m.get('lastName', '')}".strip() or "Associato",
+        "name": f"{m.get('firstName', '')} {m.get('lastName', '')}".strip()
+        or "Associato",
         "photo": m.get("photoUrl") or "",
         "email": email,
         "phone": phone,
@@ -182,7 +192,9 @@ def message_read_status(msg: dict, my_id: str, is_group: bool, group_size: int) 
     return "delivered"
 
 
-async def _read_info_for_message(db, msg: dict, my_id: str, is_group: bool, group_size: int) -> dict:
+async def _read_info_for_message(
+    db, msg: dict, my_id: str, is_group: bool, group_size: int
+) -> dict:
     if msg.get("mittenteId") != my_id:
         return {}
     if is_group:
@@ -192,14 +204,28 @@ async def _read_info_for_message(db, msg: dict, my_id: str, is_group: bool, grou
                 continue
             d = await member_display(db, uid)
             readers.append({"id": uid, "name": d["name"]})
-        return {"type": "group", "readers": readers, "total": len(readers), "expected": max(0, group_size - 1)}
+        return {
+            "type": "group",
+            "readers": readers,
+            "total": len(readers),
+            "expected": max(0, group_size - 1),
+        }
     if msg.get("letto"):
-        return {"type": "read", "at": msg.get("lettoAt"), "by": msg.get("destinatarioNome")}
+        return {
+            "type": "read",
+            "at": msg.get("lettoAt"),
+            "by": msg.get("destinatarioNome"),
+        }
     return {"type": "delivered"}
 
 
 async def enrich_message(
-    db, msg: dict, my_id: str, is_group: bool, group_size: int, msg_by_id: dict[str, dict]
+    db,
+    msg: dict,
+    my_id: str,
+    is_group: bool,
+    group_size: int,
+    msg_by_id: dict[str, dict],
 ) -> dict:
     out = dict(msg)
     if out.get("attachmentUrl"):
@@ -212,7 +238,11 @@ async def enrich_message(
         out["replyTo"] = {
             "id": r["id"],
             "mittenteNome": r.get("mittenteNome"),
-            "testo": "Messaggio eliminato" if r.get("deletedAt") else (r.get("testo") or message_preview(r)),
+            "testo": (
+                "Messaggio eliminato"
+                if r.get("deletedAt")
+                else (r.get("testo") or message_preview(r))
+            ),
             "tipo": r.get("tipo") or "text",
         }
     reactions = out.get("reactions") or []
@@ -221,8 +251,13 @@ async def enrich_message(
         e = rx.get("emoji")
         if e:
             grouped.setdefault(e, []).append(rx.get("memberName") or "")
-    out["reactionSummary"] = [{"emoji": e, "count": len(names), "names": names} for e, names in grouped.items()]
-    out["myReaction"] = next((rx.get("emoji") for rx in reactions if rx.get("memberId") == my_id), None)
+    out["reactionSummary"] = [
+        {"emoji": e, "count": len(names), "names": names}
+        for e, names in grouped.items()
+    ]
+    out["myReaction"] = next(
+        (rx.get("emoji") for rx in reactions if rx.get("memberId") == my_id), None
+    )
     out["readStatus"] = message_read_status(out, my_id, is_group, group_size)
     out["readInfo"] = await _read_info_for_message(db, out, my_id, is_group, group_size)
     out["canEdit"] = message_editable(out, my_id)
@@ -230,7 +265,9 @@ async def enrich_message(
 
 
 async def _hidden_chats_map(db, mid: str) -> dict[str, str]:
-    rows = await db.chat_hidden.find({"memberId": mid}, {"_id": 0, "chatId": 1, "hiddenAt": 1}).to_list(500)
+    rows = await db.chat_hidden.find(
+        {"memberId": mid}, {"_id": 0, "chatId": 1, "hiddenAt": 1}
+    ).to_list(500)
     return {r["chatId"]: r.get("hiddenAt") or "" for r in rows}
 
 
@@ -251,7 +288,9 @@ async def hide_direct_conversation(db, peer_id: str, mid: str, now_iso: str) -> 
     return {"deleted": True, "chatId": peer_id, "type": "direct"}
 
 
-async def delete_conversation_for_member(db, chat_id: str, mid: str, now_iso: str) -> dict:
+async def delete_conversation_for_member(
+    db, chat_id: str, mid: str, now_iso: str
+) -> dict:
     """Elimina chat/gruppo per l'associato: nasconde le chat private, esce dai gruppi."""
     kind, target_id = parse_chat_id(chat_id)
     if kind == "group":
@@ -267,12 +306,14 @@ async def common_groups(db, mid: str, other_id: str) -> list[dict]:
     out = []
     for g in my_groups:
         if other_id in (g.get("memberIds") or []):
-            out.append({
-                "chatId": chat_id_for_group(g["id"]),
-                "gruppoId": g["id"],
-                "name": g.get("name") or "Gruppo",
-                "memberCount": len(g.get("memberIds") or []),
-            })
+            out.append(
+                {
+                    "chatId": chat_id_for_group(g["id"]),
+                    "gruppoId": g["id"],
+                    "name": g.get("name") or "Gruppo",
+                    "memberCount": len(g.get("memberIds") or []),
+                }
+            )
     return out
 
 
@@ -289,17 +330,27 @@ async def get_contact_info(db, peer_id: str, mid: str) -> dict:
 async def list_conversations(db, mid: str) -> list[dict[str, Any]]:
     rows: dict[str, dict] = {}
 
-    direct_msgs = await db.messaggi_interni.find(
-        {
-            "$and": [
-                {"$or": [{"gruppoId": {"$exists": False}}, {"gruppoId": None}, {"gruppoId": ""}]},
-                {"$or": [{"mittenteId": mid}, {"destinatarioId": mid}]},
-                {"destinatarioId": {"$ne": "admin"}},
-                {"mittenteId": {"$ne": "admin"}},
-            ]
-        },
-        {"_id": 0},
-    ).sort("createdAt", -1).to_list(5000)
+    direct_msgs = (
+        await db.messaggi_interni.find(
+            {
+                "$and": [
+                    {
+                        "$or": [
+                            {"gruppoId": {"$exists": False}},
+                            {"gruppoId": None},
+                            {"gruppoId": ""},
+                        ]
+                    },
+                    {"$or": [{"mittenteId": mid}, {"destinatarioId": mid}]},
+                    {"destinatarioId": {"$ne": "admin"}},
+                    {"mittenteId": {"$ne": "admin"}},
+                ]
+            },
+            {"_id": 0},
+        )
+        .sort("createdAt", -1)
+        .to_list(5000)
+    )
 
     for m in direct_msgs:
         pid, pname = (
@@ -333,7 +384,9 @@ async def list_conversations(db, mid: str) -> list[dict[str, Any]]:
     for g in groups:
         gid = g["id"]
         cid = chat_id_for_group(gid)
-        last = await db.messaggi_interni.find_one({"gruppoId": gid}, {"_id": 0}, sort=[("createdAt", -1)])
+        last = await db.messaggi_interni.find_one(
+            {"gruppoId": gid}, {"_id": 0}, sort=[("createdAt", -1)]
+        )
         unread = await db.messaggi_interni.count_documents(
             {
                 "gruppoId": gid,
@@ -381,7 +434,9 @@ async def count_unread_messages(db, mid: str) -> int:
     return sum(int(c.get("unreadCount") or 0) for c in conversations)
 
 
-async def _load_messages_enriched(db, msgs: list, mid: str, is_group: bool, group_size: int) -> list[dict]:
+async def _load_messages_enriched(
+    db, msgs: list, mid: str, is_group: bool, group_size: int
+) -> list[dict]:
     msg_by_id = {m["id"]: m for m in msgs}
     out = []
     for m in msgs:
@@ -395,7 +450,11 @@ async def get_conversation(db, chat_id: str, mid: str, now_iso: str) -> dict[str
     if kind == "direct":
         if target_id == "admin":
             raise HTTPException(status_code=404, detail="Conversazione non trovata")
-        msgs = await db.messaggi_interni.find(_direct_filter(mid, target_id), {"_id": 0}).sort("createdAt", 1).to_list(500)
+        msgs = (
+            await db.messaggi_interni.find(_direct_filter(mid, target_id), {"_id": 0})
+            .sort("createdAt", 1)
+            .to_list(500)
+        )
         await db.messaggi_interni.update_many(
             {"mittenteId": target_id, "destinatarioId": mid, "letto": False},
             {"$set": {"letto": True, "lettoAt": now_iso}},
@@ -419,7 +478,11 @@ async def get_conversation(db, chat_id: str, mid: str, now_iso: str) -> dict[str
     if not g:
         raise HTTPException(status_code=404, detail="Gruppo non trovato")
     gid = g["id"]
-    msgs = await db.messaggi_interni.find({"gruppoId": gid}, {"_id": 0}).sort("createdAt", 1).to_list(500)
+    msgs = (
+        await db.messaggi_interni.find({"gruppoId": gid}, {"_id": 0})
+        .sort("createdAt", 1)
+        .to_list(500)
+    )
     await db.messaggi_interni.update_many(
         {
             "gruppoId": gid,
@@ -429,7 +492,9 @@ async def get_conversation(db, chat_id: str, mid: str, now_iso: str) -> dict[str
         {"$addToSet": {"lettiDa": mid}},
     )
     summary = await group_members_summary(db, g.get("memberIds") or [])
-    enriched = await _load_messages_enriched(db, msgs, mid, True, summary["memberCount"])
+    enriched = await _load_messages_enriched(
+        db, msgs, mid, True, summary["memberCount"]
+    )
     return {
         "chatId": chat_id_for_group(gid),
         "type": "group",
@@ -467,7 +532,9 @@ async def get_group_info(db, chat_id: str, mid: str) -> dict[str, Any]:
     }
 
 
-async def update_group(db, gruppo_id: str, mid: str, payload: dict, now_iso: str) -> dict:
+async def update_group(
+    db, gruppo_id: str, mid: str, payload: dict, now_iso: str
+) -> dict:
     g = await db.chat_gruppi.find_one({"id": gruppo_id, "memberIds": mid}, {"_id": 0})
     if not g:
         raise HTTPException(status_code=404, detail="Gruppo non trovato")
@@ -523,7 +590,9 @@ def _base_message_doc(mid: str, mitt_nome: str, now_iso: str, **extra) -> dict:
     }
 
 
-async def send_message(db, chat_id: str, mid: str, payload: dict, now_iso: str, get_member_fn) -> dict:
+async def send_message(
+    db, chat_id: str, mid: str, payload: dict, now_iso: str, get_member_fn
+) -> dict:
     await unhide_conversation(db, chat_id, mid)
     testo = (payload.get("testo") or "").strip()
     tipo = (payload.get("tipo") or "text").lower()
@@ -571,7 +640,9 @@ async def send_message(db, chat_id: str, mid: str, payload: dict, now_iso: str, 
             **extra,
         )
     else:
-        gruppo = await db.chat_gruppi.find_one({"id": target_id, "memberIds": mid}, {"_id": 0})
+        gruppo = await db.chat_gruppi.find_one(
+            {"id": target_id, "memberIds": mid}, {"_id": 0}
+        )
         if not gruppo:
             raise HTTPException(status_code=404, detail="Gruppo non trovato")
         doc = _base_message_doc(
@@ -588,7 +659,9 @@ async def send_message(db, chat_id: str, mid: str, payload: dict, now_iso: str, 
     if reply_to_id:
         valid = await _message_in_chat(db, reply_to_id, mid, kind, target_id)
         if not valid:
-            raise HTTPException(status_code=400, detail="Messaggio di risposta non valido")
+            raise HTTPException(
+                status_code=400, detail="Messaggio di risposta non valido"
+            )
 
     await db.messaggi_interni.insert_one(doc.copy())
 
@@ -617,11 +690,15 @@ async def send_message(db, chat_id: str, mid: str, payload: dict, now_iso: str, 
             preview=preview,
         )
 
-    enriched = await enrich_message(db, doc, mid, kind == "group", group_size, {doc["id"]: doc})
+    enriched = await enrich_message(
+        db, doc, mid, kind == "group", group_size, {doc["id"]: doc}
+    )
     return enriched
 
 
-async def _message_in_chat(db, msg_id: str, mid: str, kind: str, target_id: str) -> bool:
+async def _message_in_chat(
+    db, msg_id: str, mid: str, kind: str, target_id: str
+) -> bool:
     m = await db.messaggi_interni.find_one({"id": msg_id}, {"_id": 0})
     if not m:
         return False
@@ -637,7 +714,9 @@ async def _get_message_for_user(db, msg_id: str, mid: str) -> tuple[dict, str, s
     if not m:
         raise HTTPException(status_code=404, detail="Messaggio non trovato")
     if m.get("gruppoId"):
-        g = await db.chat_gruppi.find_one({"id": m["gruppoId"], "memberIds": mid}, {"_id": 0, "id": 1})
+        g = await db.chat_gruppi.find_one(
+            {"id": m["gruppoId"], "memberIds": mid}, {"_id": 0, "id": 1}
+        )
         if not g:
             raise HTTPException(status_code=403, detail="Non autorizzato")
         return m, "group", m["gruppoId"]
@@ -658,7 +737,9 @@ async def edit_message(db, msg_id: str, mid: str, testo: str, now_iso: str) -> d
     if m.get("deletedAt"):
         raise HTTPException(status_code=400, detail="Messaggio eliminato")
     if (m.get("tipo") or "text") != "text":
-        raise HTTPException(status_code=400, detail="Solo i messaggi di testo sono modificabili")
+        raise HTTPException(
+            status_code=400, detail="Solo i messaggi di testo sono modificabili"
+        )
     if not message_editable(m, mid, now_iso):
         raise HTTPException(
             status_code=400,
@@ -694,7 +775,9 @@ async def delete_message(db, msg_id: str, mid: str, now_iso: str) -> dict:
     return await enrich_message(db, m, mid, kind == "group", gs, {msg_id: m})
 
 
-async def toggle_reaction(db, msg_id: str, mid: str, emoji: str, now_iso: str, get_member_fn) -> dict:
+async def toggle_reaction(
+    db, msg_id: str, mid: str, emoji: str, now_iso: str, get_member_fn
+) -> dict:
     emoji = (emoji or "").strip()
     if emoji not in ALLOWED_EMOJI:
         raise HTTPException(status_code=400, detail="Emoji non consentita")
@@ -702,15 +785,26 @@ async def toggle_reaction(db, msg_id: str, mid: str, emoji: str, now_iso: str, g
     if m.get("deletedAt"):
         raise HTTPException(status_code=400, detail="Messaggio eliminato")
     reactions = list(m.get("reactions") or [])
-    existing = next((i for i, r in enumerate(reactions) if r.get("memberId") == mid and r.get("emoji") == emoji), None)
+    existing = next(
+        (
+            i
+            for i, r in enumerate(reactions)
+            if r.get("memberId") == mid and r.get("emoji") == emoji
+        ),
+        None,
+    )
     if existing is not None:
         reactions.pop(existing)
     else:
         mitt = await get_member_fn(db, mid)
         nome = f"{mitt.get('firstName', '')} {mitt.get('lastName', '')}".strip()
         reactions = [r for r in reactions if r.get("memberId") != mid]
-        reactions.append({"emoji": emoji, "memberId": mid, "memberName": nome, "createdAt": now_iso})
-    await db.messaggi_interni.update_one({"id": msg_id}, {"$set": {"reactions": reactions}})
+        reactions.append(
+            {"emoji": emoji, "memberId": mid, "memberName": nome, "createdAt": now_iso}
+        )
+    await db.messaggi_interni.update_one(
+        {"id": msg_id}, {"$set": {"reactions": reactions}}
+    )
     m["reactions"] = reactions
     gs = 2
     if kind == "group":
@@ -734,7 +828,9 @@ async def create_group(
         raise HTTPException(status_code=400, detail="Nome gruppo troppo corto")
     ids = list(dict.fromkeys([mid] + [x for x in member_ids if x and x != mid]))
     if len(ids) < 2:
-        raise HTTPException(status_code=400, detail="Seleziona almeno un altro associato")
+        raise HTTPException(
+            status_code=400, detail="Seleziona almeno un altro associato"
+        )
     valid = await db.members.count_documents(
         {
             "id": {"$in": ids},

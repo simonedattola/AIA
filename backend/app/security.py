@@ -1,4 +1,5 @@
 """Auth helpers: JWT + bcrypt."""
+
 import os
 from datetime import datetime, timezone, timedelta
 from typing import Optional
@@ -7,7 +8,6 @@ import bcrypt
 from jose import jwt, JWTError
 from fastapi import Depends, HTTPException, status
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
-
 
 bearer = HTTPBearer(auto_error=False)
 
@@ -59,7 +59,9 @@ async def require_member(creds: HTTPAuthorizationCredentials = Depends(bearer)) 
     return payload
 
 
-async def require_admin_or_observer(creds: HTTPAuthorizationCredentials = Depends(bearer)) -> dict:
+async def require_admin_or_observer(
+    creds: HTTPAuthorizationCredentials = Depends(bearer),
+) -> dict:
     """Admin JWT oppure associato osservatore/consiglio."""
     if not creds:
         raise HTTPException(status_code=401, detail="Token mancante")

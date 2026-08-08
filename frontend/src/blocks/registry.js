@@ -226,7 +226,7 @@ export const BLOCK_TYPES = [
     label: "Calendario eventi",
     desc: "Si aggiorna automaticamente dal calendario.",
     icon: SITE_ICONS.events,
-    defaultConfig: { eyebrow: "", title: "Eventi", intro: "", listTitle: "Prossimi appuntamenti", listLimit: 3, showCalendar: true },
+    defaultConfig: { eyebrow: "", title: "Eventi", intro: "", listTitle: "Prossimi appuntamenti", listLimit: 50, showCalendar: false },
   },
   {
     type: "contact_section",

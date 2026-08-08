@@ -19,7 +19,7 @@ from .article_categories import ensure_category_exists, save_configured_categori
 from .article_cleanup import is_weekly_designations_article, repair_body_html
 from .article_member_match import match_members_by_full_name
 from .models import Article, _now
-from .paths import UPLOAD_DIR
+from . import storage as upload_storage
 
 logger = logging.getLogger(__name__)
 
@@ -171,9 +171,7 @@ class LegacyArticleImporter:
         ext = self._ext_from_url(url)
         digest = hashlib.md5(url.encode()).hexdigest()[:10]
         name = f"legacy-wp{wp_post_id}-{digest}{ext}"
-        target = UPLOAD_DIR / name
-        UPLOAD_DIR.mkdir(parents=True, exist_ok=True)
-        target.write_bytes(resp.content)
+        upload_storage.save_bytes(name, resp.content)
         local = f"/api/uploads/{name}"
         self._image_cache[url] = local
         return local
@@ -318,7 +316,7 @@ class LegacyArticleImporter:
         return {"action": "created", "slug": slug, "title": title}
 
     async def run(self) -> dict[str, Any]:
-        UPLOAD_DIR.mkdir(parents=True, exist_ok=True)
+        upload_storage.ensure_local_dir()
         await self._load_members()
 
         stats = {"created": 0, "updated": 0, "errors": 0, "categories": set(), "dry_run": self.dry_run}

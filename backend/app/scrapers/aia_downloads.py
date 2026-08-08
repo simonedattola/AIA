@@ -12,7 +12,7 @@ import httpx
 from bs4 import BeautifulSoup
 
 from ..media_urls import format_file_size_label
-from ..paths import UPLOAD_DIR
+from .. import storage as upload_storage
 
 logger = logging.getLogger(__name__)
 
@@ -140,9 +140,7 @@ async def import_scraped_downloads(
                     res.raise_for_status()
                     suffix = Path(_local_name_from_url(item.file_url)).suffix.lower() or ".bin"
                     name = f"{file_prefix}_{uuid.uuid4().hex[:12]}{suffix}"
-                    target = UPLOAD_DIR / name
-                    UPLOAD_DIR.mkdir(parents=True, exist_ok=True)
-                    target.write_bytes(res.content)
+                    upload_storage.save_bytes(name, res.content)
                     file_size = format_file_size_label(len(res.content))
                     stored_url = f"/api/uploads/{name}"
                 except Exception as exc:

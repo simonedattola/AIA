@@ -7,7 +7,7 @@ import { isNavItemActive, normalizePublicNavItem, publicNavLinkClass, publicMobi
 import { Menu, X, ChevronRight } from "lucide-react";
 import { Button } from "@/design-system";
 
-/** Larghezza minima per menu inline (7 voci + logo + 2 CTA, senza icona lucchetto). */
+/** Larghezza minima per menu inline (voci + logo + 2 CTA). */
 const INLINE_NAV_MIN_PX = 1140;
 
 function useInlineNav() {
@@ -123,59 +123,54 @@ export default function SiteHeader() {
             ref={menuRef}
             className={`relative flex items-center gap-1.5 max-[1139px]:gap-2 shrink-0 ${inlineNav ? "" : "ml-auto"}`}
           >
-            <Button
-              to="/diventa-arbitro"
-              variant="outline"
-              size="sm"
-              data-testid="header-cta-diventa-arbitro"
-              className="text-[15px] max-[1139px]:text-base font-semibold whitespace-nowrap"
-            >
-              {inlineNav ? (
-                <>
+            {/* Desktop only: CTA buttons. On mobile they live inside the hamburger menu. */}
+            {inlineNav && (
+              <>
+                <Button
+                  to="/diventa-arbitro"
+                  variant="outline"
+                  size="sm"
+                  data-testid="header-cta-diventa-arbitro"
+                  className="text-[15px] font-semibold whitespace-nowrap"
+                >
                   Diventa Arbitro
                   <ChevronRight className="h-4 w-4 shrink-0" aria-hidden />
-                </>
-              ) : (
-                <>
-                  <span className="hidden min-[380px]:inline">Diventa </span>
-                  Arbitro
-                </>
-              )}
-            </Button>
+                </Button>
 
-            <Button
-              to={PORTAL_ROUTES.login}
-              variant="primary"
-              size="sm"
-              data-testid="nav-link-area-associati"
-              className="text-[15px] max-[1139px]:text-base font-semibold whitespace-nowrap"
-            >
-              <span className="hidden min-[400px]:inline">Area Associati</span>
-              <span className="min-[400px]:hidden">Area</span>
-            </Button>
+                <Button
+                  to={PORTAL_ROUTES.login}
+                  variant="primary"
+                  size="sm"
+                  data-testid="nav-link-area-associati"
+                  className="text-[15px] font-semibold whitespace-nowrap"
+                >
+                  Area Associati
+                </Button>
+              </>
+            )}
 
             {!inlineNav && (
               <button
                 type="button"
                 data-testid="header-mobile-toggle"
                 onClick={() => setOpen((v) => !v)}
-                className="inline-flex items-center justify-center min-h-[44px] min-w-[44px] p-2 max-[1139px]:p-2.5 rounded-md text-slate-700 hover:bg-slate-100 shrink-0 border border-slate-200 focus-visible:ring-2 focus-visible:ring-gold-400 focus-visible:ring-offset-2"
+                className="inline-flex items-center justify-center min-h-[48px] min-w-[48px] p-2.5 rounded-md text-slate-700 hover:bg-slate-100 shrink-0 border border-slate-200 focus-visible:ring-2 focus-visible:ring-gold-400 focus-visible:ring-offset-2"
                 aria-label={open ? "Chiudi menu" : "Apri menu navigazione"}
                 aria-expanded={open}
                 aria-haspopup="true"
               >
-                {open ? <X className="h-5 w-5 max-[1139px]:h-6 max-[1139px]:w-6" /> : <Menu className="h-5 w-5 max-[1139px]:h-6 max-[1139px]:w-6" />}
+                {open ? <X className="h-6 w-6" /> : <Menu className="h-6 w-6" />}
               </button>
             )}
 
             {!inlineNav && open && (
               <div
-                className="absolute right-0 top-full mt-1.5 z-50 py-1.5 bg-white rounded-lg border border-slate-200 shadow-lg"
+                className="absolute right-0 top-full mt-1.5 z-50 py-2 bg-white rounded-lg border border-slate-200 shadow-lg"
                 data-testid="mobile-menu"
                 role="menu"
               >
                 <nav
-                  className="flex flex-col min-w-[11rem] w-max max-w-[min(16rem,calc(100vw-2rem))]"
+                  className="flex flex-col min-w-[14rem] w-max max-w-[min(18rem,calc(100vw-2rem))]"
                   aria-label="Navigazione principale"
                 >
                   {mainNav.map((it) => {
@@ -189,11 +184,31 @@ export default function SiteHeader() {
                         aria-current={active ? "page" : undefined}
                         data-testid={`nav-link-${it.href.replace(/\//g, "") || "home"}`}
                         className={publicMobileNavLinkClass(active)}
+                        role="menuitem"
                       >
                         <NavActiveLabel isActive={active}>{it.label}</NavActiveLabel>
                       </NavLink>
                     );
                   })}
+                  <div className="my-1.5 border-t border-slate-100" />
+                  <NavLink
+                    to="/diventa-arbitro"
+                    onClick={closeMenu}
+                    data-testid="header-cta-diventa-arbitro"
+                    className={publicMobileNavLinkClass(isNavItemActive(pathname, "/diventa-arbitro"))}
+                    role="menuitem"
+                  >
+                    Diventa Arbitro
+                  </NavLink>
+                  <NavLink
+                    to={PORTAL_ROUTES.login}
+                    onClick={closeMenu}
+                    data-testid="nav-link-area-associati"
+                    className={publicMobileNavLinkClass(isNavItemActive(pathname, PORTAL_ROUTES.login))}
+                    role="menuitem"
+                  >
+                    Area Associati
+                  </NavLink>
                 </nav>
               </div>
             )}

@@ -54,7 +54,8 @@ def test_process_gallery_image_exports_jpeg():
 
 
 def test_hamming_identical_hashes():
-    data = _jpeg(1000, 700)
+    # soglia qualità richiede immagini abbastanza grandi (non solo dimensioni minime)
+    data = _jpeg(1200, 800)
     a = _analyze_bytes(data, is_cover=False)
     b = _analyze_bytes(data, is_cover=False)
     assert a and b

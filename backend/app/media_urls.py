@@ -1,9 +1,9 @@
 """Resolve uploaded media paths to absolute URLs for browsers."""
 import os
 import re
-from pathlib import Path
 
-from .paths import UPLOAD_DIR
+from . import storage
+from .paths import S3_PUBLIC_BASE_URL, use_object_storage
 
 _UPLOAD_PATH_RE = re.compile(r"^/api/uploads/")
 
@@ -25,6 +25,9 @@ def upload_basename(url: str | None) -> str | None:
     if "/api/uploads/" in raw:
         name = raw.split("/api/uploads/")[-1].strip("/")
         return name or None
+    if S3_PUBLIC_BASE_URL and raw.startswith(S3_PUBLIC_BASE_URL):
+        name = raw[len(S3_PUBLIC_BASE_URL) :].lstrip("/").split("/")[-1]
+        return name or None
     return None
 
 
@@ -32,22 +35,71 @@ def file_size_label_for_media_url(url: str | None) -> str:
     name = upload_basename(url)
     if not name:
         return ""
-    path = UPLOAD_DIR / name
-    if not path.is_file():
+    size = storage.size_bytes(name)
+    if not size:
         return ""
-    return format_file_size_label(path.stat().st_size)
+    return format_file_size_label(size)
+
+
+_LOCAL_HOST_RE = re.compile(r"^https?://(localhost|127\.0\.0\.1)(:\d+)?", re.I)
 
 
 def public_api_base() -> str:
     return (os.environ.get("PUBLIC_API_URL") or os.environ.get("REACT_APP_BACKEND_URL") or "").rstrip("/")
 
 
+def _prefer_relative_media() -> bool:
+    """
+    When PUBLIC_API_URL is empty or points at localhost, keep /api/uploads paths
+    relative so tunnels / same-origin proxies (CRA, Cloudflare) can serve them.
+    Set PUBLIC_API_URL to a public https origin in production.
+    """
+    flag = (os.environ.get("MEDIA_URL_MODE") or "").strip().lower()
+    if flag in ("relative", "same-origin"):
+        return True
+    if flag in ("absolute", "full"):
+        return False
+    base = public_api_base()
+    if not base:
+        return True
+    return bool(_LOCAL_HOST_RE.match(base))
+
+
+def _to_relative_upload_url(url: str) -> str:
+    """Strip local absolute backend origin; leave external CDN URLs untouched."""
+    if _LOCAL_HOST_RE.match(url) and "/api/uploads/" in url:
+        return "/api/uploads/" + url.split("/api/uploads/", 1)[-1]
+    return url
+
+
 def resolve_media_url(url: str | None) -> str:
     if not url or not str(url).strip():
         return ""
     url = str(url).strip()
+
     if url.startswith("http://") or url.startswith("https://"):
+        if _prefer_relative_media():
+            return _to_relative_upload_url(url)
         return url
+
+    # Prefer CDN when object storage public base is configured
+    name = None
+    if url.startswith("/api/uploads/"):
+        name = url.split("/api/uploads/")[-1].strip("/")
+    elif url.startswith("uploads/"):
+        name = url.split("/")[-1]
+    if name and use_object_storage():
+        cdn = storage.public_cdn_url(name)
+        if cdn:
+            return cdn
+
+    if _prefer_relative_media():
+        if url.startswith("/"):
+            return url
+        if url.startswith("uploads/"):
+            return f"/api/{url}"
+        return f"/api/uploads/{url.split('/')[-1]}"
+
     base = public_api_base()
     if not base:
         return url
@@ -93,8 +145,27 @@ def resolve_media_fields(doc: dict, fields: tuple[str, ...] = ("photoUrl", "cove
 
 
 def resolve_html_media_urls(html: str) -> str:
+    if not html:
+        return html or ""
+
+    if _prefer_relative_media():
+        # Collapse absolute localhost upload URLs to same-origin paths
+        html = re.sub(
+            r'(src=["\'])https?://(?:localhost|127\.0\.0\.1)(?::\d+)?(/api/uploads/[^"\']+)(["\'])',
+            r"\1\2\3",
+            html,
+            flags=re.I,
+        )
+        html = re.sub(
+            r'(href=["\'])https?://(?:localhost|127\.0\.0\.1)(?::\d+)?(/api/uploads/[^"\']+)(["\'])',
+            r"\1\2\3",
+            html,
+            flags=re.I,
+        )
+        return html
+
     base = public_api_base()
-    if not base or not html:
+    if not base:
         return html or ""
 
     def repl_src(match):

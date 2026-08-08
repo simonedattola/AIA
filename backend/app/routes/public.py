@@ -1,9 +1,14 @@
 """Public API routes - readable without authentication."""
+
 from fastapi import APIRouter, HTTPException, BackgroundTasks
 from typing import Optional
 
 from ..db import get_db
-from ..designation_enrich import build_member_lookups, enrich_designation, enrich_testimonial
+from ..designation_enrich import (
+    build_member_lookups,
+    enrich_designation,
+    enrich_testimonial,
+)
 from ..designation_queries import member_designations_query
 from ..member_roles import (
     normalize_member,
@@ -16,9 +21,17 @@ from ..media_urls import resolve_media_fields, resolve_attachments
 from ..sanitize import sanitize_html
 from ..page_nav import page_to_nav_item
 from ..models import (
-    LeadCreate, Lead, ContactCreate, ContactMessage,
+    LeadCreate,
+    Lead,
+    ContactCreate,
+    ContactMessage,
 )
-from ..mailer import send_email, render_lead_email, render_contact_email, contact_preference_label
+from ..mailer import (
+    send_email,
+    render_lead_email,
+    render_contact_email,
+    contact_preference_label,
+)
 import os
 
 router = APIRouter(prefix="/api/public", tags=["public"])
@@ -26,7 +39,11 @@ router = APIRouter(prefix="/api/public", tags=["public"])
 
 def _normalize_nav_item(item: dict) -> dict:
     """Associati → Arbitri nel menu pubblico (route attuale /arbitri)."""
-    if item.get("highlight") or "area-associati" in (item.get("href") or "") or "area-riservata" in (item.get("href") or ""):
+    if (
+        item.get("highlight")
+        or "area-associati" in (item.get("href") or "")
+        or "area-riservata" in (item.get("href") or "")
+    ):
         return item
     href = item.get("href") or ""
     label = (item.get("label") or "").strip()
@@ -49,10 +66,21 @@ async def get_settings():
 @router.get("/nav")
 async def get_nav():
     db = get_db()
-    pages = await db.pages.find(
-        {"status": "published", "showInMenu": True},
-        {"_id": 0, "slug": 1, "menuLabel": 1, "title": 1, "menuOrder": 1, "menuHighlight": 1},
-    ).sort("menuOrder", 1).to_list(100)
+    pages = (
+        await db.pages.find(
+            {"status": "published", "showInMenu": True},
+            {
+                "_id": 0,
+                "slug": 1,
+                "menuLabel": 1,
+                "title": 1,
+                "menuOrder": 1,
+                "menuHighlight": 1,
+            },
+        )
+        .sort("menuOrder", 1)
+        .to_list(100)
+    )
     items = [page_to_nav_item(p) for p in pages]
     items.sort(key=lambda x: x.get("order", 100))
     return [_normalize_nav_item(it) for it in items]
@@ -74,7 +102,13 @@ async def list_articles(category: Optional[str] = None, limit: int = 20, skip: i
     if category:
         q["category"] = category
     total = await db.articles.count_documents(q)
-    items = await db.articles.find(q, {"_id": 0}).sort("publishedAt", -1).skip(skip).limit(limit).to_list(limit)
+    items = (
+        await db.articles.find(q, {"_id": 0})
+        .sort("publishedAt", -1)
+        .skip(skip)
+        .limit(limit)
+        .to_list(limit)
+    )
     for item in items:
         resolve_media_fields(item)
     return {"items": items, "total": total}
@@ -94,10 +128,23 @@ async def get_article(slug: str):
     art["bodyHtml"] = normalize_article_body_html(art.get("bodyHtml") or "")
     # related: same category, 3 most recent excluding current
     resolve_media_fields(art)
-    related = await db.articles.find(
-        {"status": "published", "category": art["category"], "slug": {"$ne": slug}},
-        {"_id": 0, "slug": 1, "title": 1, "excerpt": 1, "coverUrl": 1, "publishedAt": 1, "category": 1},
-    ).sort("publishedAt", -1).limit(3).to_list(3)
+    related = (
+        await db.articles.find(
+            {"status": "published", "category": art["category"], "slug": {"$ne": slug}},
+            {
+                "_id": 0,
+                "slug": 1,
+                "title": 1,
+                "excerpt": 1,
+                "coverUrl": 1,
+                "publishedAt": 1,
+                "category": 1,
+            },
+        )
+        .sort("publishedAt", -1)
+        .limit(3)
+        .to_list(3)
+    )
     for r in related:
         resolve_media_fields(r)
     return {"article": art, "related": related}
@@ -119,9 +166,15 @@ async def list_events(upcoming: bool = False, limit: int = 50):
     today = ""
     if upcoming:
         from datetime import datetime, timezone
+
         today = datetime.now(timezone.utc).strftime("%Y-%m-%d")
     q = public_events_query(upcoming=upcoming, today=today)
-    items = await db.events.find(q, {"_id": 0}).sort("date", 1 if upcoming else -1).limit(limit).to_list(limit)
+    items = (
+        await db.events.find(q, {"_id": 0})
+        .sort("date", 1 if upcoming else -1)
+        .limit(limit)
+        .to_list(limit)
+    )
     for item in items:
         item["attachments"] = resolve_attachments(item.get("attachments"))
     return items
@@ -161,7 +214,12 @@ async def list_members(
         ]
     from ..member_category import refresh_member_category
 
-    items = await db.members.find(query, {"_id": 0}).sort([("lastName", 1), ("firstName", 1)]).limit(limit).to_list(limit)
+    items = (
+        await db.members.find(query, {"_id": 0})
+        .sort([("lastName", 1), ("firstName", 1)])
+        .limit(limit)
+        .to_list(limit)
+    )
     for item in items:
         normalize_member(item)
         if item.get("memberRole") == "arbitro":
@@ -188,12 +246,23 @@ async def get_member(slug: str, season: Optional[str] = None):
     seasons_available: list[str] = []
     query_all = member_designations_query(m, season=None)
     if query_all:
-        date_rows = await db.designations.find(query_all, {"_id": 0, "matchDate": 1}).to_list(2000)
-        seasons_available = distinct_seasons_from_dates([d.get("matchDate", "") for d in date_rows])
-    active_season = season or (seasons_available[0] if seasons_available else current_season_label())
+        date_rows = await db.designations.find(
+            query_all, {"_id": 0, "matchDate": 1}
+        ).to_list(2000)
+        seasons_available = distinct_seasons_from_dates(
+            [d.get("matchDate", "") for d in date_rows]
+        )
+    active_season = season or (
+        seasons_available[0] if seasons_available else current_season_label()
+    )
     des_q = member_designations_query(m, season=active_season)
     if des_q:
-        designations = await db.designations.find(des_q, {"_id": 0}).sort("matchDate", -1).limit(1000).to_list(1000)
+        designations = (
+            await db.designations.find(des_q, {"_id": 0})
+            .sort("matchDate", -1)
+            .limit(1000)
+            .to_list(1000)
+        )
         slug_val = (m.get("slug") or "").strip()
         for d in designations:
             updates = {}
@@ -204,7 +273,18 @@ async def get_member(slug: str, season: Optional[str] = None):
             if updates:
                 await db.designations.update_one({"id": d["id"]}, {"$set": updates})
                 d.update(updates)
-    members = await db.members.find(legacy_arbitri_query(), {"_id": 0, "id": 1, "slug": 1, "firstName": 1, "lastName": 1, "kind": 1, "memberRole": 1}).to_list(2000)
+    members = await db.members.find(
+        legacy_arbitri_query(),
+        {
+            "_id": 0,
+            "id": 1,
+            "slug": 1,
+            "firstName": 1,
+            "lastName": 1,
+            "kind": 1,
+            "memberRole": 1,
+        },
+    ).to_list(2000)
     slug_by_id, member_by_name = build_member_lookups(members)
     for item in designations:
         enrich_designation(item, slug_by_id, member_by_name)
@@ -214,26 +294,59 @@ async def get_member(slug: str, season: Optional[str] = None):
     if m.get("memberRole") == "arbitro":
         await refresh_member_category(db, m, persist=True)
 
-    article_fields = {"_id": 0, "slug": 1, "title": 1, "category": 1, "excerpt": 1, "coverUrl": 1, "publishedAt": 1}
-    articles = await db.articles.find(
-        {"status": "published", "relatedMemberIds": mid},
-        article_fields,
-    ).sort("publishedAt", -1).limit(24).to_list(24)
+    article_fields = {
+        "_id": 0,
+        "slug": 1,
+        "title": 1,
+        "category": 1,
+        "excerpt": 1,
+        "coverUrl": 1,
+        "publishedAt": 1,
+    }
+    articles = (
+        await db.articles.find(
+            {"status": "published", "relatedMemberIds": mid},
+            article_fields,
+        )
+        .sort("publishedAt", -1)
+        .limit(24)
+        .to_list(24)
+    )
 
-    events = await db.events.find(
-        {
-            "$or": [
-                {"invitedMemberIds": mid},
-                {"relatedMemberIds": mid},
-            ]
-        },
-        {"_id": 0, "id": 1, "date": 1, "titolo": 1, "descrizione": 1, "luogo": 1, "tipo": 1},
-    ).sort("date", -1).limit(12).to_list(12)
+    events = (
+        await db.events.find(
+            {
+                "$or": [
+                    {"invitedMemberIds": mid},
+                    {"relatedMemberIds": mid},
+                ]
+            },
+            {
+                "_id": 0,
+                "id": 1,
+                "date": 1,
+                "titolo": 1,
+                "descrizione": 1,
+                "luogo": 1,
+                "tipo": 1,
+            },
+        )
+        .sort("date", -1)
+        .limit(12)
+        .to_list(12)
+    )
 
-    testimonials = await db.testimonials.find(
-        {"memberId": mid, "$or": [{"status": "published"}, {"status": {"$exists": False}}]},
-        {"_id": 0, "id": 1, "name": 1, "role": 1, "quote": 1, "photoUrl": 1},
-    ).sort("sortOrder", 1).to_list(10)
+    testimonials = (
+        await db.testimonials.find(
+            {
+                "memberId": mid,
+                "$or": [{"status": "published"}, {"status": {"$exists": False}}],
+            },
+            {"_id": 0, "id": 1, "name": 1, "role": 1, "quote": 1, "photoUrl": 1},
+        )
+        .sort("sortOrder", 1)
+        .to_list(10)
+    )
     for a in articles:
         resolve_media_fields(a)
     mem_photo = (m.get("photoUrl") or "").strip()
@@ -255,11 +368,18 @@ async def get_member(slug: str, season: Optional[str] = None):
 
 
 @router.get("/designations")
-async def list_designations(role: Optional[str] = None, category: Optional[str] = None, limit: int = 500):
+async def list_designations(
+    role: Optional[str] = None, category: Optional[str] = None, limit: int = 500
+):
     db = get_db()
     from ..designation_filters import designations_page_query
 
-    settings = await db.site_settings.find_one({"id": "site-settings"}, {"_id": 0, "lastDesignationsSync": 1}) or {}
+    settings = (
+        await db.site_settings.find_one(
+            {"id": "site-settings"}, {"_id": 0, "lastDesignationsSync": 1}
+        )
+        or {}
+    )
     last_sync = settings.get("lastDesignationsSync")
     query = designations_page_query(last_sync)
     if role:
@@ -268,10 +388,28 @@ async def list_designations(role: Optional[str] = None, category: Optional[str] 
         else:
             query["$and"].append({"role": role})
     if category:
-        query["$and"].append({"$or": [{"championship": category}, {"category": category}]})
-    items = await db.designations.find(query, {"_id": 0}).sort("matchDate", 1).limit(limit).to_list(limit)
+        query["$and"].append(
+            {"$or": [{"championship": category}, {"category": category}]}
+        )
+    items = (
+        await db.designations.find(query, {"_id": 0})
+        .sort("matchDate", 1)
+        .limit(limit)
+        .to_list(limit)
+    )
 
-    members = await db.members.find(legacy_arbitri_query(), {"_id": 0, "id": 1, "slug": 1, "firstName": 1, "lastName": 1, "kind": 1, "memberRole": 1}).to_list(2000)
+    members = await db.members.find(
+        legacy_arbitri_query(),
+        {
+            "_id": 0,
+            "id": 1,
+            "slug": 1,
+            "firstName": 1,
+            "lastName": 1,
+            "kind": 1,
+            "memberRole": 1,
+        },
+    ).to_list(2000)
     slug_by_id, member_by_name = build_member_lookups(members)
     for item in items:
         enrich_designation(item, slug_by_id, member_by_name)
@@ -283,12 +421,17 @@ async def get_stats():
     db = get_db()
     members_total = await db.members.count_documents({})
     associati = await db.members.count_documents({})
-    osservatori = await db.members.count_documents({
-        "$or": [
-            {"memberRole": "osservatore"},
-            {"memberRole": {"$exists": False}, "kind": {"$in": ["oa", "ot", "osservatore"]}},
-        ]
-    })
+    osservatori = await db.members.count_documents(
+        {
+            "$or": [
+                {"memberRole": "osservatore"},
+                {
+                    "memberRole": {"$exists": False},
+                    "kind": {"$in": ["oa", "ot", "osservatore"]},
+                },
+            ]
+        }
+    )
     tutor = await db.members.count_documents({"kind": "tutor"})
     articles_total = await db.articles.count_documents({"status": "published"})
     from datetime import datetime, timezone
@@ -301,7 +444,14 @@ async def get_stats():
     active_season = current_season_label()
     des_rows = await db.designations.find(
         published_referee_designations_season_query(active_season),
-        {"_id": 0, "matchDate": 1, "matchHome": 1, "matchAway": 1, "matchLabel": 1, "role": 1},
+        {
+            "_id": 0,
+            "matchDate": 1,
+            "matchHome": 1,
+            "matchAway": 1,
+            "matchLabel": 1,
+            "role": 1,
+        },
     ).to_list(20000)
     matches_this_season = count_refereed_matches_for_season(des_rows, active_season)
 
@@ -365,13 +515,25 @@ async def get_album(slug: str):
 @router.get("/testimonials")
 async def list_testimonials():
     db = get_db()
-    items = await db.testimonials.find(
-        {"$or": [{"status": "published"}, {"status": {"$exists": False}}]},
-        {"_id": 0},
-    ).sort("sortOrder", 1).to_list(100)
+    items = (
+        await db.testimonials.find(
+            {"$or": [{"status": "published"}, {"status": {"$exists": False}}]},
+            {"_id": 0},
+        )
+        .sort("sortOrder", 1)
+        .to_list(100)
+    )
     members = await db.members.find(
         {"slug": {"$exists": True, "$ne": ""}},
-        {"_id": 0, "id": 1, "slug": 1, "firstName": 1, "lastName": 1, "memberRole": 1, "photoUrl": 1},
+        {
+            "_id": 0,
+            "id": 1,
+            "slug": 1,
+            "firstName": 1,
+            "lastName": 1,
+            "memberRole": 1,
+            "photoUrl": 1,
+        },
     ).to_list(2000)
     slug_by_id, member_by_name = build_member_lookups(members, arbitri_only=False)
     member_by_id = {str(m["id"]): m for m in members if m.get("id")}
@@ -381,7 +543,9 @@ async def list_testimonials():
         resolve_media_fields(item)
         slug_val = (item.get("memberSlug") or "").strip()
         if slug_val and slug_val != before_slug:
-            await db.testimonials.update_one({"id": item["id"]}, {"$set": {"memberSlug": slug_val}})
+            await db.testimonials.update_one(
+                {"id": item["id"]}, {"$set": {"memberSlug": slug_val}}
+            )
     return items
 
 
@@ -404,19 +568,25 @@ async def submit_lead(payload: LeadCreate, background: BackgroundTasks):
     # email notifications
     notify = os.environ.get("NOTIFY_EMAIL", "").strip()
     if notify:
-        background.add_task(send_email, notify,
-                            f"Nuova candidatura corso arbitri – {lead.firstName} {lead.lastName}",
-                            render_lead_email(doc))
+        background.add_task(
+            send_email,
+            notify,
+            f"Nuova candidatura corso arbitri – {lead.firstName} {lead.lastName}",
+            render_lead_email(doc),
+        )
     # confirmation to user
-    background.add_task(send_email, lead.email,
-                        "Grazie! Abbiamo ricevuto la tua candidatura - AIA Legnano",
-                        f"""<div style="font-family:Arial,sans-serif;max-width:600px;">
+    background.add_task(
+        send_email,
+        lead.email,
+        "Grazie! Abbiamo ricevuto la tua candidatura - AIA Legnano",
+        f"""<div style="font-family:Arial,sans-serif;max-width:600px;">
                         <h2 style="color:#004587;">Ciao {lead.firstName},</h2>
                         <p>grazie per aver inviato la tua candidatura al <strong>corso arbitri</strong>
                         della Sezione AIA di Legnano.</p>
                         <p>Un nostro referente ti contatterà entro pochi giorni tramite {contact_preference_label(lead.contactPreference)}.</p>
                         <p style="margin-top:24px;color:#64748B;">A presto sui campi,<br/>
-                        <strong>Sezione AIA Legnano</strong></p></div>""")
+                        <strong>Sezione AIA Legnano</strong></p></div>""",
+    )
     return {"ok": True, "id": lead.id}
 
 
@@ -428,7 +598,10 @@ async def submit_contact(payload: ContactCreate, background: BackgroundTasks):
     await db.contact_messages.insert_one(doc.copy())
     notify = os.environ.get("NOTIFY_EMAIL", "").strip()
     if notify:
-        background.add_task(send_email, notify,
-                            f"[Sito AIA Legnano] {payload.subject or 'Nuovo messaggio'}",
-                            render_contact_email(doc))
+        background.add_task(
+            send_email,
+            notify,
+            f"[Sito AIA Legnano] {payload.subject or 'Nuovo messaggio'}",
+            render_contact_email(doc),
+        )
     return {"ok": True, "id": msg.id}

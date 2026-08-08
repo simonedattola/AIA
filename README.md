@@ -10,19 +10,51 @@ Sito istituzionale e pannello admin per la Sezione AIA di Legnano (React + FastA
 
 ## Configurazione
 
-1. Copia le variabili d'ambiente del backend:
+### Secret e variabili d'ambiente
+
+**Non committare mai file `.env` con password o JWT reali.** I template nel repo usano solo placeholder.
+
+1. **Sviluppo locale (uvicorn senza Docker)** — copia il template backend:
 
 ```bash
 cp backend/.env.example backend/.env
 ```
 
-Modifica `backend/.env` (almeno `MONGO_URL`, `DB_NAME`, `JWT_SECRET`, credenziali admin).
+Modifica `backend/.env` e imposta almeno:
 
-2. Frontend – crea `frontend/.env`:
+| Variabile | Note |
+|-----------|------|
+| `MONGO_URL` | es. `mongodb://localhost:27017` |
+| `DB_NAME` | es. `aia_legnano` |
+| `JWT_SECRET` | stringa casuale lunga (≥32 caratteri). Es: `openssl rand -base64 48` |
+| `ADMIN_EMAIL` | email admin seed |
+| `ADMIN_PASSWORD` | password forte (obbligatoria; niente default in codice) |
+
+2. **Docker Compose** — usa il template in root:
+
+```bash
+cp .env.example .env
+# genera secret, poi:
+docker compose up --build
+```
+
+Compose legge `.env` in root e **richiede** `JWT_SECRET`, `ADMIN_EMAIL` e `ADMIN_PASSWORD` (nessun valore hardcoded in `docker-compose.yml`).
+
+3. Frontend — crea `frontend/.env` (non secret):
 
 ```
 REACT_APP_BACKEND_URL=http://localhost:8000
 ```
+
+Per i test di integrazione backend, esporta le stesse credenziali admin (`ADMIN_PASSWORD`, opzionalmente `ADMIN_EMAIL`) prima di `pytest`.
+
+### GitHub Actions secrets (CI/CD)
+
+I secret di pipeline **non** vanno nel codice: vanno creati in GitHub
+(**Settings → Secrets and variables → Actions**).
+
+Elenco completo, generazione, checklist e procedura di rotazione:
+[`.github/SECRETS.md`](.github/SECRETS.md).
 
 ## Area riservata associati (integrata, porta 3000)
 
@@ -47,6 +79,26 @@ uvicorn server:app --reload --host 0.0.0.0 --port 8000
 All'avvio viene eseguito il seed idempotente (dati demo + utente admin).
 
 API: `http://localhost:8000/api/`
+
+### Health & Monitoring
+
+- **Health endpoint:** `GET /api/health` — returns service status (`database`, `cache`) and UTC timestamp
+- **Logs:** Structured JSON logs to stdout (aggregate with ELK / Datadog / CloudWatch). Set `LOG_LEVEL` (default `INFO`).
+- **Metrics:** Prometheus-style gauges at `GET /metrics` (`aia_api_up`, `aia_api_uptime_seconds`, `aia_api_database_up`)
+
+Example health payload:
+
+```json
+{
+  "status": "healthy",
+  "timestamp": "2026-08-07T20:00:00Z",
+  "services": {
+    "database": "connected",
+    "cache": "N/A"
+  }
+}
+```
+
 
 ## Frontend
 
@@ -97,24 +149,99 @@ Variabili in `backend/.env`:
 
 Per disattivare: `DESIGNATIONS_AUTO_SYNC=false`
 
-## Test backend
+## API documentation (Swagger)
+
+With the backend running:
+
+| URL | Description |
+|-----|-------------|
+| http://localhost:8000/docs | Swagger UI (try endpoints, Authorize with JWT) |
+| http://localhost:8000/redoc | ReDoc |
+| http://localhost:8000/openapi.json | OpenAPI schema |
+
+Admin: `POST /api/admin/login` → paste token in **Authorize**. Portal: `POST /api/portal/login`.
+
+## Documentation
+
+| Doc | Description |
+|-----|-------------|
+| [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md) | System diagram and data flows |
+| [`docs/DEPLOYMENT.md`](docs/DEPLOYMENT.md) | Development, staging, production |
+| [`docs/BACKUP.md`](docs/BACKUP.md) | Mongo + uploads backup / DR |
+| [`docs/CONTRIBUTING.md`](docs/CONTRIBUTING.md) | Local workflow and PR guidelines |
+| [`docs/VERIFICATION.md`](docs/VERIFICATION.md) | Phase 9 production-readiness checklist |
+| [`.github/SECRETS.md`](.github/SECRETS.md) | GitHub Actions secrets |
+| [`.github/CI.md`](.github/CI.md) | CI workflows and branch protection |
+
+## Production URLs
+
+| Surface | URL |
+|---------|-----|
+| Frontend (Vercel) | `https://aia-legnano.vercel.app` _(replace with custom domain when ready)_ |
+| Backend API | _TBD — custom infra; see [`docs/DEPLOYMENT.md`](docs/DEPLOYMENT.md)_ |
+| Local frontend | `http://localhost:3000` |
+| Local API | `http://localhost:8000` |
+
+## Testing
+
+See [`backend/TESTING.md`](backend/TESTING.md) for pytest markers (unit vs integration) and frontend Jest commands.
 
 ```bash
-cd backend
-REACT_APP_BACKEND_URL=http://localhost:8000 pytest tests/ -v
+# Backend unit tests (CI-equivalent)
+cd backend && pytest tests/ -m "not integration" -q
+
+# Frontend
+cd frontend && npm test -- --watchAll=false
 ```
 
-(I test di integrazione richiedono il server in esecuzione e MongoDB configurato.)
+Integration tests require a running API + `ADMIN_PASSWORD` and are excluded from CI.
 
 ## Area riservata associati
 
 - Nel menu pubblico: voce **Area riservata** (o `/area/riservata`)
 - Nel pannello admin: link **Area riservata** nella sidebar
-- Portale: `http://localhost:3001` (con `docker compose up` include il servizio `area-riservata`)
-- Login: **codice meccanografico** + password iniziale `nome.cognome` (es. Mario Rossi → codice assegnato / `mario.rossi`)
-- In Admin → Associati imposta il codice meccanografico: all’aggiornamento viene creato/sincronizzato l’account portale
+- Portale integrato: `http://localhost:3000/area-riservata/login` (API `/api/portal/*`)
+- Login: **codice meccanografico** + password iniziale `nome.cognome`
+- La cartella `area-riservata/` (Next.js) è deprecata
 
 ## Credenziali admin (seed)
 
-- Email: valore di `ADMIN_EMAIL` in `.env` (default `admin@aia-legnano.it`)
-- Password: valore di `ADMIN_PASSWORD` in `.env`
+- Email: valore di `ADMIN_EMAIL` in `.env` / `backend/.env`
+- Password: valore di `ADMIN_PASSWORD` (obbligatorio; senza default in codice)
+- All'avvio il seed sincronizza l'hash della password admin dall'env
+
+## Status & Roadmap
+
+### v1.0 (Current — integrated on verification branch)
+
+- [x] Public site + admin panel
+- [x] Member portal
+- [x] Designations sync (AIA FIGC)
+- [x] Mobile-first responsive UI (PR #6)
+- [x] Security hardening (PR #5 / #7)
+- [x] CI workflows + unit tests (PR #8 / #10)
+- [x] OpenAPI / Swagger (PR #9)
+- [x] Health + JSON logs + metrics (PR #11)
+- [x] DB indexes + backup docs + S3 adapter (PR #12)
+- [x] Architecture / deployment docs (PR #13)
+
+### v1.1 (Ops follow-ups)
+
+- [ ] Merge PRs #5–#13 to `main` and enable branch protection (`verify`)
+- [ ] Configure GitHub Actions secrets in the repo UI
+- [ ] Rotate `JWT_SECRET` / `ADMIN_PASSWORD` (history still contains old defaults)
+- [ ] E2E testing (Playwright)
+- [ ] Scheduled backup automation in production
+- [ ] Vercel re-deploy + backend URL go-live
+
+---
+
+## Contributing
+
+See [`docs/CONTRIBUTING.md`](docs/CONTRIBUTING.md) for local development, testing, and PR guidelines.
+
+---
+
+## License
+
+© 2026 AIA Legnano. All rights reserved.

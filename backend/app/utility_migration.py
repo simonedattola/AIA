@@ -1,11 +1,11 @@
 """Migrate utility content from legacy WordPress site."""
+
 from __future__ import annotations
 
 import html
 import re
 import urllib.request
 from typing import Any
-
 
 UTILITY_SECTIONS = {
     "lezioni_tecniche": "Materiale lezioni tecniche",
@@ -51,14 +51,16 @@ def default_utility_seed() -> dict[str, Any]:
 
     items: list[dict[str, Any]] = []
     for i, row in enumerate(links):
-        items.append({
-            "section": "link_utili",
-            "title": row["title"],
-            "description": "",
-            "url": row["url"],
-            "fileUrl": "",
-            "sortOrder": i,
-        })
+        items.append(
+            {
+                "section": "link_utili",
+                "title": row["title"],
+                "description": "",
+                "url": row["url"],
+                "fileUrl": "",
+                "sortOrder": i,
+            }
+        )
     return {
         "polo": {"bodyHtml": POLO_BODY_HTML},
         "items": items,

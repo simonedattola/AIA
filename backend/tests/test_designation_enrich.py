@@ -1,4 +1,9 @@
-from app.designation_enrich import enrich_designation, enrich_testimonial, build_member_lookups, _parse_category_string
+from app.designation_enrich import (
+    enrich_designation,
+    enrich_testimonial,
+    build_member_lookups,
+    _parse_category_string,
+)
 
 
 def test_parse_category_string():
@@ -10,7 +15,12 @@ def test_parse_category_string():
 
 def test_enrich_fills_slug_and_fields():
     members = [
-        {"id": "m1", "slug": "luca-bianchi", "firstName": "Luca", "lastName": "Bianchi"},
+        {
+            "id": "m1",
+            "slug": "luca-bianchi",
+            "firstName": "Luca",
+            "lastName": "Bianchi",
+        },
     ]
     slug_by_id, member_by_name = build_member_lookups(members)
     item = {

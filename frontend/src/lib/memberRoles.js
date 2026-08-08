@@ -53,18 +53,21 @@ export function hasDesignations(memberRole) {
 
 export function memberRoleLabel(m) {
   const r = m?.memberRole;
-  if (r === "arbitro") return "Arbitro";
-  if (r === "assistente") return "Assistente";
-  if (r === "consiglio_direttivo") return m?.boardTitle || "Consiglio Direttivo";
+  const board = (m?.boardTitle || "").trim();
+  if (r === "arbitro") return board ? `Arbitro · ${board}` : "Arbitro";
+  if (r === "assistente") return board ? `Assistente · ${board}` : "Assistente";
+  if (r === "consiglio_direttivo") return board || "Consiglio Direttivo";
   if (r === "osservatore") {
-    return m?.observerType === "ot" ? "OT · Organo Tecnico" : "OA · Osservatore Arbitrale";
+    const base = m?.observerType === "ot" ? "OT · Organo Tecnico" : "OA · Osservatore Arbitrale";
+    return board ? `${base} · ${board}` : base;
   }
   return m?.role || "";
 }
 
-export function profileBackPath(memberRole) {
+export function profileBackPath(memberRole, member) {
   if (memberRole === "consiglio_direttivo" || memberRole === "osservatore") {
     return "/chi-siamo";
   }
+  // Arbitro/assistente con incarico sezionale: resta sul percorso associati
   return "/arbitri";
 }

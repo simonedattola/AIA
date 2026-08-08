@@ -33,7 +33,7 @@
     "/app/backend/tests/__init__.py"
   ],
   "success_rate": {"backend": "100%", "frontend": "92%"},
-  "test_credentials": "admin@aia-legnano.it / AiaLegnano2026!",
+  "test_credentials": "see ADMIN_EMAIL / ADMIN_PASSWORD in local .env (never commit secrets)",
   "seed_data_creation": "All test data was created with TEST_/TEST prefix and cleaned up via DELETE. One left-over draft article 'TEST articolo 2ebb4230' may remain in the database because UI save flow created it via the PUT-undefined path (article was never actually inserted, but slugified test articles from manual POST were cleaned).",
   "retest_needed": true,
   "main_agent_can_self_test": true,

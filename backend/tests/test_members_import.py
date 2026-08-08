@@ -1,4 +1,5 @@
 """Tests for flexible members file import."""
+
 import pytest
 
 from app.members_import import (
@@ -43,8 +44,7 @@ class TestParseMembersFile:
 
     def test_nominativo_column(self):
         content = (
-            "nominativo;ruolo;email\n"
-            "Sara Bianchi;Assistente;sara@test.it\n"
+            "nominativo;ruolo;email\n" "Sara Bianchi;Assistente;sara@test.it\n"
         ).encode("utf-8")
         rows, _, _ = parse_members_file(content, "anagrafica.csv")
         assert rows[0]["firstName"] == "Sara"
@@ -52,31 +52,27 @@ class TestParseMembersFile:
 
     def test_reordered_columns(self):
         content = (
-            "meccanografico;ruolo;cognome;nome\n"
-            "99999;Arbitro;Verdi;Luigi\n"
+            "meccanografico;ruolo;cognome;nome\n" "99999;Arbitro;Verdi;Luigi\n"
         ).encode("utf-8")
         rows, _, _ = parse_members_file(content, "anagrafica.csv")
         assert rows[0]["firstName"] == "Luigi"
         assert rows[0]["meccanografico"] == "99999"
 
     def test_no_category_ok(self):
-        content = (
-            "nome;cognome;ruolo\n"
-            "Anna;Neri;Arbitro\n"
-        ).encode("utf-8")
+        content = ("nome;cognome;ruolo\n" "Anna;Neri;Arbitro\n").encode("utf-8")
         rows, _, _ = parse_members_file(content, "anagrafica.csv")
         assert rows[0]["category"] == ""
 
     def test_template(self):
-        rows, warnings, _ = parse_members_file(IMPORT_TEMPLATE_CSV.encode("utf-8"), "modello.csv")
+        rows, warnings, _ = parse_members_file(
+            IMPORT_TEMPLATE_CSV.encode("utf-8"), "modello.csv"
+        )
         assert len(rows) == 2
         assert not warnings
 
     def test_duplicate_in_file(self):
         content = (
-            "nome;cognome;ruolo\n"
-            "Mario;Rossi;Arbitro\n"
-            "Mario;Rossi;Arbitro\n"
+            "nome;cognome;ruolo\n" "Mario;Rossi;Arbitro\n" "Mario;Rossi;Arbitro\n"
         ).encode("utf-8")
         rows, warnings, _ = parse_members_file(content, "dup.csv")
         assert len(rows) == 1
@@ -89,7 +85,12 @@ class TestParseMembersFile:
 
 class TestDedupeRows:
     def test_by_name(self):
-        row = {"firstName": "Mario", "lastName": "Rossi", "email": "", "meccanografico": ""}
+        row = {
+            "firstName": "Mario",
+            "lastName": "Rossi",
+            "email": "",
+            "meccanografico": "",
+        }
         out, skipped = _dedupe_rows([row, row])
         assert len(out) == 1
         assert skipped == 1

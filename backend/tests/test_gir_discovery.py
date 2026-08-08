@@ -1,5 +1,9 @@
 """Scoperta gironi sezione CRA quando Default.asp non espone link."""
-from app.scrapers.aia_lombardia import _regional_gir_suffixes, discover_gir_urls_for_section
+
+from app.scrapers.aia_lombardia import (
+    _regional_gir_suffixes,
+    discover_gir_urls_for_section,
+)
 
 
 def test_regional_gir_suffixes():

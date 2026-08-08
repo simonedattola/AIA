@@ -1,14 +1,32 @@
 """HTML sanitizer for article bodyHtml coming from TipTap."""
+
 import bleach
 
 ALLOWED_TAGS = [
-    "p", "br", "hr",
-    "h2", "h3", "h4",
-    "strong", "b", "em", "i", "u", "s", "code",
-    "a", "ul", "ol", "li",
-    "blockquote", "pre",
-    "img", "figure", "figcaption",
-    "span", "div",
+    "p",
+    "br",
+    "hr",
+    "h2",
+    "h3",
+    "h4",
+    "strong",
+    "b",
+    "em",
+    "i",
+    "u",
+    "s",
+    "code",
+    "a",
+    "ul",
+    "ol",
+    "li",
+    "blockquote",
+    "pre",
+    "img",
+    "figure",
+    "figcaption",
+    "span",
+    "div",
 ]
 
 ALLOWED_ATTRS = {
@@ -36,7 +54,11 @@ def sanitize_html(html: str) -> str:
     cleaned = bleach.linkify(
         cleaned,
         callbacks=[
-            lambda attrs, new=False: {**attrs, (None, "target"): "_blank", (None, "rel"): "noopener noreferrer"}
+            lambda attrs, new=False: {
+                **attrs,
+                (None, "target"): "_blank",
+                (None, "rel"): "noopener noreferrer",
+            }
         ],
         skip_tags=["pre", "code"],
     )

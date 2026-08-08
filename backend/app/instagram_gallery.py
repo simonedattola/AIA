@@ -1,4 +1,5 @@
 """Import immagini da Instagram nel carosello galleria (esclude designazioni e contenuti non adatti)."""
+
 from __future__ import annotations
 
 import base64
@@ -69,9 +70,13 @@ def is_designation_post(caption: str) -> bool:
     lower = text.lower()
     if "#designazioni" in lower:
         return True
-    if "designazioni" in lower and any(k in lower for k in ("weekend", "partite", "girone", "🔜", "fine settimana")):
+    if "designazioni" in lower and any(
+        k in lower for k in ("weekend", "partite", "girone", "🔜", "fine settimana")
+    ):
         return True
-    if "buon lavoro a tutti" in lower and ("partite" in lower or "weekend" in lower or "playoff" in lower):
+    if "buon lavoro a tutti" in lower and (
+        "partite" in lower or "weekend" in lower or "playoff" in lower
+    ):
         if "raduno" not in lower and "premiat" not in lower:
             return True
     return False
@@ -170,7 +175,9 @@ def _parse_feed_item(item: dict[str, Any], username: str) -> dict[str, Any] | No
     caption = _caption_from_item(item)
     media_type = item.get("media_type")
     product_type = (item.get("product_type") or "").strip()
-    if is_unsuitable_for_gallery(caption, media_type=media_type, product_type=product_type):
+    if is_unsuitable_for_gallery(
+        caption, media_type=media_type, product_type=product_type
+    ):
         return None
     image_url = _image_url_from_item(item)
     if not image_url:
@@ -182,9 +189,11 @@ def _parse_feed_item(item: dict[str, Any], username: str) -> dict[str, Any] | No
         "imageUrl": image_url,
         "permalink": _permalink(username, shortcode),
         "takenAt": taken_at,
-        "photoDate": datetime.fromtimestamp(taken_at, tz=timezone.utc).strftime("%Y-%m-%d")
-        if taken_at
-        else "",
+        "photoDate": (
+            datetime.fromtimestamp(taken_at, tz=timezone.utc).strftime("%Y-%m-%d")
+            if taken_at
+            else ""
+        ),
     }
 
 
@@ -263,7 +272,9 @@ def fetch_all_profile_posts_instaloader(
         save_metadata=False,
         compress_json=False,
     )
-    loader.context._session.cookies.set("sessionid", session_id, domain=".instagram.com")
+    loader.context._session.cookies.set(
+        "sessionid", session_id, domain=".instagram.com"
+    )
     profile = instaloader.Profile.from_username(loader.context, username)
 
     posts: list[dict[str, Any]] = []
@@ -282,9 +293,13 @@ def fetch_all_profile_posts_instaloader(
             break
 
         caption = post.caption or ""
-        product_type = "clips" if post.is_video and post.typename != "GraphSidecar" else ""
+        product_type = (
+            "clips" if post.is_video and post.typename != "GraphSidecar" else ""
+        )
         media_type = 2 if post.is_video and post.typename != "GraphSidecar" else 1
-        if is_unsuitable_for_gallery(caption, media_type=media_type, product_type=product_type):
+        if is_unsuitable_for_gallery(
+            caption, media_type=media_type, product_type=product_type
+        ):
             stats["skippedUnsuitable"] += 1
             continue
 
@@ -371,7 +386,9 @@ def fetch_all_profile_posts(
                 caption = _caption_from_item(item)
                 media_type = item.get("media_type")
                 product_type = (item.get("product_type") or "").strip()
-                if is_unsuitable_for_gallery(caption, media_type=media_type, product_type=product_type):
+                if is_unsuitable_for_gallery(
+                    caption, media_type=media_type, product_type=product_type
+                ):
                     stats["skippedUnsuitable"] += 1
                     continue
 
@@ -449,7 +466,9 @@ async def import_instagram_post(
     caption = (post.get("caption") or post.get("alt") or "").strip()
     media_type = post.get("mediaType")
     product_type = (post.get("productType") or "").strip()
-    if is_unsuitable_for_gallery(caption, media_type=media_type, product_type=product_type):
+    if is_unsuitable_for_gallery(
+        caption, media_type=media_type, product_type=product_type
+    ):
         return None
 
     permalink = (post.get("permalink") or post.get("href") or "").strip()
@@ -465,7 +484,12 @@ async def import_instagram_post(
                 "source": "instagram",
                 "$or": [
                     {"sourceUrl": permalink},
-                    {"sourceUrl": {"$regex": f"/p/{re.escape(code)}/?$", "$options": "i"}},
+                    {
+                        "sourceUrl": {
+                            "$regex": f"/p/{re.escape(code)}/?$",
+                            "$options": "i",
+                        }
+                    },
                 ],
             },
             {"_id": 0, "id": 1},
@@ -476,7 +500,9 @@ async def import_instagram_post(
     try:
         raw = _decode_image_payload(post)
     except Exception as exc:
-        logger.warning("Instagram: download fallito %s — %s", permalink or caption[:40], exc)
+        logger.warning(
+            "Instagram: download fallito %s — %s", permalink or caption[:40], exc
+        )
         return None
 
     processed, aspect = process_gallery_image(raw, "16:9")
@@ -518,7 +544,11 @@ async def sync_instagram_gallery(
         session_id = session_id or os.getenv("INSTAGRAM_SESSION_ID", "").strip()
         if limit > 0:
             posts = fetch_profile_posts(
-                username, session_id=session_id, limit=limit, user_id=user_id, since_year=since_year
+                username,
+                session_id=session_id,
+                limit=limit,
+                user_id=user_id,
+                since_year=since_year,
             )
         else:
             posts, fetch_stats = fetch_all_profile_posts(
@@ -541,7 +571,9 @@ async def sync_instagram_gallery(
             skipped_unsuitable += 1
             continue
         permalink = normalize_instagram_permalink(
-            (post.get("permalink") or post.get("href") or post.get("shortcode") or "").strip()
+            (
+                post.get("permalink") or post.get("href") or post.get("shortcode") or ""
+            ).strip()
         )
         if permalink:
             code = instagram_shortcode_from_url(permalink)
@@ -550,7 +582,12 @@ async def sync_instagram_gallery(
                     "source": "instagram",
                     "$or": [
                         {"sourceUrl": permalink},
-                        {"sourceUrl": {"$regex": f"/p/{re.escape(code)}/?$", "$options": "i"}},
+                        {
+                            "sourceUrl": {
+                                "$regex": f"/p/{re.escape(code)}/?$",
+                                "$options": "i",
+                            }
+                        },
                     ],
                 },
                 {"_id": 0, "id": 1},

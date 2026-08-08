@@ -1,4 +1,5 @@
 """Sezioni/categorie documenti configurabili dall'admin."""
+
 from __future__ import annotations
 
 from datetime import datetime, timezone
@@ -51,7 +52,9 @@ def merge_sections(*lists: list[str]) -> list[str]:
 
 
 async def get_configured_sections(db) -> list[str]:
-    settings = await db.site_settings.find_one({"id": "site-settings"}, {"_id": 0, "documentSections": 1})
+    settings = await db.site_settings.find_one(
+        {"id": "site-settings"}, {"_id": 0, "documentSections": 1}
+    )
     stored = (settings or {}).get("documentSections") or []
     if stored:
         return merge_sections(stored)
@@ -112,7 +115,9 @@ async def normalize_document_category(
     for value in (cat, sec):
         if not value:
             continue
-        if value in configured or any(s.casefold() == value.casefold() for s in configured):
+        if value in configured or any(
+            s.casefold() == value.casefold() for s in configured
+        ):
             return value
         if value in LEGACY_CATEGORY_MAP:
             return LEGACY_CATEGORY_MAP[value]
@@ -125,7 +130,9 @@ async def normalize_document_category(
 
 
 async def ensure_document_sections_seed(db) -> None:
-    settings = await db.site_settings.find_one({"id": "site-settings"}, {"_id": 0, "documentSections": 1})
+    settings = await db.site_settings.find_one(
+        {"id": "site-settings"}, {"_id": 0, "documentSections": 1}
+    )
     from_docs = await db.documents.distinct("category")
     if not settings:
         return
