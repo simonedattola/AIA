@@ -52,4 +52,22 @@ export default [
       "no-empty": ["error", { allowEmptyCatch: true }],
     },
   },
+  {
+    files: ["src/**/__tests__/**/*.{js,jsx}", "src/**/*.test.{js,jsx}", "src/setupTests.js", "src/test-utils/**/*.{js,jsx}"],
+    languageOptions: {
+      globals: {
+        ...globals.jest,
+      },
+    },
+  },
+  {
+    files: ["src/setupProxy.js", "src/setupTests.js", "src/test-utils/**/*.{js,jsx}"],
+    languageOptions: {
+      sourceType: "script",
+      globals: {
+        ...globals.node,
+        ...globals.jest,
+      },
+    },
+  },
 ];

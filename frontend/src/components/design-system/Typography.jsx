@@ -45,12 +45,12 @@ export function HeroTitle({ as: Component = "h1", className, children, ...props 
 
 HeroTitle.propTypes = typographyPropTypes;
 
-/** Titolo CTA banner e news slider — text-3xl → text-4xl → text-5xl */
+/** Titolo CTA banner e news slider */
 export function CtaTitle({ as: Component = "h2", className, children, ...props }) {
   return (
     <Component
       className={cn(
-        "font-display text-ds-cta sm:text-ds-cta-md lg:text-ds-cta-lg leading-[1.1] text-navy-700",
+        "font-display font-bold text-ds-cta sm:text-ds-cta-md lg:text-ds-cta-lg leading-[1.1] tracking-tight text-navy-700",
         className
       )}
       {...props}
@@ -62,11 +62,12 @@ export function CtaTitle({ as: Component = "h2", className, children, ...props }
 
 CtaTitle.propTypes = typographyPropTypes;
 
+/** Titolo sezione CMS (home, eventi, contatti, diventa arbitro, …) */
 export function SectionTitle({ as: Component = "h2", className, children, ...props }) {
   return (
     <Component
       className={cn(
-        "font-display text-ds-section sm:text-ds-section-lg text-navy-700",
+        "font-display font-bold text-ds-section sm:text-ds-section-lg tracking-tight text-navy-700",
         className
       )}
       {...props}
@@ -78,10 +79,14 @@ export function SectionTitle({ as: Component = "h2", className, children, ...pro
 
 SectionTitle.propTypes = typographyPropTypes;
 
+/** Sotto-sezione (es. gruppi organigramma) — più piccola dei titoli pagina */
 export function SubsectionTitle({ as: Component = "h3", className, children, ...props }) {
   return (
     <Component
-      className={cn("font-display text-ds-subsection text-navy-700", className)}
+      className={cn(
+        "font-display font-bold text-ds-subsection sm:text-ds-subsection-lg tracking-tight text-navy-700",
+        className
+      )}
       {...props}
     >
       {children}

@@ -10,12 +10,14 @@
   --ds-text-hero: 2.75rem;       /* 44px — hero / titoli pagina su mobile */
   --ds-text-hero-sm: 3.5rem;     /* 56px — hero sotto lg */
   --ds-text-hero-lg: 4rem;       /* 64px — hero desktop */
-  --ds-text-cta: 1.875rem;       /* 30px — text-3xl */
-  --ds-text-cta-md: 2.25rem;     /* 36px — text-4xl */
+  --ds-text-cta: 2.25rem;        /* 36px — CTA su mobile */
+  --ds-text-cta-md: 2.5rem;      /* 40px */
   --ds-text-cta-lg: 3rem;        /* 48px — text-5xl */
-  --ds-text-section: 1.875rem;   /* 30px — text-3xl (CMS) */
-  --ds-text-section-lg: 2.25rem; /* 36px — text-4xl */
-  --ds-text-subsection: 1.5rem;  /* 24px */
+  --ds-text-section: 2.25rem;    /* 36px — titoli sezione su mobile */
+  --ds-text-section-lg: 2.5rem;  /* 40px — titoli sezione desktop */
+  /* Sotto-sezioni (es. organigramma): sotto i titoli pagina (~2.75–4rem) */
+  --ds-text-subsection: 1.625rem;   /* 26px */
+  --ds-text-subsection-lg: 1.875rem; /* 30px */
   --ds-text-card: 1.25rem;       /* 20px */
   --ds-text-body: 1rem;          /* 16px */
   --ds-text-small: 0.875rem;     /* 14px */
