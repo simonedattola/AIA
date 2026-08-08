@@ -480,13 +480,16 @@ export function OrganigrammaBlock({ config: c, stats }) {
       .catch(() => setPeople([]));
   }, [c.scope]);
 
+  const orgKind = (m) => String(m.organigrammaKind || "").toLowerCase();
   const president =
     people.find((m) => m.isPresident) ||
     people.find((m) => {
+      const k = orgKind(m);
+      if (k === "ors" || k === "collaboratore") return false;
       const t = (m.boardTitle || "").toLowerCase();
-      return t.includes("presidente di sezione") || (t.includes("presidente") && !t.includes("revisione") && !t.includes("vice"));
+      if (t.includes("revisione") || /vice\s*-?\s*presidente|vicepresidente/.test(t)) return false;
+      return /\bpresidente\b/.test(t) && (k === "cds" || !k);
     });
-  const revisione = people.filter((m) => /revisione/i.test(m.boardTitle || ""));
   const isConsiglioTitle = (title) => {
     const t = (title || "").toLowerCase();
     if (!t || /revisione/i.test(t)) return false;
@@ -510,15 +513,21 @@ export function OrganigrammaBlock({ config: c, stats }) {
       t.includes("gestione")
     );
   };
+  const revisione = people.filter(
+    (m) => orgKind(m) === "ors" || (!orgKind(m) && /revisione/i.test(m.boardTitle || ""))
+  );
   const consiglio = people.filter(
-    (m) => m.id !== president?.id && isConsiglioTitle(m.boardTitle)
+    (m) =>
+      m.id !== president?.id &&
+      (orgKind(m) === "cds" || (!orgKind(m) && isConsiglioTitle(m.boardTitle)))
   );
   const collaboratori = people.filter(
     (m) =>
       m.id !== president?.id &&
       !revisione.some((x) => x.id === m.id) &&
       !consiglio.some((x) => x.id === m.id) &&
-      (isCollaboratoreTitle(m.boardTitle) || !isConsiglioTitle(m.boardTitle))
+      (orgKind(m) === "collaboratore" ||
+        (!orgKind(m) && (isCollaboratoreTitle(m.boardTitle) || !isConsiglioTitle(m.boardTitle))))
   );
 
   if (!president && consiglio.length === 0 && collaboratori.length === 0 && revisione.length === 0) return null;

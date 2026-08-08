@@ -78,18 +78,51 @@ def test_normalize_president_not_revisione():
     }
     normalize_member(doc)
     assert doc["isPresident"] is False
+    assert doc["organigrammaKind"] == "ors"
 
     prez = {
         "memberRole": "consiglio_direttivo",
+        "organigrammaKind": "cds",
         "boardTitle": "Presidente di Sezione",
     }
     normalize_member(prez)
     assert prez["isPresident"] is True
 
+    vice = {
+        "organigrammaKind": "cds",
+        "boardTitle": "Vice Presidente — Area designazioni",
+        "isPresident": True,
+    }
+    normalize_member(vice)
+    assert vice["isPresident"] is False
+
+    # OA + Presidente CDS: qualifica da codice AIA, presidente da incarico
+    zambon = {
+        "role": "OA",
+        "memberRole": "consiglio_direttivo",
+        "boardTitle": "Presidente di Sezione — Codice Etico",
+        "isPresident": False,
+    }
+    normalize_member(zambon)
+    assert zambon["memberRole"] == "osservatore"
+    assert zambon["organigrammaKind"] == "cds"
+    assert zambon["isPresident"] is True
+
 
 def test_dual_role_arbitro_keeps_designations():
     assert has_designations("arbitro")
-    dual = {"memberRole": "arbitro", "boardTitle": "Area Informatica"}
+    dual = {"memberRole": "arbitro", "role": "AE", "boardTitle": "Area Informatica"}
     normalize_member(dual)
     assert dual["memberRole"] == "arbitro"
+    assert dual["organigrammaKind"] == "collaboratore"
     assert has_designations(dual["memberRole"])
+
+
+def test_category_only_ae_aa():
+    from app.member_roles import can_have_max_category
+
+    assert can_have_max_category({"role": "AE"})
+    assert can_have_max_category({"role": "AA"})
+    assert not can_have_max_category({"role": "AB"})
+    assert not can_have_max_category({"role": "OA"})
+    assert not can_have_max_category({"role": "AFR"})

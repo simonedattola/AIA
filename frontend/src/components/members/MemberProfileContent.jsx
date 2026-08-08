@@ -97,9 +97,17 @@ export default function MemberProfileContent({ memberSlug }) {
               <Eyebrow className="text-gold-400 mb-2">{memberRoleLabel(m)}</Eyebrow>
               <CtaTitle className="text-white leading-tight">{m.firstName} {m.lastName}</CtaTitle>
               <div className="flex flex-wrap items-center gap-x-4 gap-y-1 mt-3 text-slate-300 text-sm">
-                {m.memberRole === "arbitro" && m.category && <span className="text-gold-300 font-medium">{m.category}</span>}
-                {m.memberRole !== "arbitro" && m.category && <span>{m.category}</span>}
-                {m.yearStart && <span>In sezione dal {m.yearStart}</span>}
+                {(m.role === "AE" || m.role === "AA") && m.category && (
+                  <span className="text-gold-300 font-medium">{m.category}</span>
+                )}
+                {m.yearStart ? (
+                  <span>
+                    {(() => {
+                      const y = Math.max(0, new Date().getFullYear() - Number(m.yearStart));
+                      return y === 1 ? "1 anno di anzianità" : `${y} anni di anzianità`;
+                    })()}
+                  </span>
+                ) : null}
               </div>
               {hasBio && (
                 <p className="mt-6 pt-6 border-t border-white/15 text-slate-200 leading-relaxed whitespace-pre-line max-w-3xl" data-testid="member-bio">{m.bio}</p>

@@ -227,10 +227,11 @@ class Member(BaseModel):
         "arbitro"  # arbitro | assistente | consiglio_direttivo | osservatore
     )
     observerType: str = ""  # oa | ot (solo se memberRole=osservatore)
-    boardTitle: str = ""  # incarico CD (es. Vice Presidente)
-    isPresident: bool = False
-    category: str = ""  # categoria sportiva (arbitri)
-    role: str = ""  # legacy
+    organigrammaKind: str = ""  # "" | cds | collaboratore | ors
+    boardTitle: str = ""  # incarico organigramma (es. Segretario, Area Informatica)
+    isPresident: bool = False  # calcolato da incarico CDS + parola Presidente
+    category: str = ""  # categoria sportiva (solo AE / AA)
+    role: str = ""  # codice AIA: AE | AA | AB | AFR | OA | OT
     kind: str = "associato"  # legacy
     yearStart: Optional[int] = None
     meccanografico: str = ""
@@ -260,6 +261,7 @@ class MemberCreate(BaseModel):
     telefonoVisibile: bool = False
     memberRole: str = "arbitro"
     observerType: str = ""
+    organigrammaKind: str = ""
     boardTitle: str = ""
     isPresident: bool = False
     category: str = ""

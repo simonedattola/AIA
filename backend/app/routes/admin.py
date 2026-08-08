@@ -583,13 +583,26 @@ async def admin_delete_official(official_id: str, admin=Depends(require_admin)):
 
 
 # ---- Members ----
+def _admin_member_view(item: dict) -> dict:
+    """Campi admin: password portale iniziale in sola lettura (nome.cognome)."""
+    from ..member_roles import can_have_max_category, normalize_member
+    from ..portal_password import default_portal_password
+
+    normalize_member(item)
+    if not can_have_max_category(item):
+        item["category"] = ""
+    item["portalPassword"] = default_portal_password(
+        item.get("firstName") or "", item.get("lastName") or ""
+    )
+    return item
+
+
 @router.get("/members")
 async def admin_list_members(
     memberRole: Optional[str] = None, admin=Depends(require_admin)
 ):
     db = get_db()
     from ..media_urls import resolve_media_fields
-    from ..member_roles import normalize_member
 
     query = {"memberRole": memberRole} if memberRole else {}
     items = (
@@ -598,7 +611,7 @@ async def admin_list_members(
         .to_list(500)
     )
     for item in items:
-        normalize_member(item)
+        _admin_member_view(item)
         resolve_media_fields(item)
     return items
 
@@ -615,7 +628,7 @@ async def admin_create_member(payload: MemberCreate, admin=Depends(require_admin
     while await db.members.find_one({"slug": slug}, {"_id": 0, "id": 1}):
         i += 1
         slug = f"{base}-{i}"
-    from ..member_roles import normalize_member
+    from ..member_roles import can_have_max_category, normalize_member
 
     member = Member(
         slug=slug,
@@ -623,8 +636,9 @@ async def admin_create_member(payload: MemberCreate, admin=Depends(require_admin
         lastName=payload.lastName.strip(),
         memberRole=(payload.memberRole or "arbitro").strip().lower(),
         observerType=payload.observerType or "",
+        organigrammaKind=(payload.organigrammaKind or "").strip().lower(),
         boardTitle=payload.boardTitle or "",
-        isPresident=payload.isPresident,
+        isPresident=False,
         category=payload.category,
         role=payload.role,
         kind=payload.kind,
@@ -642,11 +656,13 @@ async def admin_create_member(payload: MemberCreate, admin=Depends(require_admin
     )
     doc = member.model_dump()
     normalize_member(doc)
+    if not can_have_max_category(doc):
+        doc["category"] = ""
     await db.members.insert_one(doc.copy())
     from ..portal_credentials import ensure_member_portal_credentials
 
     await ensure_member_portal_credentials(doc)
-    return doc
+    return _admin_member_view(doc)
 
 
 @router.put("/members/{member_id}")
@@ -656,7 +672,7 @@ async def admin_update_member(
     db = get_db()
     payload.id = member_id
     payload.updatedAt = datetime.now(timezone.utc).isoformat()
-    from ..member_roles import normalize_member
+    from ..member_roles import can_have_max_category, normalize_member
 
     payload.bio = (payload.bio or "").strip()
     payload.chiSiamoText = (payload.chiSiamoText or "").strip()
@@ -664,21 +680,29 @@ async def admin_update_member(
     payload.bioHtml = ""
     if payload.memberRole:
         payload.memberRole = payload.memberRole.strip().lower()
+    if payload.organigrammaKind is not None:
+        payload.organigrammaKind = (payload.organigrammaKind or "").strip().lower()
     if not (payload.slug or "").strip():
         payload.slug = slugify(f"{payload.firstName}-{payload.lastName}")
     doc = payload.model_dump()
     normalize_member(doc)
+    if not can_have_max_category(doc):
+        doc["category"] = ""
+    # passwordHash non va sovrascritta da payload admin accidentale vuoto
+    existing = await db.members.find_one({"id": member_id}, {"_id": 0, "passwordHash": 1})
+    if existing and existing.get("passwordHash") and not doc.get("passwordHash"):
+        doc["passwordHash"] = existing["passwordHash"]
     await db.members.update_one({"id": member_id}, {"$set": doc})
     from ..media_urls import resolve_media_fields
     from ..member_category import refresh_member_category
 
-    if doc.get("memberRole") == "arbitro":
+    if can_have_max_category(doc):
         await refresh_member_category(db, doc, persist=True)
     resolve_media_fields(doc)
     from ..portal_credentials import ensure_member_portal_credentials
 
     await ensure_member_portal_credentials(doc)
-    return doc
+    return _admin_member_view(doc)
 
 
 @router.delete("/members/{member_id}")

@@ -113,10 +113,8 @@ export default function MemberFileImport({ onImported }) {
               <p>
                 <strong>Obbligatorio:</strong> nome e cognome (oppure una colonna «nominativo»).
               </p>
-              <p>
-                <strong>Opzionale:</strong> ruolo, categoria, meccanografico, email, telefono, anno inizio, note.
-              </p>
-              <p>La categoria sportiva non è obbligatoria: può restare vuota e aggiornarsi dopo dalle designazioni.</p>
+              <p>Colonne utili: ruolo (AE/AA/AB/AFR/OA/OT), meccanografico, email, telefono, anno inizio, note.</p>
+              <p>La categoria massima vale solo per AE e AA; altrimenti resta vuota.</p>
               <p>Profili già presenti (stesso nome, email o meccanografico) vengono aggiornati, non duplicati.</p>
             </div>
 

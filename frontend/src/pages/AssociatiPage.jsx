@@ -105,10 +105,17 @@ export default function AssociatiPage() {
                     {m.firstName} {m.lastName}
                   </CardTitle>
                   <div className="mt-2 text-xs uppercase tracking-wider text-gold-500 font-semibold">{m.role}</div>
-                  <div className="text-sm text-slate-600 mt-1">{m.category}</div>
-                  {m.yearStart && (
-                    <div className="text-xs text-slate-400 mt-2">In sezione dal {m.yearStart}</div>
+                  {(m.role === "AE" || m.role === "AA") && m.category && (
+                    <div className="text-sm text-slate-600 mt-1">{m.category}</div>
                   )}
+                  {m.yearStart ? (
+                    <div className="text-xs text-slate-400 mt-2">
+                      {(() => {
+                        const y = Math.max(0, new Date().getFullYear() - Number(m.yearStart));
+                        return y === 1 ? "1 anno di anzianità" : `${y} anni di anzianità`;
+                      })()}
+                    </div>
+                  ) : null}
                 </Card>
               ))}
             </div>
