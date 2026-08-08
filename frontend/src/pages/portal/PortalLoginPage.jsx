@@ -45,7 +45,7 @@ export default function PortalLoginPage() {
         <div className="flex items-center gap-3 mb-8">
           <img src={SECTION_LOGO} alt="AIA Legnano" className={SECTION_LOGO_CLASS.lg} />
           <div>
-            <div className="font-display text-xl font-bold text-navy-700">Area associati</div>
+            <div className="font-display text-xl font-bold text-navy-700">Area Associati</div>
             <div className="text-xs uppercase tracking-[0.18em] text-slate-500 font-medium">AIA Legnano</div>
           </div>
         </div>

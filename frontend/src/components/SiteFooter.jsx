@@ -93,9 +93,19 @@ export default function SiteFooter() {
                 <Link
                   to={PORTAL_ROUTES.login}
                   className="inline-flex items-center gap-1.5 text-slate-300 hover:text-gold-400 transition-colors text-sm"
+                  data-testid="footer-area-associati"
                 >
                   <Lock className="h-3.5 w-3.5" />
-                  Area associati
+                  Area Associati
+                </Link>
+              </li>
+              <li>
+                <Link
+                  to={ADMIN_ROUTES.login}
+                  className="inline-flex items-center gap-1.5 text-slate-300 hover:text-gold-400 transition-colors text-sm"
+                  data-testid="footer-admin-link"
+                >
+                  Amministrazione
                 </Link>
               </li>
               <li>
@@ -136,9 +146,12 @@ export default function SiteFooter() {
               <span className="block">Fondata nel {s.foundedYear || "1927"}.</span>
             </div>
           </div>
-          <div className="text-xs text-slate-400">
-            <Link to={ADMIN_ROUTES.login} className="hover:text-gold-400 transition-colors" data-testid="footer-admin-link">
-              Area Amministratori
+          <div className="text-xs text-slate-400 flex items-center gap-4">
+            <Link to={PORTAL_ROUTES.login} className="hover:text-gold-400 transition-colors">
+              Area Associati
+            </Link>
+            <Link to={ADMIN_ROUTES.login} className="hover:text-gold-400 transition-colors" data-testid="footer-admin-link-bottom">
+              Amministrazione
             </Link>
           </div>
         </div>

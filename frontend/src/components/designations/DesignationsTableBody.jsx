@@ -42,19 +42,19 @@ export default function DesignationsTableBody({
   const colSpan = 4 + (showNominativoCol ? 1 : 0) + (showActionsCol ? 1 : 0);
 
   return (
-    <table className="w-full min-w-0 md:min-w-[680px]" data-testid={tableTestId}>
+    <table className="w-full min-w-0 table-fixed" data-testid={tableTestId}>
       <thead>
         <tr
           className={`bg-navy-700 text-white text-left text-xs uppercase tracking-wider${
             stickyHeader ? " sticky top-0 z-10" : ""
           }`}
         >
-          <th className="px-4 py-3 font-semibold">Data</th>
-          <th className="px-4 py-3 font-semibold">Campionato</th>
-          <th className="px-4 py-3 font-semibold">Gara</th>
-          <th className="px-4 py-3 font-semibold">Ruolo</th>
-          {showNominativoCol && <th className="px-4 py-3 font-semibold">Nominativo</th>}
-          {showActionsCol && <th className="px-4 py-3 font-semibold text-right">Azioni</th>}
+          <th className="px-3 py-3 font-semibold w-[12%]">Data</th>
+          <th className="px-3 py-3 font-semibold w-[22%]">Campionato</th>
+          <th className="px-3 py-3 font-semibold w-[28%]">Gara</th>
+          <th className="px-3 py-3 font-semibold w-[12%]">Ruolo</th>
+          {showNominativoCol && <th className="px-3 py-3 font-semibold w-[16%]">Nominativo</th>}
+          {showActionsCol && <th className="px-3 py-3 font-semibold w-[10%] text-right">Azioni</th>}
         </tr>
       </thead>
       <tbody>
@@ -67,16 +67,16 @@ export default function DesignationsTableBody({
                 className={`${selected ? "bg-navy-50 ring-1 ring-inset ring-navy-200" : zebra}`}
                 data-testid={d.id ? `${rowTestIdPrefix}-${d.id}` : undefined}
               >
-                <td className="px-4 py-3.5 text-sm whitespace-nowrap text-slate-700">
+                <td className="px-3 py-3.5 text-sm text-slate-700">
                   <span className="inline-flex items-center gap-1.5">
                     <CalendarDays className="h-4 w-4 text-gold-400 shrink-0" />
                     {formatDateIt(d.matchDate, { short: true })}
                   </span>
                 </td>
-                <td className="px-4 py-3.5 text-sm text-slate-600">{formatDesignationMeta(d)}</td>
-                <td className="px-4 py-3.5 text-sm font-medium text-navy-700">{displayDesignationGara(d)}</td>
-                <td className="px-4 py-3.5 text-sm">
-                  <span className="text-xs bg-navy-50 text-navy-700 px-2.5 py-1 rounded font-medium whitespace-nowrap">
+                <td className="px-3 py-3.5 text-sm text-slate-600 break-words">{formatDesignationMeta(d)}</td>
+                <td className="px-3 py-3.5 text-sm font-medium text-navy-700 break-words">{displayDesignationGara(d)}</td>
+                <td className="px-3 py-3.5 text-sm">
+                  <span className="text-xs bg-navy-50 text-navy-700 px-2 py-1 rounded font-medium">
                     {d.role}
                   </span>
                 </td>

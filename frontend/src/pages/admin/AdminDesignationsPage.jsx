@@ -6,10 +6,11 @@ import {
 } from "../../lib/api";
 import { MemberSingleSelect } from "../../components/admin/MemberSelect";
 import { formatDateTimeIt } from "../../lib/format";
-import { displayDesignationGara } from "../../lib/designationsDisplay";
+import { displayDesignationGara, formatDesignationMeta } from "../../lib/designationsDisplay";
 import DesignationsTableBody from "../../components/designations/DesignationsTableBody";
 import DesignationFileImport from "../../components/admin/DesignationFileImport";
-import { Plus, Pencil, Trash2, RefreshCw, Loader2, ExternalLink } from "lucide-react";
+import { formatDateIt } from "../../lib/format";
+import { Plus, Pencil, Trash2, RefreshCw, Loader2, ExternalLink, CalendarDays } from "lucide-react";
 import { SITE_ICONS } from "../../lib/siteIcons";
 import { AdminEmptyState, AdminFormModal, AdminPageHeader } from "../../components/admin/admin-ui";
 import { Button } from "@/design-system";
@@ -280,47 +281,88 @@ export default function AdminDesignationsPage() {
       {items.length === 0 && !editing ? (
         <AdminEmptyState icon={SITE_ICONS.designations} title="Nessuna designazione. Importa da file o usa Sync AIA FIGC." />
       ) : items.length > 0 ? (
-        <div className="border border-slate-200 rounded-xl overflow-hidden shadow-sm overflow-x-auto">
-          <DesignationsTableBody
-            designations={items}
-            tableTestId="admin-designations-table"
-            rowTestIdPrefix="designation-row"
-            renderNominativo={(d) => (
-              <>
-                {d.memberSlug ? (
-                  <Link to={`/arbitri/${d.memberSlug}`} target="_blank" className="text-navy-600 hover:underline font-medium">
-                    {memberLabel(d)}
-                  </Link>
-                ) : (
-                  <span>{memberLabel(d)}</span>
-                )}
-                {!d.memberId && d.memberName && (
-                  <span className="block text-[10px] text-amber-600">non collegato</span>
-                )}
-              </>
-            )}
-            renderActions={(d) => (
-              <>
-                <button
-                  type="button"
-                  onClick={() => openEdit(d)}
-                  className="p-1.5 rounded text-navy-600 hover:bg-navy-50"
-                  data-testid={`designation-edit-${d.id}`}
-                  title="Modifica"
-                >
-                  <Pencil className="h-4 w-4" />
-                </button>
-                <button
-                  type="button"
-                  onClick={() => remove(d.id, displayDesignationGara(d))}
-                  className="p-1.5 text-red-600 hover:bg-red-50 rounded ml-1"
-                  data-testid={`designation-delete-${d.id}`}
-                >
-                  <Trash2 className="h-4 w-4" />
-                </button>
-              </>
-            )}
-          />
+        <div className="border border-slate-200 rounded-xl overflow-hidden shadow-sm bg-white">
+          <ul className="divide-y divide-slate-100 lg:hidden" data-testid="admin-designations-mobile-list">
+            {items.map((d) => (
+              <li key={d.id} className="p-4" data-testid={`designation-row-${d.id}`}>
+                <div className="flex items-start justify-between gap-3">
+                  <div className="min-w-0 flex-1">
+                    <div className="flex flex-wrap items-center gap-2 mb-1.5">
+                      <span className="inline-flex items-center gap-1 text-sm text-slate-700">
+                        <CalendarDays className="h-4 w-4 text-gold-400 shrink-0" />
+                        {formatDateIt(d.matchDate, { short: true })}
+                      </span>
+                      <span className="text-xs bg-navy-50 text-navy-700 px-2 py-0.5 rounded font-medium">{d.role}</span>
+                    </div>
+                    <p className="text-sm font-medium text-navy-700 break-words">{displayDesignationGara(d)}</p>
+                    <p className="text-xs text-slate-500 mt-1 break-words">{formatDesignationMeta(d)}</p>
+                    <p className="text-sm mt-1.5">
+                      {d.memberSlug ? (
+                        <Link to={`/arbitri/${d.memberSlug}`} target="_blank" className="text-navy-600 hover:underline font-medium break-words">
+                          {memberLabel(d)}
+                        </Link>
+                      ) : (
+                        <span className="break-words">{memberLabel(d)}</span>
+                      )}
+                      {!d.memberId && d.memberName && (
+                        <span className="ml-1 text-[10px] text-amber-600">non collegato</span>
+                      )}
+                    </p>
+                  </div>
+                  <div className="flex shrink-0">
+                    <button type="button" onClick={() => openEdit(d)} className="p-2 rounded text-navy-600 hover:bg-navy-50" data-testid={`designation-edit-${d.id}`} title="Modifica">
+                      <Pencil className="h-4 w-4" />
+                    </button>
+                    <button type="button" onClick={() => remove(d.id, displayDesignationGara(d))} className="p-2 text-red-600 hover:bg-red-50 rounded" data-testid={`designation-delete-${d.id}`}>
+                      <Trash2 className="h-4 w-4" />
+                    </button>
+                  </div>
+                </div>
+              </li>
+            ))}
+          </ul>
+          <div className="hidden lg:block overflow-x-auto">
+            <DesignationsTableBody
+              designations={items}
+              tableTestId="admin-designations-table"
+              rowTestIdPrefix="designation-row-desktop"
+              renderNominativo={(d) => (
+                <>
+                  {d.memberSlug ? (
+                    <Link to={`/arbitri/${d.memberSlug}`} target="_blank" className="text-navy-600 hover:underline font-medium">
+                      {memberLabel(d)}
+                    </Link>
+                  ) : (
+                    <span>{memberLabel(d)}</span>
+                  )}
+                  {!d.memberId && d.memberName && (
+                    <span className="block text-[10px] text-amber-600">non collegato</span>
+                  )}
+                </>
+              )}
+              renderActions={(d) => (
+                <>
+                  <button
+                    type="button"
+                    onClick={() => openEdit(d)}
+                    className="p-1.5 rounded text-navy-600 hover:bg-navy-50"
+                    data-testid={`designation-edit-${d.id}`}
+                    title="Modifica"
+                  >
+                    <Pencil className="h-4 w-4" />
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => remove(d.id, displayDesignationGara(d))}
+                    className="p-1.5 text-red-600 hover:bg-red-50 rounded ml-1"
+                    data-testid={`designation-delete-${d.id}`}
+                  >
+                    <Trash2 className="h-4 w-4" />
+                  </button>
+                </>
+              )}
+            />
+          </div>
         </div>
       ) : null}
     </div>

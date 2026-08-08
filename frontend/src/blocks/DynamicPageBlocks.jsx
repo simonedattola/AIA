@@ -626,7 +626,7 @@ export function PortalLoginBlock({ config: c }) {
         <div className="flex items-center gap-3 mb-8">
           <img src={SECTION_LOGO} alt="AIA Legnano" className={SECTION_LOGO_CLASS.lg} />
           <div>
-            <CardTitle as="div" className="text-xl">{c.title || "Area associati"}</CardTitle>
+            <CardTitle as="div" className="text-xl">{c.title || "Area Associati"}</CardTitle>
             <Eyebrow as="div" className="tracking-[0.18em] text-slate-500 font-medium">{c.subtitle || "AIA Legnano"}</Eyebrow>
           </div>
         </div>

@@ -98,13 +98,15 @@ export default function AdminLayout() {
           <button type="button" onClick={() => setOpen(true)} className="p-2 text-white" aria-label="Apri menu">
             <Menu className="h-5 w-5" />
           </button>
-          <div className="font-display font-bold text-white">Amministrazione</div>
+          <Link to={R.dashboard} className="font-display font-bold text-white hover:text-gold-300 transition-colors">
+            Amministrazione
+          </Link>
           <a href="/" target="_blank" rel="noopener noreferrer" className="p-2 text-gold-300" aria-label="Sito pubblico">
             <ExternalLink className="h-5 w-5" />
           </a>
         </header>
 
-        <main className="flex-1 overflow-x-auto p-4 sm:p-6 lg:p-10" data-testid="admin-content">
+        <main className="flex-1 overflow-x-hidden p-3 sm:p-6 lg:p-10" data-testid="admin-content">
           <Outlet />
         </main>
       </div>

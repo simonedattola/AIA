@@ -263,90 +263,115 @@ export default function AdminMembersPage() {
           </div>
         </div>
 
-        <div className="overflow-x-auto">
-          <table className="w-full">
-            <thead>
-              <tr className="bg-slate-50 text-xs uppercase text-slate-500 text-left">
-                <th className="px-4 py-3">Nome</th>
-                <th className="px-4 py-3">Ruolo</th>
-                <th className="px-4 py-3">Incarico</th>
-                <th className="px-4 py-3">Meccanografico</th>
-                <th className="px-4 py-3">Anzianità</th>
-                <th className="px-4 py-3 text-right">Azioni</th>
-              </tr>
-            </thead>
-            <tbody>
-              {loading ? (
-                <tr>
-                  <td colSpan="6" className="px-4 py-10 text-center text-slate-500">
-                    <Loader2 className="h-5 w-5 animate-spin inline mr-2" /> Caricamento…
-                  </td>
-                </tr>
-              ) : filtered.length === 0 ? (
-                <tr>
-                  <td colSpan="6" className="p-4">
-                    <AdminEmptyState icon={UserIcon} title="Nessun profilo trovato." />
-                  </td>
-                </tr>
-              ) : (
-                filtered.map((m) => {
-                  const years = seniorityYears(m.yearStart);
-                  return (
-                    <tr key={m.id} className="border-t border-slate-100 hover:bg-slate-50" data-testid={`member-row-${m.id}`}>
-                      <td className="px-4 py-3">
-                        <div className="flex items-center gap-3">
-                          {m.photoUrl ? (
-                            <MediaImage src={m.photoUrl} alt="" className="w-10 h-10 rounded-full object-cover border border-slate-200" />
-                          ) : (
-                            <div className="w-10 h-10 rounded-full bg-navy-100 text-navy-600 flex items-center justify-center text-sm font-bold">
-                              {m.firstName[0]}{m.lastName[0]}
-                            </div>
-                          )}
-                          <div>
-                            <div className="font-medium text-navy-700">{m.firstName} {m.lastName}</div>
-                            {m.email && <div className="text-xs text-slate-400">{m.email}</div>}
-                          </div>
+        {loading ? (
+          <div className="px-4 py-10 text-center text-slate-500">
+            <Loader2 className="h-5 w-5 animate-spin inline mr-2" /> Caricamento…
+          </div>
+        ) : filtered.length === 0 ? (
+          <div className="p-4">
+            <AdminEmptyState icon={UserIcon} title="Nessun profilo trovato." />
+          </div>
+        ) : (
+          <>
+            <ul className="divide-y divide-slate-100 lg:hidden" data-testid="admin-members-mobile-list">
+              {filtered.map((m) => {
+                const years = seniorityYears(m.yearStart);
+                return (
+                  <li key={m.id} className="p-4" data-testid={`member-row-${m.id}`}>
+                    <div className="flex items-start gap-3">
+                      {m.photoUrl ? (
+                        <MediaImage src={m.photoUrl} alt="" className="w-11 h-11 rounded-full object-cover border border-slate-200 shrink-0" />
+                      ) : (
+                        <div className="w-11 h-11 rounded-full bg-navy-100 text-navy-600 flex items-center justify-center text-sm font-bold shrink-0">
+                          {m.firstName[0]}{m.lastName[0]}
                         </div>
-                      </td>
-                      <td className="px-4 py-3 text-sm">{memberRoleLabel(m)}</td>
-                      <td className="px-4 py-3 text-sm">{m.boardTitle || "—"}</td>
-                      <td className="px-4 py-3 text-sm font-mono">{m.meccanografico || "—"}</td>
-                      <td className="px-4 py-3 text-sm">
-                        {years == null ? "—" : years === 1 ? "1 anno" : `${years} anni`}
-                      </td>
-                      <td className="px-4 py-3 text-right whitespace-nowrap">
+                      )}
+                      <div className="min-w-0 flex-1">
+                        <div className="font-medium text-navy-700 break-words">{m.firstName} {m.lastName}</div>
+                        <div className="text-sm text-slate-600 mt-0.5 break-words">{memberRoleLabel(m)}</div>
+                        {m.boardTitle && <div className="text-xs text-slate-500 mt-0.5 break-words">{m.boardTitle}</div>}
+                        <div className="text-xs text-slate-500 mt-1 flex flex-wrap gap-x-3 gap-y-0.5">
+                          {m.meccanografico && <span className="font-mono">{m.meccanografico}</span>}
+                          {years != null && <span>{years === 1 ? "1 anno" : `${years} anni`}</span>}
+                        </div>
+                      </div>
+                      <div className="flex shrink-0 gap-0.5">
                         {m.slug && (
-                          <a
-                            href={`/arbitri/${m.slug}`}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="p-1.5 text-slate-500 hover:text-navy-600 hover:bg-navy-50 rounded inline-block"
-                            title="Profilo pubblico"
-                          >
+                          <a href={`/arbitri/${m.slug}`} target="_blank" rel="noopener noreferrer" className="p-2 text-slate-500 hover:text-navy-600 rounded" title="Profilo pubblico">
                             <ExternalLink className="h-4 w-4" />
                           </a>
                         )}
-                        <button
-                          onClick={() => setEditing(withFormFields({ ...m, awards: m.awards || [] }))}
-                          className="p-1.5 text-navy-600 hover:bg-navy-50 rounded"
-                          data-testid={`member-edit-${m.id}`}
-                        >
+                        <button type="button" onClick={() => setEditing(withFormFields({ ...m, awards: m.awards || [] }))} className="p-2 text-navy-600 hover:bg-navy-50 rounded" data-testid={`member-edit-${m.id}`}>
                           <Pencil className="h-4 w-4" />
                         </button>
-                        <button
-                          onClick={() => remove(m.id, `${m.firstName} ${m.lastName}`)}
-                          className="p-1.5 text-red-600 hover:bg-red-50 rounded ml-1"
-                        >
+                        <button type="button" onClick={() => remove(m.id, `${m.firstName} ${m.lastName}`)} className="p-2 text-red-600 hover:bg-red-50 rounded">
                           <Trash2 className="h-4 w-4" />
                         </button>
-                      </td>
-                    </tr>
-                  );
-                })
-              )}
-            </tbody>
-          </table>
-        </div>
+                      </div>
+                    </div>
+                  </li>
+                );
+              })}
+            </ul>
+
+            <div className="hidden lg:block overflow-x-auto">
+              <table className="w-full table-fixed">
+                <thead>
+                  <tr className="bg-slate-50 text-xs uppercase text-slate-500 text-left">
+                    <th className="px-4 py-3 w-[38%]">Nome</th>
+                    <th className="px-4 py-3 w-[28%]">Ruolo / incarico</th>
+                    <th className="px-4 py-3 w-[14%]">Mecc.</th>
+                    <th className="px-4 py-3 w-[10%]">Anz.</th>
+                    <th className="px-4 py-3 w-[10%] text-right">Azioni</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {filtered.map((m) => {
+                    const years = seniorityYears(m.yearStart);
+                    return (
+                      <tr key={m.id} className="border-t border-slate-100 hover:bg-slate-50" data-testid={`member-row-desktop-${m.id}`}>
+                        <td className="px-4 py-3">
+                          <div className="flex items-center gap-3 min-w-0">
+                            {m.photoUrl ? (
+                              <MediaImage src={m.photoUrl} alt="" className="w-9 h-9 rounded-full object-cover border border-slate-200 shrink-0" />
+                            ) : (
+                              <div className="w-9 h-9 rounded-full bg-navy-100 text-navy-600 flex items-center justify-center text-xs font-bold shrink-0">
+                                {m.firstName[0]}{m.lastName[0]}
+                              </div>
+                            )}
+                            <div className="min-w-0">
+                              <div className="font-medium text-navy-700 truncate">{m.firstName} {m.lastName}</div>
+                              {m.email && <div className="text-xs text-slate-400 truncate">{m.email}</div>}
+                            </div>
+                          </div>
+                        </td>
+                        <td className="px-4 py-3 text-sm min-w-0">
+                          <div className="truncate">{memberRoleLabel(m)}</div>
+                          {m.boardTitle && <div className="text-xs text-slate-500 truncate">{m.boardTitle}</div>}
+                        </td>
+                        <td className="px-4 py-3 text-sm font-mono truncate">{m.meccanografico || "—"}</td>
+                        <td className="px-4 py-3 text-sm">{years == null ? "—" : `${years}a`}</td>
+                        <td className="px-4 py-3 text-right whitespace-nowrap">
+                          {m.slug && (
+                            <a href={`/arbitri/${m.slug}`} target="_blank" rel="noopener noreferrer" className="p-1.5 text-slate-500 hover:text-navy-600 hover:bg-navy-50 rounded inline-block" title="Profilo pubblico">
+                              <ExternalLink className="h-4 w-4" />
+                            </a>
+                          )}
+                          <button type="button" onClick={() => setEditing(withFormFields({ ...m, awards: m.awards || [] }))} className="p-1.5 text-navy-600 hover:bg-navy-50 rounded" data-testid={`member-edit-${m.id}`}>
+                            <Pencil className="h-4 w-4" />
+                          </button>
+                          <button type="button" onClick={() => remove(m.id, `${m.firstName} ${m.lastName}`)} className="p-1.5 text-red-600 hover:bg-red-50 rounded ml-1">
+                            <Trash2 className="h-4 w-4" />
+                          </button>
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+          </>
+        )}
       </div>
     </div>
   );
