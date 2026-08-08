@@ -1,7 +1,7 @@
 import { Link, NavLink, useLocation } from "react-router-dom";
 import { useEffect, useState, useMemo, useRef, useCallback } from "react";
 import { useSite } from "../lib/site-context";
-import { SECTION_LOGO, SECTION_LOGO_CLASS } from "../lib/brand";
+import { SECTION_LOGO, SECTION_LOGO_CLASS, NATIONAL_LOGO, NATIONAL_LOGO_CLASS } from "../lib/brand";
 import { PORTAL_ROUTES } from "../lib/appRoutes";
 import { isNavItemActive, normalizePublicNavItem, publicNavLinkClass, publicMobileNavLinkClass, NavActiveLabel } from "../lib/navActive";
 import { Menu, X, ChevronRight } from "lucide-react";
@@ -86,11 +86,24 @@ export default function SiteHeader() {
             className="flex items-center gap-2.5 max-[1139px]:gap-3 shrink-0 min-w-0"
             data-testid="header-logo"
           >
-            <img
-              src={SECTION_LOGO}
-              alt="AIA Legnano"
-              className={SECTION_LOGO_CLASS.header}
-            />
+            <span className="flex items-center gap-2 shrink-0" data-testid="header-logo-pair">
+              <img
+                src={SECTION_LOGO}
+                alt="AIA Legnano"
+                className={SECTION_LOGO_CLASS.header}
+                width={40}
+                height={40}
+                data-testid="header-section-logo"
+              />
+              <img
+                src={NATIONAL_LOGO}
+                alt="AIA Nazionale"
+                className={NATIONAL_LOGO_CLASS.header}
+                width={40}
+                height={40}
+                data-testid="header-national-logo"
+              />
+            </span>
             <span className="font-display font-bold text-navy-600 max-[1139px]:text-lg min-[1140px]:text-base xl:text-lg tracking-tight whitespace-nowrap truncate">
               AIA Legnano
             </span>

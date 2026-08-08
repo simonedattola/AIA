@@ -59,7 +59,7 @@ Entrypoint: `backend/server.py`. Domain logic under `backend/app/` (`routes/`, s
 | `/area-riservata/login` | Portal login (integrated on port 3000) |
 | Public content routes | Articles, events, gallery, forms, etc. |
 
-Legacy Next.js app in `area-riservata/` is **deprecated** (see `area-riservata/DEPRECATED.md`).
+Portal UI lives in the main React app (`frontend/`); there is no separate Next.js portal.
 
 ### Auth
 

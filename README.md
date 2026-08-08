@@ -2,6 +2,24 @@
 
 Sito istituzionale e pannello admin per la Sezione AIA di Legnano (React + FastAPI + MongoDB).
 
+## Versione unica (importante)
+
+C’è **una sola versione del sito**: il branch **`main`**.
+
+| Cosa | Dove |
+|------|------|
+| Codice ufficiale | `main` |
+| Sito in locale | `http://localhost:3000` |
+| API in locale | `http://localhost:8000` |
+| Backup pre go-live | branch `backup/pre-go-live` (solo ripristino) |
+
+Non usare altre branch feature per sviluppare o per aprire Chrome: creano confusioni (loghi mancanti, layout diversi).
+
+```bash
+git checkout main
+git pull origin main
+```
+
 ## Requisiti
 
 - **Node.js** ≥ 18 (con npm o yarn)
@@ -40,11 +58,13 @@ docker compose up --build
 
 Compose legge `.env` in root e **richiede** `JWT_SECRET`, `ADMIN_EMAIL` e `ADMIN_PASSWORD` (nessun valore hardcoded in `docker-compose.yml`).
 
-3. Frontend — crea `frontend/.env` (non secret):
+3. Frontend — crea `frontend/.env` (non secret). Per sviluppo locale con proxy CRA preferisci URL vuoto:
 
 ```
-REACT_APP_BACKEND_URL=http://localhost:8000
+REACT_APP_BACKEND_URL=
 ```
+
+(alternativa diretta: `REACT_APP_BACKEND_URL=http://localhost:8000`)
 
 Per i test di integrazione backend, esporta le stesse credenziali admin (`ADMIN_PASSWORD`, opzionalmente `ADMIN_EMAIL`) prima di `pytest`.
 
@@ -62,8 +82,6 @@ Elenco completo, generazione, checklist e procedura di rotazione:
 - API: `http://localhost:8000/api/portal/*`
 - Login: **codice meccanografico** + password (iniziale `nome.cognome`, es. `mario.rossi`)
 - Admin: **Presenze** e **Notifiche portale** nel pannello `/admin`
-
-La cartella `area-riservata/` (Next.js su 3001) è **deprecata** — vedi `area-riservata/DEPRECATED.md`.
 
 ## Backend
 
@@ -202,7 +220,6 @@ Integration tests require a running API + `ADMIN_PASSWORD` and are excluded from
 - Nel pannello admin: link **Area riservata** nella sidebar
 - Portale integrato: `http://localhost:3000/area-riservata/login` (API `/api/portal/*`)
 - Login: **codice meccanografico** + password iniziale `nome.cognome`
-- La cartella `area-riservata/` (Next.js) è deprecata
 
 ## Credenziali admin (seed)
 
