@@ -104,9 +104,12 @@ export default function SiteHeader() {
                 data-testid="header-national-logo"
               />
             </span>
-            <span className="font-display font-bold text-navy-600 max-[1139px]:text-lg min-[1140px]:text-base xl:text-lg tracking-tight whitespace-nowrap truncate">
-              AIA Legnano
-            </span>
+            {/* Testo solo in vista compact: con due loghi + nav inline occuperebbe troppo spazio. */}
+            {!inlineNav && (
+              <span className="font-display font-bold text-navy-600 text-lg tracking-tight whitespace-nowrap truncate">
+                AIA Legnano
+              </span>
+            )}
           </Link>
 
           {inlineNav && (
