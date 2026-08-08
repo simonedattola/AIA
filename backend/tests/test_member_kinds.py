@@ -33,6 +33,18 @@ def test_member_role_label():
     assert "OA" in member_role_label("osservatore", "oa")
 
 
+def test_aa_is_assistente_arbitrale():
+    from app.member_roles import infer_member_role, member_role_label, normalize_member
+    from app.members_import import _normalize_member_role
+
+    assert _normalize_member_role("AA")[0] == "assistente"
+    assert infer_member_role({"role": "AA"}) == "assistente"
+    doc = {"role": "AA", "firstName": "Marco", "lastName": "Test"}
+    normalize_member(doc)
+    assert doc["memberRole"] == "assistente"
+    assert member_role_label(doc["memberRole"], doc=doc) == "Assistente Arbitrale"
+
+
 def test_chi_siamo_includes_arbitro_with_board_title():
     from app.member_roles import (
         chi_siamo_query,

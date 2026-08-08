@@ -114,13 +114,17 @@ function matchesArbitriFilter(m, filterKey) {
     return code === "AB" || String(m.category || "").toLowerCase().includes("benemerito");
   }
   if (filterKey === "ASSISTENTE") {
-    return m.memberRole === "assistente" || String(m.category || "").toLowerCase().includes("assistente arbitrale");
+    return (
+      code === "AA" ||
+      m.memberRole === "assistente" ||
+      String(m.category || "").toLowerCase().includes("assistente arbitrale")
+    );
   }
   if (filterKey === "AE") {
-    if (m.memberRole === "assistente") return false;
+    if (code === "AA" || m.memberRole === "assistente") return false;
     if (code === "AB" || String(m.category || "").toLowerCase().includes("benemerito")) return false;
-    // Codice AIA AE; senza codice: arbitri non assistenti/benemeriti
-    return !code || code === "AE" || code === "AA" || code === "AFR";
+    // Codice AIA AE / fuori ruolo; senza codice: arbitri non assistenti/benemeriti
+    return !code || code === "AE" || code === "AFR";
   }
   return true;
 }
