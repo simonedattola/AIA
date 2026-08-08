@@ -51,7 +51,20 @@ export function hasDesignations(memberRole) {
   return memberRole === "arbitro" || memberRole === "assistente";
 }
 
+function isArbitroBenemerito(m) {
+  const code = String(m?.role || "").trim().toUpperCase();
+  if (code === "AB") return true;
+  return String(m?.category || "").toLowerCase().includes("benemerito");
+}
+
 export function memberRoleLabel(m) {
+  if (isArbitroBenemerito(m)) {
+    const board = (m?.boardTitle || "").trim();
+    if (board && board.toLowerCase() !== "arbitro benemerito") {
+      return `Arbitro Benemerito · ${board}`;
+    }
+    return "Arbitro Benemerito";
+  }
   const r = m?.memberRole;
   const board = (m?.boardTitle || "").trim();
   if (r === "arbitro") return board ? `Arbitro · ${board}` : "Arbitro";
@@ -65,9 +78,11 @@ export function memberRoleLabel(m) {
 }
 
 export function profileBackPath(memberRole, member) {
+  if (isArbitroBenemerito(member)) return "/chi-siamo";
   if (memberRole === "consiglio_direttivo" || memberRole === "osservatore") {
     return "/chi-siamo";
   }
+  if ((member?.boardTitle || "").trim()) return "/chi-siamo";
   // Arbitro/assistente con incarico sezionale: resta sul percorso associati
   return "/arbitri";
 }
