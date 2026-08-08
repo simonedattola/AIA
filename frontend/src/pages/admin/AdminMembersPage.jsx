@@ -4,7 +4,19 @@ import {
   adminMembers, adminCreateMember, adminUpdateMember, adminDeleteMember, adminUpload,
 } from "../../lib/api";
 import { toast, apiErrorMessage } from "../../lib/toast";
-import { MEMBER_ROLES, ROLE_FILTERS, normalizeMember, memberRoleLabel } from "../../lib/memberRoles";
+import {
+  AIA_QUALIFICHE,
+  ORGANIGRAMMA_KINDS,
+  ROLE_FILTERS,
+  normalizeMember,
+  memberRoleLabel,
+  canHaveMaxCategory,
+  defaultPortalPassword,
+  seniorityYears,
+  yearStartFromSeniority,
+  isSectionPresident,
+  matchesRoleFilter,
+} from "../../lib/memberRoles";
 import { Plus, Pencil, Trash2, Save, X, Upload, Search, Loader2, Filter, User as UserIcon, ExternalLink, Award } from "lucide-react";
 import { Link } from "react-router-dom";
 import MediaImage from "../../components/MediaImage";
@@ -16,13 +28,17 @@ import { Button } from "@/design-system";
 const empty = () => ({
   firstName: "",
   lastName: "",
+  role: "",
   memberRole: "arbitro",
-  observerType: "oa",
+  observerType: "",
+  organigrammaKind: "",
   boardTitle: "",
   isPresident: false,
   category: "",
-  yearStart: new Date().getFullYear(),
+  yearStart: null,
+  seniorityYears: "",
   meccanografico: "",
+  portalPassword: "",
   photoUrl: "",
   bio: "",
   chiSiamoText: "",
@@ -32,6 +48,21 @@ const empty = () => ({
   notes: "",
   awards: [],
 });
+
+function withFormFields(m) {
+  const n = normalizeMember(m);
+  const years = seniorityYears(n.yearStart);
+  return {
+    ...n,
+    seniorityYears: years == null ? "" : String(years),
+    portalPassword: n.portalPassword || defaultPortalPassword(n.firstName, n.lastName),
+  };
+}
+
+function memberRoleFromAia(code) {
+  const map = { AE: "arbitro", AA: "assistente", AB: "arbitro", AFR: "arbitro", OA: "osservatore", OT: "osservatore" };
+  return map[code] || (code ? "arbitro" : "");
+}
 
 export default function AdminMembersPage() {
   const [searchParams, setSearchParams] = useSearchParams();
@@ -46,14 +77,14 @@ export default function AdminMembersPage() {
   const load = useCallback(async () => {
     setLoading(true);
     try {
-      const data = await adminMembers(roleFilter ? { memberRole: roleFilter } : {});
+      const data = await adminMembers({});
       setItems(data.map(normalizeMember));
     } catch (e) {
       toast.error(apiErrorMessage(e, "Impossibile caricare associati"));
     } finally {
       setLoading(false);
     }
-  }, [roleFilter]);
+  }, []);
   useEffect(() => { load(); }, [load]);
 
   useEffect(() => {
@@ -67,9 +98,13 @@ export default function AdminMembersPage() {
     if (!m.firstName?.trim()) return "Il nome è obbligatorio";
     if (!m.lastName?.trim()) return "Il cognome è obbligatorio";
     if (m.email && !/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(m.email)) return "Email non valida";
-    if (m.yearStart && (m.yearStart < 1900 || m.yearStart > new Date().getFullYear() + 1)) return "Anno inizio non valido";
-    if (m.memberRole === "consiglio_direttivo" && !m.boardTitle?.trim()) return "Indica l'incarico nel consiglio (es. Presidente, Segretario)";
-    if (["arbitro", "assistente"].includes(m.memberRole) && !m.meccanografico?.trim()) {
+    const years = m.seniorityYears === "" || m.seniorityYears == null ? null : Number(m.seniorityYears);
+    if (years != null && (Number.isNaN(years) || years < 0 || years > 120)) return "Anzianità non valida";
+    if (m.organigrammaKind && !m.boardTitle?.trim()) {
+      return "Indica l'incarico in organigramma (es. Segretario, Area Informatica)";
+    }
+    const code = String(m.role || "").trim().toUpperCase();
+    if (["AE", "AA", "AB", "AFR"].includes(code) && !m.meccanografico?.trim()) {
       return "Il codice meccanografico è obbligatorio per l'accesso all'area associati";
     }
     return null;
@@ -80,21 +115,31 @@ export default function AdminMembersPage() {
     if (err) return toast.error(err);
     setSaving(true);
     try {
-      const payload = {
+      const code = String(editing.role || "").trim().toUpperCase();
+      const organigrammaKind = (editing.organigrammaKind || "").trim().toLowerCase();
+      const boardTitle = organigrammaKind ? (editing.boardTitle || "").trim() : "";
+      const memberRole = code
+        ? memberRoleFromAia(code)
+        : organigrammaKind === "cds"
+          ? "consiglio_direttivo"
+          : editing.memberRole || "arbitro";
+      const yearStart = yearStartFromSeniority(editing.seniorityYears);
+      const draft = {
         ...editing,
         firstName: editing.firstName.trim(),
         lastName: editing.lastName.trim(),
-        memberRole: (editing.memberRole || "arbitro").toLowerCase(),
+        role: code,
+        memberRole,
+        organigrammaKind,
+        boardTitle,
+        observerType: code === "OT" ? "ot" : code === "OA" ? "oa" : "",
+        category: canHaveMaxCategory({ role: code }) ? (editing.category || "").trim() : "",
+        yearStart,
         bio: (editing.bio || "").trim(),
         chiSiamoText: (editing.chiSiamoText || "").trim(),
         presidentLongBio: (editing.presidentLongBio || "").trim(),
         bioHtml: "",
-        boardTitle: (editing.boardTitle || "").trim(),
-        observerType: editing.memberRole === "osservatore" ? (editing.observerType || "oa") : "",
-        isPresident:
-          !!editing.isPresident &&
-          (editing.memberRole === "consiglio_direttivo" || !!(editing.boardTitle || "").trim()),
-        yearStart: editing.yearStart ? Number(editing.yearStart) : null,
+        isPresident: isSectionPresident({ organigrammaKind, boardTitle }),
         awards: (editing.awards || [])
           .filter((a) => (a.title || "").trim())
           .map((a, i) => ({
@@ -104,11 +149,13 @@ export default function AdminMembersPage() {
             year: a.year ? Number(a.year) : null,
           })),
       };
+      delete draft.seniorityYears;
+      delete draft.portalPassword;
       if (editing.id) {
-        const upd = await adminUpdateMember(editing.id, payload);
+        const upd = await adminUpdateMember(editing.id, draft);
         toast.success(`${upd.firstName} ${upd.lastName} aggiornato`);
       } else {
-        const res = await adminCreateMember(payload);
+        const res = await adminCreateMember(draft);
         toast.success(`${res.firstName} ${res.lastName} creato`);
       }
       setEditing(null);
@@ -147,15 +194,18 @@ export default function AdminMembersPage() {
   };
 
   const filtered = items.filter((m) => {
+    if (!matchesRoleFilter(m, roleFilter)) return false;
     if (!q) return true;
-    return `${m.firstName} ${m.lastName} ${m.category} ${m.boardTitle} ${m.meccanografico || ""}`.toLowerCase().includes(q.toLowerCase());
+    return `${m.firstName} ${m.lastName} ${m.category} ${m.boardTitle} ${m.role} ${m.meccanografico || ""}`
+      .toLowerCase()
+      .includes(q.toLowerCase());
   });
 
   return (
     <div data-testid="admin-members">
       <AdminPageHeader
         title="Anagrafica"
-        description={`${items.length} persone in anagrafica · arbitri, assistenti, consiglio direttivo e osservatori. I conteggi del sito usano questo elenco.`}
+        description={`${items.length} persone · organigramma, arbitri e osservatori.`}
       >
         <div className="flex flex-wrap items-center gap-2">
           <MemberFileImport
@@ -191,7 +241,7 @@ export default function AdminMembersPage() {
             <input
               value={q}
               onChange={(e) => setQ(e.target.value)}
-              placeholder="Cerca per nome, categoria, incarico…"
+              placeholder="Cerca per nome, incarico, codice…"
               className="w-full pl-9 pr-3 py-2 border border-slate-300 rounded text-sm focus:outline-none focus:border-navy-600 focus:ring-2 focus:ring-navy-600/20"
               data-testid="admin-members-search"
             />
@@ -219,9 +269,9 @@ export default function AdminMembersPage() {
               <tr className="bg-slate-50 text-xs uppercase text-slate-500 text-left">
                 <th className="px-4 py-3">Nome</th>
                 <th className="px-4 py-3">Ruolo</th>
-                <th className="px-4 py-3">Categoria / Incarico</th>
-                <th className="px-4 py-3">Mec. AIA</th>
-                <th className="px-4 py-3">Anno</th>
+                <th className="px-4 py-3">Incarico</th>
+                <th className="px-4 py-3">Meccanografico</th>
+                <th className="px-4 py-3">Anzianità</th>
                 <th className="px-4 py-3 text-right">Azioni</th>
               </tr>
             </thead>
@@ -239,55 +289,60 @@ export default function AdminMembersPage() {
                   </td>
                 </tr>
               ) : (
-                filtered.map((m) => (
-                  <tr key={m.id} className="border-t border-slate-100 hover:bg-slate-50" data-testid={`member-row-${m.id}`}>
-                    <td className="px-4 py-3">
-                      <div className="flex items-center gap-3">
-                        {m.photoUrl ? (
-                          <MediaImage src={m.photoUrl} alt="" className="w-10 h-10 rounded-full object-cover border border-slate-200" />
-                        ) : (
-                          <div className="w-10 h-10 rounded-full bg-navy-100 text-navy-600 flex items-center justify-center text-sm font-bold">
-                            {m.firstName[0]}{m.lastName[0]}
+                filtered.map((m) => {
+                  const years = seniorityYears(m.yearStart);
+                  return (
+                    <tr key={m.id} className="border-t border-slate-100 hover:bg-slate-50" data-testid={`member-row-${m.id}`}>
+                      <td className="px-4 py-3">
+                        <div className="flex items-center gap-3">
+                          {m.photoUrl ? (
+                            <MediaImage src={m.photoUrl} alt="" className="w-10 h-10 rounded-full object-cover border border-slate-200" />
+                          ) : (
+                            <div className="w-10 h-10 rounded-full bg-navy-100 text-navy-600 flex items-center justify-center text-sm font-bold">
+                              {m.firstName[0]}{m.lastName[0]}
+                            </div>
+                          )}
+                          <div>
+                            <div className="font-medium text-navy-700">{m.firstName} {m.lastName}</div>
+                            {m.email && <div className="text-xs text-slate-400">{m.email}</div>}
                           </div>
-                        )}
-                        <div>
-                          <div className="font-medium text-navy-700">{m.firstName} {m.lastName}</div>
-                          {m.email && <div className="text-xs text-slate-400">{m.email}</div>}
                         </div>
-                      </div>
-                    </td>
-                    <td className="px-4 py-3 text-sm">{memberRoleLabel(m)}</td>
-                    <td className="px-4 py-3 text-sm">{m.boardTitle || m.category || "—"}</td>
-                    <td className="px-4 py-3 text-sm font-mono">{m.meccanografico || "—"}</td>
-                    <td className="px-4 py-3 text-sm">{m.yearStart || "—"}</td>
-                    <td className="px-4 py-3 text-right whitespace-nowrap">
-                      {m.slug && (
-                        <a
-                          href={`/arbitri/${m.slug}`}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="p-1.5 text-slate-500 hover:text-navy-600 hover:bg-navy-50 rounded inline-block"
-                          title="Profilo pubblico"
+                      </td>
+                      <td className="px-4 py-3 text-sm">{memberRoleLabel(m)}</td>
+                      <td className="px-4 py-3 text-sm">{m.boardTitle || "—"}</td>
+                      <td className="px-4 py-3 text-sm font-mono">{m.meccanografico || "—"}</td>
+                      <td className="px-4 py-3 text-sm">
+                        {years == null ? "—" : years === 1 ? "1 anno" : `${years} anni`}
+                      </td>
+                      <td className="px-4 py-3 text-right whitespace-nowrap">
+                        {m.slug && (
+                          <a
+                            href={`/arbitri/${m.slug}`}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="p-1.5 text-slate-500 hover:text-navy-600 hover:bg-navy-50 rounded inline-block"
+                            title="Profilo pubblico"
+                          >
+                            <ExternalLink className="h-4 w-4" />
+                          </a>
+                        )}
+                        <button
+                          onClick={() => setEditing(withFormFields({ ...m, awards: m.awards || [] }))}
+                          className="p-1.5 text-navy-600 hover:bg-navy-50 rounded"
+                          data-testid={`member-edit-${m.id}`}
                         >
-                          <ExternalLink className="h-4 w-4" />
-                        </a>
-                      )}
-                      <button
-                        onClick={() => setEditing({ ...normalizeMember(m), awards: m.awards || [] })}
-                        className="p-1.5 text-navy-600 hover:bg-navy-50 rounded"
-                        data-testid={`member-edit-${m.id}`}
-                      >
-                        <Pencil className="h-4 w-4" />
-                      </button>
-                      <button
-                        onClick={() => remove(m.id, `${m.firstName} ${m.lastName}`)}
-                        className="p-1.5 text-red-600 hover:bg-red-50 rounded ml-1"
-                      >
-                        <Trash2 className="h-4 w-4" />
-                      </button>
-                    </td>
-                  </tr>
-                ))
+                          <Pencil className="h-4 w-4" />
+                        </button>
+                        <button
+                          onClick={() => remove(m.id, `${m.firstName} ${m.lastName}`)}
+                          className="p-1.5 text-red-600 hover:bg-red-50 rounded ml-1"
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </button>
+                      </td>
+                    </tr>
+                  );
+                })
               )}
             </tbody>
           </table>
@@ -298,11 +353,24 @@ export default function AdminMembersPage() {
 }
 
 function MemberModal({ editing, setEditing, save, saving, uploadPhoto, uploadingPhoto }) {
-  const set = (k) => (e) => setEditing({ ...editing, [k]: e.target.value });
-  const setCheck = (k) => (e) => setEditing({ ...editing, [k]: e.target.checked });
-  const isCD = editing.memberRole === "consiglio_direttivo";
-  const isObs = editing.memberRole === "osservatore";
-  const isArbitro = editing.memberRole === "arbitro" || editing.memberRole === "assistente";
+  const set = (k) => (e) => {
+    const next = { ...editing, [k]: e.target.value };
+    if (k === "firstName" || k === "lastName") {
+      next.portalPassword = defaultPortalPassword(
+        k === "firstName" ? e.target.value : editing.firstName,
+        k === "lastName" ? e.target.value : editing.lastName
+      );
+    }
+    setEditing(next);
+  };
+  const code = String(editing.role || "").trim().toUpperCase();
+  const hasOrg = !!(editing.organigrammaKind || "").trim();
+  const showCategory = canHaveMaxCategory({ role: code });
+  const presidentPreview = isSectionPresident({
+    organigrammaKind: editing.organigrammaKind,
+    boardTitle: editing.boardTitle,
+  });
+  const portalPassword = editing.portalPassword || defaultPortalPassword(editing.firstName, editing.lastName);
 
   return (
     <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4 overflow-y-auto" data-testid="member-modal">
@@ -343,73 +411,89 @@ function MemberModal({ editing, setEditing, save, saving, uploadPhoto, uploading
             <Field label="Cognome*">
               <input data-testid="member-lastName" value={editing.lastName} onChange={set("lastName")} className={I} />
             </Field>
-            <Field label="Ruolo*">
+
+            <Field label="Qualifica AIA">
               <select
-                data-testid="member-role"
-                value={editing.memberRole}
+                data-testid="member-aia-code"
+                value={code}
                 onChange={(e) => {
-                  const memberRole = e.target.value;
-                  const patch = { memberRole };
-                  if (memberRole === "osservatore" && !editing.observerType) patch.observerType = "oa";
-                  setEditing({ ...editing, ...patch });
+                  const role = e.target.value;
+                  setEditing({
+                    ...editing,
+                    role,
+                    memberRole: memberRoleFromAia(role) || editing.memberRole,
+                    observerType: role === "OT" ? "ot" : role === "OA" ? "oa" : "",
+                    category: canHaveMaxCategory({ role }) ? editing.category : "",
+                  });
                 }}
                 className={I}
               >
-                {MEMBER_ROLES.map((r) => (
-                  <option key={r.value} value={r.value}>{r.label}</option>
+                {AIA_QUALIFICHE.map((r) => (
+                  <option key={r.value || "none"} value={r.value}>{r.label}</option>
                 ))}
               </select>
             </Field>
-            {isObs && (
-              <Field label="Tipo osservatore">
-                <select value={editing.observerType || "oa"} onChange={set("observerType")} className={I}>
-                  <option value="oa">OA — Osservatore Arbitrale</option>
-                  <option value="ot">OT — Organo Tecnico</option>
-                </select>
-              </Field>
-            )}
-            <Field
-              label={isCD ? "Incarico nel CD*" : "Incarico in organigramma"}
-              hint={
-                isCD
-                  ? "Es. Presidente di Sezione, Segretario, Cassiere"
-                  : "Opzionale. Se compilato, il profilo compare anche in Chi siamo (es. Area Informatica) pur restando arbitro/assistente."
-              }
-            >
-              <input value={editing.boardTitle || ""} onChange={set("boardTitle")} className={I} placeholder="Es. Area Informatica" />
-            </Field>
-            {(isCD || !!(editing.boardTitle || "").trim()) && (
-              <Field label="Presidente di sezione">
-                <label className="flex items-center gap-2 text-sm mt-2">
-                  <input type="checkbox" checked={!!editing.isPresident} onChange={setCheck("isPresident")} className="rounded" />
-                  Mostra in evidenza su Chi siamo
-                </label>
-              </Field>
-            )}
-            {isArbitro && (
-              <Field
-                label="Categoria sportiva (campionato massimo)"
-                hint="Calcolata automaticamente dalle designazioni come Arbitro (scala Serie A → Giovanissimi). Puoi correggerla manualmente."
+
+            <Field label="Organigramma">
+              <select
+                data-testid="member-organigramma"
+                value={editing.organigrammaKind || ""}
+                onChange={(e) => setEditing({ ...editing, organigrammaKind: e.target.value })}
+                className={I}
               >
+                {ORGANIGRAMMA_KINDS.map((r) => (
+                  <option key={r.value || "none"} value={r.value}>{r.label}</option>
+                ))}
+              </select>
+            </Field>
+
+            {hasOrg && (
+              <Field label="Incarico*">
+                <input
+                  data-testid="member-boardTitle"
+                  value={editing.boardTitle || ""}
+                  onChange={set("boardTitle")}
+                  className={I}
+                  placeholder="Es. Segretario, Area Informatica"
+                />
+              </Field>
+            )}
+
+            {showCategory && (
+              <Field label="Categoria massima">
                 <input value={editing.category || ""} onChange={set("category")} className={I} />
               </Field>
             )}
-            <Field label="Anno inizio in sezione">
+
+            <Field label="Anzianità (anni)">
               <input
                 type="number"
-                min="1900"
-                max={new Date().getFullYear() + 1}
-                value={editing.yearStart || ""}
-                onChange={set("yearStart")}
+                min="0"
+                max="120"
+                value={editing.seniorityYears ?? ""}
+                onChange={set("seniorityYears")}
                 className={I}
+                placeholder="Es. 4"
               />
             </Field>
-            <Field label="Codice meccanografico AIA (accesso area associati — riservato)">
-              <input value={editing.meccanografico || ""} onChange={set("meccanografico")} className={`${I} font-mono`} placeholder="es. 12345678" />
-              <p className="text-xs text-slate-500 mt-1">
-                Password iniziale portale: <strong>nome.cognome</strong> (es. Mario Rossi → mario.rossi). Modificabile dal profilo associato.
-              </p>
+
+            <Field label="Codice meccanografico">
+              <input
+                value={editing.meccanografico || ""}
+                onChange={set("meccanografico")}
+                className={`${I} font-mono`}
+                placeholder="es. 12345678"
+              />
             </Field>
+            <Field label="Password">
+              <input
+                value={portalPassword}
+                readOnly
+                className={`${I} font-mono bg-slate-50 text-slate-700`}
+                data-testid="member-portal-password"
+              />
+            </Field>
+
             <Field label="Email">
               <input type="email" value={editing.email || ""} onChange={set("email")} className={I} />
             </Field>
@@ -418,7 +502,7 @@ function MemberModal({ editing, setEditing, save, saving, uploadPhoto, uploading
             </Field>
           </div>
 
-          <Field label="Biografia" hint="Solo testo semplice, visibile nel profilo pubblico">
+          <Field label="Biografia">
             <textarea
               rows={5}
               value={editing.bio || ""}
@@ -428,9 +512,9 @@ function MemberModal({ editing, setEditing, save, saving, uploadPhoto, uploading
             />
           </Field>
 
-          {isCD && !!editing.isPresident && (
+          {presidentPreview && (
             <>
-              <Field label='Testo card "Chi siamo" (Presidente)' hint="Testo medio visibile solo nella pagina Chi siamo.">
+              <Field label='Testo card "Chi siamo" (Presidente)'>
                 <textarea
                   rows={5}
                   value={editing.chiSiamoText || ""}
@@ -439,7 +523,7 @@ function MemberModal({ editing, setEditing, save, saving, uploadPhoto, uploading
                   placeholder="Testo di presentazione del Presidente in evidenza nella pagina Chi siamo…"
                 />
               </Field>
-              <Field label="Testo lungo profilo Presidente" hint="Visibile solo nel profilo del Presidente, prima di premi e notizie.">
+              <Field label="Testo lungo profilo Presidente">
                 <textarea
                   rows={9}
                   value={editing.presidentLongBio || ""}
@@ -507,11 +591,10 @@ function AwardsEditor({ awards, onChange }) {
   );
 }
 
-function Field({ label, hint, children }) {
+function Field({ label, children }) {
   return (
     <label className="block">
       <span className="block text-sm font-medium text-slate-700 mb-1">{label}</span>
-      {hint && <span className="block text-xs text-slate-400 mb-1">{hint}</span>}
       {children}
     </label>
   );

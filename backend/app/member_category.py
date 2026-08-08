@@ -14,10 +14,12 @@ def _now() -> str:
 
 
 async def compute_category_for_member(db, member: dict) -> str:
-    """Calcola il campionato più alto da designazioni (solo ruolo Arbitro)."""
+    """Calcola il campionato più alto da designazioni (solo AE / AA)."""
+    from .member_roles import can_have_max_category
+
     normalize_member(member)
-    if member.get("memberRole") != "arbitro":
-        return (member.get("category") or "").strip()
+    if not can_have_max_category(member):
+        return ""
 
     query = member_designations_query(member, season=None)
     if not query:
@@ -48,14 +50,22 @@ async def refresh_arbitri_categories(db) -> int:
     """Ricalcola categoria per tutti gli arbitri (post-sync)."""
     from .member_roles import legacy_arbitri_query
 
+    from .member_roles import can_have_max_category
+
     updated = 0
     cursor = db.members.find(legacy_arbitri_query(), {"_id": 0})
     async for doc in cursor:
         normalize_member(doc)
-        if doc.get("memberRole") != "arbitro":
+        if not can_have_max_category(doc):
+            if (doc.get("category") or "").strip():
+                await db.members.update_one(
+                    {"id": doc["id"]},
+                    {"$set": {"category": "", "updatedAt": _now()}},
+                )
+                updated += 1
             continue
         before = (doc.get("category") or "").strip()
         after = await refresh_member_category(db, doc, persist=True)
-        if after and after != before:
+        if after != before:
             updated += 1
     return updated

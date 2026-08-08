@@ -1,4 +1,5 @@
 """Ruoli sezionali unificati (gestiti dalla pagina Associati in admin)."""
+
 from __future__ import annotations
 
 import re
@@ -7,16 +8,109 @@ MEMBER_ROLES = ("arbitro", "assistente", "consiglio_direttivo", "osservatore")
 ARBITRI_ROLES = frozenset({"arbitro", "assistente"})
 CHI_SIAMO_ROLES = frozenset({"consiglio_direttivo"})
 OBSERVER_TYPES = ("oa", "ot")
+ORGANIGRAMMA_KINDS = ("cds", "collaboratore", "ors")
+AIA_CODES = ("AE", "AA", "AB", "AFR", "OA", "OT")
+AIA_CODE_TO_MEMBER_ROLE = {
+    "AE": "arbitro",
+    "AA": "assistente",
+    "AB": "arbitro",
+    "AFR": "arbitro",
+    "OA": "osservatore",
+    "OT": "osservatore",
+}
+# Categoria massima campionato: solo Arbitro Effettivo e Assistente Arbitrale
+CATEGORY_ELIGIBLE_CODES = frozenset({"AE", "AA"})
 
 # boardTitle generico AB: non è incarico di organigramma
 _BENEMERITO_TITLE = re.compile(r"^\s*arbitro\s+benemerito\s*$", re.I)
+_VICE_PRESIDENTE = re.compile(r"vice\s*-?\s*presidente|vicepresidente", re.I)
+_PRESIDENTE_WORD = re.compile(r"\bpresidente\b", re.I)
 
 
 def _strip_html(text: str) -> str:
     return re.sub(r"<[^>]+>", "", text or "").strip()
 
 
+def aia_code_of(doc: dict | None) -> str:
+    if not doc:
+        return ""
+    code = (doc.get("role") or "").strip().upper()
+    return code if code in AIA_CODE_TO_MEMBER_ROLE else ""
+
+
+def can_have_max_category(doc: dict | None) -> bool:
+    return aia_code_of(doc) in CATEGORY_ELIGIBLE_CODES
+
+
+def infer_organigramma_kind(doc: dict) -> str:
+    explicit = (doc.get("organigrammaKind") or "").strip().lower()
+    if explicit in ORGANIGRAMMA_KINDS:
+        return explicit
+    if explicit in ("", "none", "nessuno"):
+        # continua con inferenza da titoli legacy
+        pass
+    else:
+        return ""
+
+    bt = (doc.get("boardTitle") or "").strip()
+    if not bt or _BENEMERITO_TITLE.match(bt):
+        # Solo consiglio_direttivo legacy senza titolo → CDS
+        if (doc.get("memberRole") or "").strip().lower() == "consiglio_direttivo":
+            return "cds"
+        return ""
+
+    low = bt.lower()
+    if "revisione" in low or "revisori" in low:
+        return "ors"
+    if (
+        re.match(r"^\s*collaboratore\b", low)
+        or "collaboratore —" in low
+        or "collaboratore -" in low
+    ):
+        return "collaboratore"
+    if (
+        "consigliere" in low
+        or _VICE_PRESIDENTE.search(low)
+        or "presidente di sezione" in low
+        or re.match(r"^\s*presidente\b", low)
+        or "segretario" in low
+        or "cassiere" in low
+        or (doc.get("memberRole") or "").strip().lower() == "consiglio_direttivo"
+    ):
+        return "cds"
+    # Incarico libero (es. "Area Informatica") → collaboratore se presente
+    if has_organigramma_board_title(doc):
+        return "collaboratore"
+    return ""
+
+
+def is_section_president_title(board_title: str, organigramma_kind: str = "") -> bool:
+    """Presidente di Sezione: parola Presidente in incarico CDS, non Vice/Revisione."""
+    kind = (organigramma_kind or "").strip().lower()
+    bt = (board_title or "").strip()
+    if kind and kind != "cds":
+        return False
+    if not bt:
+        return False
+    low = bt.lower()
+    if "revisione" in low or "revisori" in low:
+        return False
+    if _VICE_PRESIDENTE.search(bt):
+        return False
+    if not _PRESIDENTE_WORD.search(bt):
+        return False
+    # Se kind non è noto, richiedi indizi CDS (non solo "Presidente" generico in ORS già escluso)
+    if not kind:
+        if "collaboratore" in low:
+            return False
+    return True
+
+
 def infer_member_role(doc: dict) -> str:
+    code = aia_code_of(doc)
+    if code:
+        return AIA_CODE_TO_MEMBER_ROLE[code]
+
     explicit = (doc.get("memberRole") or "").strip().lower()
     if explicit in MEMBER_ROLES:
         return explicit
@@ -39,15 +133,24 @@ def infer_member_role(doc: dict) -> str:
     if kind in ("oa", "ot") or kind == "osservatore" or "osservatore" in role:
         return "osservatore"
     # Codice AIA AA = Assistente Arbitrale
-    code = (doc.get("role") or "").strip().upper()
-    if code == "AA" or "assistente" in role or kind == "tutor":
+    code_raw = (doc.get("role") or "").strip().upper()
+    if code_raw == "AA" or "assistente" in role or kind == "tutor":
         return "assistente"
     if kind == "associato" and "assistente" in role:
         return "assistente"
+
+    org = infer_organigramma_kind(doc)
+    if org == "cds" and not code:
+        return "consiglio_direttivo"
     return "arbitro"
 
 
 def infer_observer_type(doc: dict) -> str:
+    code = aia_code_of(doc)
+    if code == "OT":
+        return "ot"
+    if code == "OA":
+        return "oa"
     ot = (doc.get("observerType") or "").strip().lower()
     if ot in OBSERVER_TYPES:
         return ot
@@ -64,8 +167,7 @@ def is_arbitro_benemerito(doc: dict | None) -> bool:
     """AIA code AB = Arbitro Benemerito (lista Arbitri + filtro dedicato)."""
     if not doc:
         return False
-    code = (doc.get("role") or "").strip().upper()
-    if code == "AB":
+    if aia_code_of(doc) == "AB":
         return True
     cat = (doc.get("category") or "").strip().lower()
     return "benemerito" in cat
@@ -75,6 +177,9 @@ def has_organigramma_board_title(doc: dict | None) -> bool:
     """Incarico sezionale reale (CD / collaboratore / revisione), non solo Benemerito."""
     if not doc:
         return False
+    kind = (doc.get("organigrammaKind") or "").strip().lower()
+    if kind in ORGANIGRAMMA_KINDS:
+        return True
     bt = (doc.get("boardTitle") or "").strip()
     if not bt or _BENEMERITO_TITLE.match(bt):
         return False
@@ -83,22 +188,36 @@ def has_organigramma_board_title(doc: dict | None) -> bool:
 
 def normalize_member(doc: dict) -> dict:
     """Allinea documento DB al modello ruoli unificato (in-place)."""
+    code = aia_code_of(doc)
+    if code:
+        doc["role"] = code
+    doc["organigrammaKind"] = infer_organigramma_kind(doc)
     doc["memberRole"] = infer_member_role(doc)
     if doc["memberRole"] == "osservatore":
         doc["observerType"] = infer_observer_type(doc)
+    elif code in ("OA", "OT"):
+        doc["observerType"] = infer_observer_type(doc)
+    else:
+        # non osservatore: non forzare observerType se assente
+        if doc.get("observerType") and doc["memberRole"] != "osservatore":
+            doc["observerType"] = ""
+
     if not doc.get("boardTitle") and doc["memberRole"] == "consiglio_direttivo":
         legacy = (doc.get("role") or "").strip()
-        if legacy and legacy.lower() not in ("arbitro", "assistente", "oa", "ot", "tutor"):
-            doc["boardTitle"] = legacy
-    bt = (doc.get("boardTitle") or "").strip().lower()
-    if bt:
-        # Presidente di Sezione only (not Vice, not Organo di Revisione)
-        if "revisione" in bt or "revisori" in bt or "vice" in bt:
-            doc["isPresident"] = False
-        elif "presidente di sezione" in bt or bt in ("presidente", "presidente di sezione"):
-            doc["isPresident"] = True
-        elif "presidente" in bt and "sezione" in bt:
-            doc["isPresident"] = True
+        if legacy and legacy.upper() not in AIA_CODE_TO_MEMBER_ROLE:
+            if legacy.lower() not in ("arbitro", "assistente", "oa", "ot", "tutor"):
+                doc["boardTitle"] = legacy
+
+    doc["isPresident"] = is_section_president_title(
+        doc.get("boardTitle") or "",
+        doc.get("organigrammaKind") or "",
+    )
+
+    if not can_have_max_category(doc):
+        # Non cancellare in lettura se è etichetta legacy usata altrove: la pulizia
+        # definitiva avviene in save/migrazione. Qui non tocchiamo category.
+        pass
+
     bio = (doc.get("bio") or "").strip()
     if not bio and doc.get("bioHtml"):
         doc["bio"] = _strip_html(doc.get("bioHtml") or "")
@@ -108,7 +227,11 @@ def normalize_member(doc: dict) -> dict:
 def public_member(doc: dict) -> dict:
     """Campi esposti sul sito pubblico (senza note private né codice meccanografico)."""
     normalize_member(doc)
-    out = {k: v for k, v in doc.items() if k not in ("notes", "meccanografico", "passwordHash")}
+    out = {
+        k: v
+        for k, v in doc.items()
+        if k not in ("notes", "meccanografico", "passwordHash", "portalPassword")
+    }
     return out
 
 
@@ -126,17 +249,21 @@ def arbitri_query() -> dict:
 
 
 def chi_siamo_query() -> dict:
-    """Chi siamo / organigramma: solo incarichi sezionali (CD, collaboratori, revisione).
-
-    Gli osservatori senza incarico stanno nella pagina Osservatori.
-    Gli Arbitri Benemeriti stanno in Arbitri (filtro dedicato).
-    """
+    """Chi siamo / organigramma: incarichi sezionali (CDS, collaboratori, ORS)."""
     return {
-        "boardTitle": {
-            "$exists": True,
-            "$nin": ["", None],
-            "$not": {"$regex": r"^\s*arbitro\s+benemerito\s*$", "$options": "i"},
-        }
+        "$or": [
+            {"organigrammaKind": {"$in": list(ORGANIGRAMMA_KINDS)}},
+            {
+                "boardTitle": {
+                    "$exists": True,
+                    "$nin": ["", None],
+                    "$not": {
+                        "$regex": r"^\s*arbitro\s+benemerito\s*$",
+                        "$options": "i",
+                    },
+                }
+            },
+        ]
     }
 
 
@@ -154,6 +281,7 @@ def legacy_arbitri_query() -> dict:
                 "memberRole": {"$exists": False},
                 "kind": {"$in": ["associato", "tutor"]},
             },
+            {"role": {"$in": ["AE", "AA", "AB", "AFR"]}},
         ]
     }
 
@@ -168,14 +296,16 @@ def member_role_label(
     if is_arbitro_benemerito(doc):
         return "Arbitro Benemerito"
     r = (member_role or "").lower()
-    if r == "arbitro":
-        code = ((doc or {}).get("role") or "").strip().upper()
+    code = aia_code_of(doc) if doc else ""
+    if r == "arbitro" or code in ("AE", "AFR", "AB"):
         if code == "AE":
             return "Arbitro Effettivo"
         if code == "AFR":
             return "Arbitro Fuori Ruolo"
+        if code == "AB":
+            return "Arbitro Benemerito"
         return "Arbitro"
-    if r == "assistente":
+    if r == "assistente" or code == "AA":
         return "Assistente Arbitrale"
     if r == "consiglio_direttivo":
         return "Consiglio Direttivo"
@@ -186,7 +316,11 @@ def member_role_label(
 
 
 def observer_subtitle(observer_type: str | None) -> str:
-    return "Organo Tecnico" if (observer_type or "").lower() == "ot" else "Osservatore Arbitrale"
+    return (
+        "Organo Tecnico"
+        if (observer_type or "").lower() == "ot"
+        else "Osservatore Arbitrale"
+    )
 
 
 def member_role_from_seed_category(category: str) -> str:
@@ -196,3 +330,12 @@ def member_role_from_seed_category(category: str) -> str:
     if "assistente" in c or "tutor" in c:
         return "assistente"
     return "arbitro"
+
+
+def organigramma_kind_label(kind: str | None) -> str:
+    k = (kind or "").strip().lower()
+    return {
+        "cds": "Consiglio Direttivo Sezionale",
+        "collaboratore": "Collaboratore",
+        "ors": "Organo di Revisione Sezionale",
+    }.get(k, "")

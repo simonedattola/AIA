@@ -202,9 +202,7 @@ def _map_columns(df: pd.DataFrame) -> tuple[pd.DataFrame, dict[str, str], list[s
     warnings: list[str] = []
     col_labels = [_cell_str(c) for c in df.columns]
     named_header_score = sum(
-        _header_score(label, field)
-        for label in col_labels
-        for field in FIELD_KEYWORDS
+        _header_score(label, field) for label in col_labels for field in FIELD_KEYWORDS
     )
     # Se le colonne hanno già intestazioni utili (export HTML AIA), usale
     # senza cercare una riga-header nei dati (evita di mangiare la prima persona).
@@ -223,7 +221,9 @@ def _map_columns(df: pd.DataFrame) -> tuple[pd.DataFrame, dict[str, str], list[s
         else:
             headers = [f"col{i}" for i in range(len(df.columns))]
             body = df.copy()
-            warnings.append("Intestazioni non chiare: colonne riconosciute dal contenuto.")
+            warnings.append(
+                "Intestazioni non chiare: colonne riconosciute dal contenuto."
+            )
 
     body.columns = [f"col{i}" for i in range(len(body.columns))]
     mapping: dict[str, str] = {}
@@ -300,9 +300,7 @@ def _normalize_member_role(raw: str, category: str = "") -> tuple[str, str, str]
             board_title = board_title or "Presidente"
     elif "osservatore" in text or "organo tecnico" in cat:
         role = "osservatore"
-        observer_type = (
-            "ot" if "organo tecnico" in cat or "ot" in text else "oa"
-        )
+        observer_type = "ot" if "organo tecnico" in cat or "ot" in text else "oa"
     elif "assistente" in text or "tutor" in text:
         role = "assistente"
     else:
@@ -355,33 +353,42 @@ def _row_from_mapped(
     if aia_code not in {"AE", "AA", "AB", "OA", "OT", "AFR"}:
         aia_code = ""
 
-    # AB / Benemerito: categoria per filtro Arbitri (niente boardTitle generico)
-    if (
-        aia_code == "AB"
-        or "benemerito" in _normalize_name_key(role_raw)
-        or "benemerito" in _normalize_name_key(category)
-        or board_title == "Arbitro Benemerito"
-    ):
-        category = category or "Arbitro Benemerito"
-        if board_title == "Arbitro Benemerito":
-            board_title = ""
-    if aia_code == "AA" or member_role == "assistente":
-        category = category or "Assistente Arbitrale"
+    # AB: niente boardTitle generico; categoria massima solo AE/AA
+    if board_title == "Arbitro Benemerito":
+        board_title = ""
+    if aia_code not in {"AE", "AA"}:
+        category = ""
 
     email = _cell_str(row.get("email", ""))
     if email and not _looks_like_email(email):
         warnings.append(f"Riga {line}: email non valida — ignorata.")
         email = ""
 
-    return {
+    from .member_roles import (
+        infer_organigramma_kind,
+        is_section_president_title,
+    )
+
+    draft = {
         "firstName": first,
         "lastName": last,
         "memberRole": member_role,
         "observerType": observer_type,
         "boardTitle": board_title,
-        "isPresident": member_role == "consiglio_direttivo"
-        and "presidente" in _normalize_name_key(board_title or role_raw)
-        and "vice" not in _normalize_name_key(board_title or role_raw),
+        "role": aia_code,
+        "category": category,
+    }
+    organigramma_kind = infer_organigramma_kind(draft)
+    is_president = is_section_president_title(board_title, organigramma_kind)
+
+    return {
+        "firstName": first,
+        "lastName": last,
+        "memberRole": member_role,
+        "observerType": observer_type,
+        "organigrammaKind": organigramma_kind,
+        "boardTitle": board_title,
+        "isPresident": is_president,
         "category": category,
         "role": aia_code,
         "meccanografico": _cell_str(row.get("meccanografico", "")),
