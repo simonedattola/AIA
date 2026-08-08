@@ -10,6 +10,7 @@ import {
 } from "lucide-react";
 import { Button, Card, CardTitle, CtaTitle, Eyebrow, PageTitle, SubsectionTitle } from "@/design-system";
 import TestimonialAuthor from "../testimonials/TestimonialAuthor";
+import PageBrandBar from "../PageBrandBar";
 
 const INNER = "max-w-5xl mx-auto px-4 sm:px-6 lg:px-8";
 const PROFILE_DESIGNATIONS_PAGE = 8;
@@ -78,8 +79,9 @@ export default function MemberProfileContent({ memberSlug }) {
 
   return (
     <div data-testid="member-profile-content" className="bg-background">
-      <section className="bg-navy-700 text-white pt-16 pb-12 lg:pb-14">
+      <section className="bg-navy-700 text-white pt-6 pb-12 min-[1140px]:pt-16 lg:pb-14">
         <div className={INNER}>
+          <PageBrandBar className="mb-6" tone="onDark" />
           <Link to={back} className="inline-flex items-center gap-2 text-gold-400 hover:text-white text-sm mb-8 font-medium">
             <ArrowLeft className="h-4 w-4" /> {backLabel}
           </Link>
