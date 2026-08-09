@@ -1,7 +1,6 @@
 /* Blocchi dinamici: configurazione CMS + dati live da API */
 import { useEffect, useMemo, useState } from "react";
 import { Link, useSearchParams, Navigate, useNavigate } from "react-router-dom";
-import { cn } from "@/lib/utils";
 import {
   SectionTitle, SubsectionTitle, CardTitle, Eyebrow, Card, Button, CtaTitle, FilterPill,
 } from "@/design-system";
