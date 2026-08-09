@@ -1,65 +1,38 @@
 name: Sync AIA Legnano
+# DISABLED: non committare media binari su git (push fallisce / repo troppo pesante).
+# I file vanno su MongoDB GridFS via:
+#   python backend/scripts/backfill_uploads_to_gridfs.py
+#   python backend/scripts/import_legacy_articles.py
+#   python backend/scripts/import_aia_documents.py
+#
+# Per un sync manuale su disco locale (senza push):
+#   python3 backend/scripts/sync_from_legacy_site.py --output-dir=/tmp/aia-static
 permissions:
-  contents: write
+  contents: read
 on:
-  workflow_dispatch: {}
-  schedule:
-    - cron: '0 3 * * *' # daily at 03:00 UTC
-  push:
-    paths-ignore:
-      - '.github/workflows/**'
+  workflow_dispatch:
+    inputs:
+      confirm:
+        description: "Digita RUN per eseguire solo lo scrape (nessun commit)"
+        required: true
+        default: ""
 
 jobs:
-  sync:
+  sync-dry:
+    if: github.event.inputs.confirm == 'RUN'
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v4
         with:
-          fetch-depth: 0
-          persist-credentials: true
-
-      - name: Set up Python
-        uses: actions/setup-python@v4
-        with:
-          python-version: '3.11'
-
+          python-version: "3.11"
       - name: Install dependencies
         run: |
           python -m pip install --upgrade pip
           pip install httpx beautifulsoup4 pillow
-
-      - name: Run sync script
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      - name: Scrape legacy site into /tmp (no git commit)
+        run: python3 backend/scripts/sync_from_legacy_site.py --output-dir=/tmp/aia-static
+      - name: Summary
         run: |
-          python3 backend/scripts/sync_from_legacy_site.py --output-dir=static
-
-      - name: Commit & push changes (or open PR)
-        env:
-          GIT_AUTHOR_NAME: "github-actions[bot]"
-          GIT_AUTHOR_EMAIL: "41898282+github-actions[bot]@users.noreply.github.com"
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          GITHUB_REPOSITORY: ${{ github.repository }}
-        run: |
-          git config user.name "${GIT_AUTHOR_NAME}"
-          git config user.email "${GIT_AUTHOR_EMAIL}"
-          git add static || true
-          if git diff --cached --quiet; then
-            echo "No changes to commit"
-          else
-            git commit -m "chore: sync images and downloads from aia-legnano.it [ci]"
-            # Try pushing directly to main first
-            if git push origin HEAD:main; then
-              echo "Pushed changes directly to main"
-            else
-              echo "Direct push to main failed, creating branch + pull request"
-              BRANCH="sync-aia-legnano-$(date -u +%Y%m%d%H%M%S)"
-              git checkout -b "$BRANCH"
-              git push --set-upstream origin "$BRANCH"
-
-              # Create Pull Request
-              PR_BODY=$(jq -n --arg b "$BRANCH" '{title: "chore: sync images and downloads from aia-legnano.it [ci]", head: $b, base: "main", body: "Automated sync from aia-legnano.it (workflow)."}')
-              curl -s -X POST -H "Authorization: token ${GITHUB_TOKEN}" -H "Content-Type: application/json" -d "$PR_BODY" "https://api.github.com/repos/${GITHUB_REPOSITORY}/pulls"
-            fi
-          fi
+          echo "Scraped under /tmp/aia-static — non pushato su git."
+          find /tmp/aia-static -type f | wc -l
