@@ -601,7 +601,7 @@ export function NewsSliderBlock({ config: c }) {
         )}
 
         {c.ctaLabel && c.ctaHref && (
-          <div className="mt-10 flex justify-end">
+          <div className="mt-10 flex justify-start">
             <CtaLink href={c.ctaHref} variant="primary">{c.ctaLabel} <ArrowRight className="h-4 w-4"/></CtaLink>
           </div>
         )}
@@ -702,7 +702,7 @@ export function EventsListBlock({ config: c }) {
             )}
 
             {c.ctaLabel && c.ctaHref && (
-              <div className="mt-10 flex justify-end">
+              <div className="mt-10 flex justify-start">
                 <CtaLink href={c.ctaHref} variant="primary">{c.ctaLabel} <ArrowRight className="h-4 w-4"/></CtaLink>
               </div>
             )}

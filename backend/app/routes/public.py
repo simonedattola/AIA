@@ -31,6 +31,7 @@ from ..mailer import (
     render_lead_email,
     render_contact_email,
     contact_preference_label,
+    notify_email,
 )
 import os
 
@@ -569,8 +570,8 @@ async def submit_lead(payload: LeadCreate, background: BackgroundTasks):
     lead = Lead(**payload.model_dump())
     doc = lead.model_dump()
     await db.leads.insert_one(doc.copy())  # copy to avoid _id mutation
-    # email notifications
-    notify = os.environ.get("NOTIFY_EMAIL", "").strip()
+    # email notifications → casella sezione (NOTIFY_EMAIL / legnano@aia-figc.it)
+    notify = notify_email()
     if notify:
         background.add_task(
             send_email,
@@ -600,7 +601,7 @@ async def submit_contact(payload: ContactCreate, background: BackgroundTasks):
     msg = ContactMessage(**payload.model_dump())
     doc = msg.model_dump()
     await db.contact_messages.insert_one(doc.copy())
-    notify = os.environ.get("NOTIFY_EMAIL", "").strip()
+    notify = notify_email()
     if notify:
         background.add_task(
             send_email,
