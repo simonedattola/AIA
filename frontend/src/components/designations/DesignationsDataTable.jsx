@@ -18,6 +18,8 @@ function NominativoLink({ d }) {
       to={`/arbitri/${slug}`}
       className="inline-block text-navy-600 hover:text-navy-800 font-medium underline underline-offset-2 decoration-navy-300 hover:decoration-navy-600"
       data-testid={`designazione-nominativo-${slug}`}
+      onClick={(e) => e.stopPropagation()}
+      onTouchStart={(e) => e.stopPropagation()}
     >
       {label}
     </Link>
