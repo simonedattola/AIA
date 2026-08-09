@@ -10,7 +10,7 @@ import {
   fetchTestimonials, fetchDocuments, fetchDocumentSections, submitLead,
 } from "../lib/api";
 import { useSite } from "../lib/site-context";
-import { formatDateIt, contactPreferenceLabel } from "../lib/format";
+import { formatDateIt, contactPreferenceLabel, formatEventDateTimeIt } from "../lib/format";
 import { AttachmentList } from "../components/AttachmentList";
 import NewsArticleCard from "../components/cards/NewsArticleCard";
 import TestimonialAuthor from "../components/testimonials/TestimonialAuthor";
@@ -22,6 +22,13 @@ import {
 } from "./DynamicPageBlocks";
 import { parseInstagramPostEmbed, instagramPostEmbedSrc } from "../lib/instagram-embed";
 import PageBrandBar from "../components/PageBrandBar";
+import { eventDateKey, isUpcomingEvent } from "../lib/eventsDisplay";
+import EventDetailModal from "../components/events/EventDetailModal";
+import {
+  DesignationsTableBlock, MembersGridBlock, NewsGridBlock, EventsCalendarBlock,
+  ContactSectionBlock, OrganigrammaBlock, MemberProfileBlock, PortalLoginBlock,
+} from "./DynamicPageBlocks";
+
 
 /** Link CTA: route interne, anchor (#form) e scroll con offset header fisso. */
 function CtaLink({ href = "/", variant = "primary", className, children, ...rest }) {
@@ -387,4 +394,534 @@ function CorsoArbitriForm() {
         <FormField label="Età"><input data-testid="lead-age" type="number" min="14" max="99" value={form.age} onChange={onChange("age")} className={I}/></FormField>
         <FormField label="Telefono"><input data-testid="lead-phone" type="tel" value={form.phone} onChange={onChange("phone")} className={I}/></FormField>
         <FormField label="Email*"><input data-testid="lead-email" required type="email" value={form.email} onChange={onChange("email")} className={I}/></FormField>
-        <FormField label="Preferenza contatto"><select data-testid="lead-contactPreference" value={form.contactPreference} onChange={onChange("contactPreference")} className={I}><option value="em[...]
+
+        <FormField label="Preferenza contatto"><select data-testid="lead-contactPreference" value={form.contactPreference} onChange={onChange("contactPreference")} className={I}><option value="email">Email</option><option value="telefono">Telefono</option><option value="whatsapp">WhatsApp</option><option value="entrambi">Entrambi</option></select></FormField>
+      </div>
+      <Button type="submit" disabled={submitting} variant="primary" className="mt-2">{submitting ? "Invio…" : "Invia richiesta"}</Button>
+    </Card>
+  );
+}
+
+function FormField({ label, children }) {
+  return (
+    <label className="block">
+      <span className="block text-sm font-medium text-slate-700 mb-1.5">{label}</span>
+      {children}
+    </label>
+  );
+}
+
+/* ============ FAQ ============ */
+export function FAQBlock({ config: c }) {
+  const bg = c.background === "slate" ? "bg-background bg-pattern-stadio" : "bg-background";
+  const [open, setOpen] = useState(-1);
+  return (
+    <section className={`site-section ${bg}`} data-testid="faq-block">
+      <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
+        {c.eyebrow && <Eyebrow as="div" className="mb-3 tracking-[0.25em]">{c.eyebrow}</Eyebrow>}
+        {c.title && <SectionTitle className="mb-3">{c.title}</SectionTitle>}
+        {(c.title || c.eyebrow) && <span className="gold-divider my-6 block" />}
+        <div className="space-y-4">
+          {(c.items || []).map((it, i) => {
+            const isOpen = open === i;
+            return (
+              <Card key={i} variant="outline" padding="none" className="overflow-hidden">
+                <button
+                  type="button"
+                  onClick={() => setOpen(isOpen ? -1 : i)}
+                  className="w-full px-5 sm:px-6 py-4 sm:py-5 flex items-center justify-between gap-4 text-left hover:bg-navy-50/40 transition"
+                  aria-expanded={isOpen}
+                >
+                  <CardTitle as="div" className="text-base sm:text-lg">{it.question}</CardTitle>
+                  <ChevronDown
+                    className={`h-5 w-5 text-slate-500 shrink-0 transition-transform ${isOpen ? "rotate-180" : ""}`}
+                    aria-hidden
+                  />
+                </button>
+                {isOpen && (
+                  <div className="px-5 sm:px-6 pb-5 sm:pb-6 pt-0 border-t border-slate-200">
+                    <div className="prose-aia pt-4" dangerouslySetInnerHTML={{ __html: it.answer || "" }} />
+                  </div>
+                )}
+              </Card>
+            );
+          })}
+        </div>
+      </div>
+    </section>
+  );
+}
+
+/* ============ TIMELINE / STEPS ============ */
+export function TimelineBlock({ config: c }) {
+  return (
+    <section className="site-section bg-background" data-testid="timeline-block">
+      <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
+        {c.eyebrow && <Eyebrow as="div" className="mb-3 tracking-[0.25em]">{c.eyebrow}</Eyebrow>}
+        {c.title && <SectionTitle className="mb-3">{c.title}</SectionTitle>}
+        {(c.title || c.eyebrow) && <span className="gold-divider my-6 block" />}
+        <ol className="relative border-l-2 border-navy-200 ml-3 sm:ml-6 space-y-10 sm:space-y-12 pl-6 sm:pl-10">
+          {(c.items || []).map((it, i) => (
+            <li key={i} className="relative">
+              <span className="absolute -left-[41px] sm:-left-[55px] top-0 flex items-center justify-center w-11 h-11 sm:w-14 sm:h-14 rounded-full bg-gold-400 text-navy-900 font-bold shadow-md ring-4 ring-background text-sm sm:text-base">
+                {it.step || String(i + 1).padStart(2, "0")}
+              </span>
+              <Card variant="soft" padding="default" className="shadow-ds-sm">
+                <SubsectionTitle className="text-lg sm:text-xl mb-2">{it.title}</SubsectionTitle>
+                <p className="text-slate-600 leading-relaxed">{it.text}</p>
+              </Card>
+            </li>
+          ))}
+        </ol>
+      </div>
+    </section>
+  );
+}
+
+/* ============ STATS / NUMERI ============ */
+export function StatsBlock({ config: c }) {
+  const bg = c.background === "slate" ? "bg-background bg-pattern-stadio" : "bg-background";
+  return (
+    <section className={`site-section ${bg}`} data-testid="stats-block">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        {c.eyebrow && <Eyebrow as="div" className="mb-3 tracking-[0.25em]">{c.eyebrow}</Eyebrow>}
+        {c.title && <SectionTitle className="mb-3">{c.title}</SectionTitle>}
+        {(c.title || c.eyebrow) && <span className="gold-divider my-6 block" />}
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-8">
+          {(c.items || []).map((it, i) => {
+            const I = Icons[it.icon] || Icons.Trophy;
+            return (
+              <div key={i} className="text-center">
+                <div className="inline-flex items-center justify-center w-14 h-14 rounded-full bg-navy-50 text-navy-600 ring-1 ring-navy-100 mb-4">
+                  <I className="h-6 w-6" />
+                </div>
+                <div className="font-display text-4xl sm:text-5xl font-bold text-navy-700 mb-2 tabular-nums">{it.value}</div>
+                <Eyebrow as="div" className="tracking-wider text-slate-500 font-semibold">{it.label}</Eyebrow>
+                {it.desc && <p className="text-sm text-slate-500 mt-2 leading-relaxed">{it.desc}</p>}
+              </div>
+            );
+          })}
+        </div>
+      </div>
+    </section>
+  );
+}
+
+/* ============ GALLERIA ============ */
+export function GalleryBlock({ config: c }) {
+  const cols = c.columns === 4 ? "grid-cols-2 md:grid-cols-4" : c.columns === 2 ? "grid-cols-2" : "grid-cols-2 md:grid-cols-3";
+  const [lightbox, setLightbox] = useState(null);
+  return (
+    <section className="site-section bg-background" data-testid="gallery-block">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        {c.eyebrow && <Eyebrow as="div" className="mb-3 tracking-[0.25em]">{c.eyebrow}</Eyebrow>}
+        {c.title && <SectionTitle className="mb-3">{c.title}</SectionTitle>}
+        {(c.title || c.eyebrow) && <span className="gold-divider my-6 block" />}
+        <div className={`grid ${cols} gap-ds-grid`}>
+          {(c.images || []).map((img, i) => (
+            <button
+              key={i}
+              type="button"
+              onClick={() => setLightbox({ idx: i })}
+              className="group relative aspect-square overflow-hidden rounded-xl shadow-ds-sm hover:shadow-ds-lg focus:outline-none focus:ring-2 focus:ring-navy-600 focus:ring-offset-2 transition"
+            >
+              <img src={img.url || img.src} alt={img.alt || img.caption || ""} className="w-full h-full object-cover transition-transform group-hover:scale-105" />
+              {img.caption && (
+                <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/75 to-transparent p-3 sm:p-4 text-white text-xs sm:text-sm opacity-0 group-hover:opacity-100 transition">
+                  {img.caption}
+                </div>
+              )}
+            </button>
+          ))}
+        </div>
+      </div>
+      {lightbox !== null && (
+        <div
+          className="fixed inset-0 z-50 bg-black/90 flex items-center justify-center p-4"
+          role="dialog"
+          onClick={() => setLightbox(null)}
+        >
+          <button
+            type="button"
+            className="absolute top-4 right-4 p-2 rounded-full bg-white/10 hover:bg-white/20 text-white"
+            onClick={() => setLightbox(null)}
+            aria-label="Chiudi"
+          >
+            <X className="h-6 w-6" />
+          </button>
+          {(() => {
+            const imgs = c.images || [];
+            const img = imgs[lightbox.idx];
+            if (!img) return null;
+            return (
+              <img
+                src={img.url || img.src}
+                alt={img.alt || img.caption || ""}
+                className="max-h-[85vh] max-w-[95vw] rounded-lg shadow-2xl"
+                onClick={(e) => e.stopPropagation()}
+              />
+            );
+          })()}
+        </div>
+      )}
+    </section>
+  );
+}
+
+/* ============ NEWS SLIDER / ULTIME NEWS IN HOME ============ */
+export function NewsSliderBlock({ config: c }) {
+  const [items, setItems] = useState([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    setLoading(true);
+    fetchArticles({ limit: c.limit || 3, category: c.category || undefined })
+      .then((d) => { setItems(Array.isArray(d) ? d : (d.items || [])); })
+      .catch(() => setItems([]))
+      .finally(() => setLoading(false));
+  }, [c.limit, c.category]);
+
+  return (
+    <section className="site-section bg-background bg-pattern-stadio" data-testid="news-slider-block">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        {c.eyebrow && <Eyebrow as="div" className="mb-3 tracking-[0.25em]">{c.eyebrow}</Eyebrow>}
+        {c.title && <SectionTitle className="mb-3">{c.title}</SectionTitle>}
+        {(c.title || c.eyebrow) && <span className="gold-divider mt-6 block" />}
+
+        {loading ? (
+          <p className="text-slate-500 mt-10">Caricamento…</p>
+        ) : items.length === 0 ? (
+          <p className="text-slate-500 mt-10">Nessuna news disponibile al momento.</p>
+        ) : (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 mt-10">
+            {items.map((a) => (
+              <NewsArticleCard key={a.slug} article={a} />
+            ))}
+          </div>
+        )}
+
+        {c.ctaLabel && c.ctaHref && (
+          <div className="mt-10 flex justify-end">
+            <CtaLink href={c.ctaHref} variant="primary">{c.ctaLabel} <ArrowRight className="h-4 w-4"/></CtaLink>
+          </div>
+        )}
+      </div>
+    </section>
+  );
+}
+
+/* ============ EVENTS LIST / PROSSIMI EVENTI IN HOME ============ */
+const EV_MONTHS = ["GEN", "FEB", "MAR", "APR", "MAG", "GIU", "LUG", "AGO", "SET", "OTT", "NOV", "DIC"];
+
+function HomeEventCard({ e, onClick }) {
+  const d = new Date(e.date);
+  return (
+    <Card
+      as="button"
+      type="button"
+      interactive
+      padding="default"
+      className="w-full text-left flex flex-col sm:flex-row gap-4 sm:gap-5 items-start p-4 sm:p-5"
+      onClick={onClick}
+    >
+      <div className="flex flex-col items-center justify-center bg-navy-600 text-white rounded-md w-16 h-16 flex-shrink-0">
+        <div className="text-2xl font-bold leading-none">{d.getDate().toString().padStart(2, "0")}</div>
+        <Eyebrow as="div" className="text-[10px] tracking-wider mt-1 text-gold-400">
+          {EV_MONTHS[d.getMonth()]}
+        </Eyebrow>
+      </div>
+      <div className="flex-1 min-w-0">
+        {e.tipo && (
+          <Eyebrow as="div" className="inline-block tracking-wider text-gold-400 mb-1.5">
+            {e.tipo}
+          </Eyebrow>
+        )}
+        <CardTitle as="h3" className="text-lg">{e.titolo}</CardTitle>
+        {e.descrizione && <p className="text-slate-600 text-sm mt-1.5 line-clamp-2">{e.descrizione}</p>}
+        {e.luogo && (
+          <div className="flex items-center gap-1.5 text-xs text-slate-500 mt-2">
+            <MapPin className="h-3.5 w-3.5" /> {e.luogo}
+          </div>
+        )}
+        {!e.tipo && (
+          <Eyebrow as="div" className="text-gold-600 mt-2">{formatEventDateTimeIt(e.date, e.orario)}</Eyebrow>
+        )}
+      </div>
+    </Card>
+  );
+}
+
+export function EventsListBlock({ config: c }) {
+  const [items, setItems] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [selectedId, setSelectedId] = useState(null);
+  const [modalEvent, setModalEvent] = useState(null);
+  const { settings } = useSite();
+  const instaUrl = (settings || {}).instagramUrl || "";
+  const parsedInsta = parseInstagramPostEmbed((c.instagramEmbed || {}).href || "");
+  const instaHref = (c.instagramEmbed || {}).href || "";
+  const instaSrc = parsedInsta ? instagramPostEmbedSrc(parsedInsta) : null;
+
+  useEffect(() => {
+    setLoading(true);
+    fetchEvents({ limit: c.limit ? Math.max(Number(c.limit) * 4, 200) : 200 })
+      .then((d) => {
+        let list = Array.isArray(d) ? d : (d.items || []);
+        if (c.upcomingOnly !== false) {
+          const now = new Date();
+          list = list.filter((e) => isUpcomingEvent(e, { now }));
+        }
+        list.sort((a, b) => eventDateKey(a.date).localeCompare(eventDateKey(b.date)));
+        setItems(list.slice(0, c.limit || 3));
+      })
+      .catch(() => setItems([]))
+      .finally(() => setLoading(false));
+  }, [c.limit, c.upcomingOnly]);
+
+  return (
+    <section className="site-section bg-background" data-testid="events-list-block">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        {c.eyebrow && <Eyebrow as="div" className="mb-3 tracking-[0.25em]">{c.eyebrow}</Eyebrow>}
+        {c.title && <SectionTitle className="mb-3">{c.title}</SectionTitle>}
+        {(c.title || c.eyebrow) && <span className="gold-divider mt-6 block" />}
+
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 lg:gap-10 mt-10">
+          <div className="lg:col-span-7">
+            {loading ? (
+              <p className="text-slate-500">Caricamento…</p>
+            ) : items.length === 0 ? (
+              <p className="text-slate-500">Nessun evento in programma.</p>
+            ) : (
+              <ul className="space-y-3">
+                {items.map((e) => (
+                  <li key={e.id}>
+                    <HomeEventCard e={e} onClick={() => { setSelectedId(e.id); setModalEvent(e); }} />
+                  </li>
+                ))}
+              </ul>
+            )}
+
+            {c.ctaLabel && c.ctaHref && (
+              <div className="mt-10 flex justify-end">
+                <CtaLink href={c.ctaHref} variant="primary">{c.ctaLabel} <ArrowRight className="h-4 w-4"/></CtaLink>
+              </div>
+            )}
+          </div>
+
+          <div className="lg:col-span-5 space-y-6">
+            {c.showInstagramWidget !== false && (
+              <Card padding="default" variant="soft" className="shadow-ds-sm">
+                <div className="flex items-center gap-2 mb-3">
+                  <div className="p-2 rounded-full bg-gradient-to-br from-fuchsia-500 via-rose-500 to-amber-400 text-white">
+                    <Instagram className="h-5 w-5" />
+                  </div>
+                  <div>
+                    <CardTitle as="div" className="text-base">{c.instagramTitle || "Instagram"}</CardTitle>
+                    <p className="text-sm text-slate-500">{c.instagramSubtitle || "Foto, aggiornamenti e vita della sezione."}</p>
+                  </div>
+                </div>
+                {instaSrc ? (
+                  <div className="aspect-[4/5] w-full rounded-lg overflow-hidden border border-slate-200 bg-slate-50">
+                    <iframe src={instaSrc} title="Instagram" className="w-full h-full" loading="lazy" />
+                  </div>
+                ) : (
+                  <div className="aspect-[4/5] w-full rounded-lg bg-gradient-to-br from-fuchsia-100 via-rose-50 to-amber-100 border border-slate-200 flex items-center justify-center text-center p-6">
+                    <div className="space-y-3">
+                      <Instagram className="h-10 w-10 text-rose-500 mx-auto" />
+                      <div>
+                        <p className="text-navy-700 font-semibold">Scopri le ultime foto</p>
+                        <p className="text-sm text-slate-500">Vita sezionale, eventi, successi e dietro le quinte.</p>
+                      </div>
+                      {instaUrl ? (
+                        <a href={instaUrl} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-2 text-sm font-semibold text-navy-700 border-b border-navy-700 pb-0.5">
+                          Apri Instagram <ExternalLink className="h-3.5 w-3.5" />
+                        </a>
+                      ) : instaHref ? (
+                        <a href={instaHref} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-2 text-sm font-semibold text-navy-700 border-b border-navy-700 pb-0.5">
+                          Vedi il post <ExternalLink className="h-3.5 w-3.5" />
+                        </a>
+                      ) : null}
+                    </div>
+                  </div>
+                )}
+                {instaUrl && (
+                  <div className="mt-4 flex justify-end">
+                    <a href={instaUrl} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-2 text-sm font-medium text-slate-600 hover:text-navy-700">
+                      Profilo sezione <Instagram className="h-4 w-4" />
+                    </a>
+                  </div>
+                )}
+              </Card>
+            )}
+          </div>
+        </div>
+
+        {modalEvent && (
+          <EventDetailModal event={modalEvent} onClose={() => setModalEvent(null)} />
+        )}
+      </div>
+    </section>
+  );
+}
+
+/* ============ TESTIMONIALS ============ */
+export function TestimonialsBlock({ config: c }) {
+  const [items, setItems] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const globalOk = c.useGlobal !== false;
+
+  useEffect(() => {
+    setLoading(true);
+    const p = globalOk
+      ? fetchTestimonials().catch(() => [])
+      : Promise.resolve(c.items || []);
+    p.then((d) => {
+      const list = Array.isArray(d) ? d : (d.items || c.items || []);
+      setItems((list && list.length) ? list : (c.items || []));
+    }).finally(() => setLoading(false));
+  }, [globalOk, c.items]);
+
+  return (
+    <section className="site-section bg-background bg-pattern-stadio" data-testid="testimonials-block">
+      <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
+        {c.eyebrow && <Eyebrow as="div" className="mb-3 tracking-[0.25em]">{c.eyebrow}</Eyebrow>}
+        {c.title && <SectionTitle className="mb-3">{c.title}</SectionTitle>}
+        {(c.title || c.eyebrow) && <span className="gold-divider my-6 block" />}
+        {loading ? (
+          <p className="text-slate-500">Caricamento…</p>
+        ) : items.length === 0 ? (
+          <p className="text-slate-500">Nessuna testimonianza disponibile.</p>
+        ) : (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+            {items.map((t, i) => (
+              <Card key={t.id || i} variant="soft" padding="default" className="shadow-ds-sm">
+                <svg viewBox="0 0 32 32" className="h-8 w-8 text-gold-400 mb-3 fill-current" aria-hidden>
+                  <path d="M10 8c-3.3 0-6 2.7-6 6v10h10v-10H8c0-1.1.9-2 2-2V8zm12 0c-3.3 0-6 2.7-6 6v10h10v-10h-6c0-1.1.9-2 2-2V8z" />
+                </svg>
+                <p className="text-slate-700 leading-relaxed whitespace-pre-line">{t.quote || t.text || t.body}</p>
+                <div className="mt-5 pt-4 border-t border-slate-200">
+                  <TestimonialAuthor testimonial={t} />
+                </div>
+              </Card>
+            ))}
+          </div>
+        )}
+      </div>
+    </section>
+  );
+}
+
+/* ============ DOWNLOADS / DOCUMENTI ============ */
+export function DownloadsBlock({ config: c }) {
+  const [items, setItems] = useState([]);
+  const [sections, setSections] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const globalOk = c.useGlobal !== false;
+
+  useEffect(() => {
+    setLoading(true);
+    const p = globalOk
+      ? Promise.all([
+          fetchDocuments(c.category || undefined).catch(() => []),
+          fetchDocumentSections().catch(() => []),
+        ]).then(([docs, secs]) => ({ docs: Array.isArray(docs) ? docs : (docs.items || []), secs: Array.isArray(secs) ? secs : [] }))
+      : Promise.resolve({ docs: c.items || [], secs: [] });
+
+    p.then(({ docs, secs }) => {
+      setItems(docs);
+      setSections(secs || []);
+    }).finally(() => setLoading(false));
+  }, [globalOk, c.category, c.items]);
+
+  return (
+    <section className="site-section bg-background" data-testid="downloads-block">
+      <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
+        {c.eyebrow && <Eyebrow as="div" className="mb-3 tracking-[0.25em]">{c.eyebrow}</Eyebrow>}
+        {c.title && <SectionTitle className="mb-3">{c.title}</SectionTitle>}
+        {(c.title || c.eyebrow) && <span className="gold-divider my-6 block" />}
+        {loading ? (
+          <p className="text-slate-500">Caricamento…</p>
+        ) : sections && sections.length ? (
+          <DocumentsDownloadLayout documents={items} sections={sections} />
+        ) : items && items.length ? (
+          <AttachmentList items={items} />
+        ) : (
+          <p className="text-slate-500">Nessun documento disponibile al momento.</p>
+        )}
+      </div>
+    </section>
+  );
+}
+
+/* ============ EMBED HTML / IFRAME ============ */
+export function EmbedBlock({ config: c }) {
+  const widthCls = c.maxWidth === "wide" ? "max-w-6xl" : c.maxWidth === "medium" ? "max-w-4xl" : "max-w-3xl";
+  const aspect = c.aspectRatio || "16/9";
+  return (
+    <section className="site-section bg-background" data-testid="embed-block">
+      <div className={`${widthCls} mx-auto px-4 sm:px-6 lg:px-8`}>
+        {c.eyebrow && <Eyebrow as="div" className="mb-3 tracking-[0.25em]">{c.eyebrow}</Eyebrow>}
+        {c.title && <SectionTitle className="mb-3">{c.title}</SectionTitle>}
+        {(c.title || c.eyebrow) && <span className="gold-divider my-6 block" />}
+        {c.html ? (
+          <div
+            className="w-full rounded-xl overflow-hidden shadow-ds-md border border-slate-200"
+            style={{ aspectRatio: aspect }}
+            dangerouslySetInnerHTML={{ __html: c.html }}
+          />
+        ) : null}
+      </div>
+    </section>
+  );
+}
+
+/* ============ SPACER / SPAZIATORE ============ */
+const SPACER_HEIGHT = {
+  sm: "h-8 sm:h-12",
+  md: "h-16 sm:h-24",
+  lg: "h-24 sm:h-32",
+  xl: "h-32 sm:h-48",
+};
+export function SpacerBlock({ config: c }) {
+  return <div className={SPACER_HEIGHT[c.height || "md"]} aria-hidden="true" data-testid="spacer-block" />;
+}
+
+/* ============ BLOCKS RENDERER ============ */
+export function BlocksRenderer({ blocks = [], context = {} }) {
+  const stats = context.stats;
+  const blockContext = context;
+  return (
+    <>
+      {(blocks || []).filter((b) => b.enabled !== false).map((b) => {
+        const c = b.config || {};
+        switch (b.type) {
+          case "hero": return <HeroBlock key={b.id} config={c} stats={stats} />;
+          case "rich_text": return <RichTextBlock key={b.id} config={c} />;
+          case "text_image": return <TextImageBlock key={b.id} config={c} />;
+          case "cta": return <CTABlock key={b.id} config={c} />;
+          case "faq": return <FAQBlock key={b.id} config={c} />;
+          case "timeline": return <TimelineBlock key={b.id} config={c} />;
+          case "stats": return <StatsBlock key={b.id} config={c} />;
+          case "gallery": return <GalleryBlock key={b.id} config={c} />;
+          case "news_slider": return <NewsSliderBlock key={b.id} config={c} />;
+          case "events_list": return <EventsListBlock key={b.id} config={c} />;
+          case "testimonials": return <TestimonialsBlock key={b.id} config={c} />;
+          case "downloads": return <DownloadsBlock key={b.id} config={c} />;
+          case "embed": return <EmbedBlock key={b.id} config={c} />;
+          case "spacer": return <SpacerBlock key={b.id} config={c} />;
+          case "designations_table": return <DesignationsTableBlock key={b.id} config={c} />;
+          case "members_grid": return <MembersGridBlock key={b.id} config={c} />;
+          case "news_grid": return <NewsGridBlock key={b.id} config={c} />;
+          case "events_calendar": return <EventsCalendarBlock key={b.id} config={c} />;
+          case "contact_section": return <ContactSectionBlock key={b.id} config={c} />;
+          case "organigramma": return <OrganigrammaBlock key={b.id} config={c} stats={stats} />;
+          case "member_profile": return <MemberProfileBlock key={b.id} config={c} memberSlug={blockContext.memberSlug} />;
+          case "portal_login": return <PortalLoginBlock key={b.id} config={c} />;
+          default:
+            console.warn("Unknown block type:", b.type, b);
+            return null;
+        }
+      })}
+    </>
+  );
+}
