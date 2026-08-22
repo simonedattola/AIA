@@ -1,27 +1,67 @@
 import { NavLink, Outlet, useNavigate, Navigate, Link } from "react-router-dom";
 import { useEffect, useState } from "react";
-import { adminMe } from "../../lib/api";
+import { adminMe, ADMIN_UNAUTHORIZED_EVENT } from "../../lib/api";
 import { portalNavLinkClass, NavActiveLabel } from "../../lib/navActive";
 import { ADMIN_NAV } from "../../components/admin/adminNavItems";
 import { ADMIN_ROUTES as R } from "../../lib/appRoutes";
 import { SECTION_LOGO, SECTION_LOGO_CLASS } from "../../lib/brand";
+import { AdminLoading } from "../../components/admin/admin-ui";
 import { LogOut, Menu, ArrowLeft } from "lucide-react";
 
 export default function AdminLayout() {
   const navigate = useNavigate();
-  const [admin, setAdmin] = useState(null);
+  const [auth, setAuth] = useState({ status: "checking", admin: null });
   const [open, setOpen] = useState(false);
 
   useEffect(() => {
-    adminMe().then(setAdmin).catch(() => {
-      localStorage.removeItem("aia_token");
-      navigate(R.login);
-    });
+    const onUnauthorized = () => {
+      setAuth({ status: "guest", admin: null });
+      navigate(R.login, { replace: true });
+    };
+    window.addEventListener(ADMIN_UNAUTHORIZED_EVENT, onUnauthorized);
+    return () => window.removeEventListener(ADMIN_UNAUTHORIZED_EVENT, onUnauthorized);
   }, [navigate]);
 
-  if (!localStorage.getItem("aia_token")) {
+  useEffect(() => {
+    const token = localStorage.getItem("aia_token");
+    if (!token) {
+      setAuth({ status: "guest", admin: null });
+      return;
+    }
+
+    let cancelled = false;
+    setAuth({ status: "checking", admin: null });
+
+    adminMe()
+      .then((admin) => {
+        if (!cancelled) setAuth({ status: "ok", admin });
+      })
+      .catch(() => {
+        if (cancelled) return;
+        localStorage.removeItem("aia_token");
+        localStorage.removeItem("aia_admin");
+        setAuth({ status: "guest", admin: null });
+        navigate(R.login, { replace: true });
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [navigate]);
+
+  if (auth.status === "guest") {
     return <Navigate to={R.login} replace />;
   }
+
+  if (auth.status === "checking") {
+    return (
+      <div className="app-canvas min-h-screen flex items-center justify-center bg-background">
+        <AdminLoading label="Verifica accesso…" />
+      </div>
+    );
+  }
+
+  const admin = auth.admin;
 
   const logout = () => {
     localStorage.removeItem("aia_token");
@@ -47,23 +87,26 @@ export default function AdminLayout() {
         </div>
 
         <nav className="flex-1 overflow-y-auto py-4" aria-label="Menu amministrazione">
-          {ADMIN_NAV.map((it) => (
-            <NavLink
-              key={it.to}
-              to={it.to}
-              end={it.end}
-              onClick={() => setOpen(false)}
-              className={portalNavLinkClass}
-              data-testid={`admin-nav-${it.to.split("/").pop() || "dashboard"}`}
-            >
-              {({ isActive }) => (
-                <>
-                  <it.icon className="h-5 w-5 shrink-0" />
-                  <NavActiveLabel isActive={isActive}>{it.label}</NavActiveLabel>
-                </>
-              )}
-            </NavLink>
-          ))}
+          {ADMIN_NAV.map((it) => {
+            const Icon = it.icon;
+            return (
+              <NavLink
+                key={it.to}
+                to={it.to}
+                end={it.end}
+                onClick={() => setOpen(false)}
+                className={portalNavLinkClass}
+                data-testid={`admin-nav-${it.to.split("/").pop() || "dashboard"}`}
+              >
+                {({ isActive }) => (
+                  <>
+                    <Icon className="h-5 w-5 shrink-0" />
+                    <NavActiveLabel isActive={isActive}>{it.label}</NavActiveLabel>
+                  </>
+                )}
+              </NavLink>
+            );
+          })}
         </nav>
 
         <div className="border-t border-white/10 p-4 space-y-2">

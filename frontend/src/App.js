@@ -32,6 +32,7 @@ import AdminComunicazioniPage from "./pages/admin/AdminComunicazioniPage";
 
 import AdminLoginPage from "./pages/admin/AdminLoginPage";
 import AdminLayout from "./pages/admin/AdminLayout";
+import AdminErrorBoundary from "./components/admin/AdminErrorBoundary";
 import AdminDashboardPage from "./pages/admin/AdminDashboardPage";
 import AdminPagesPage from "./pages/admin/AdminPagesPage";
 import AdminPageEditPage from "./pages/admin/AdminPageEditPage";
@@ -128,8 +129,8 @@ function App() {
             {/* Admin */}
             <Route path="/admin/login" element={<Navigate to={ADMIN_ROUTES.login} replace />} />
             <Route path="/admin/*" element={<LegacyPrefixRedirect from="/admin" to="/amministrazione" />} />
-            <Route path="/amministrazione/login" element={<AdminLoginPage />} />
-            <Route path="/amministrazione" element={<AdminLayout />}>
+            <Route path="/amministrazione/login" element={<AdminErrorBoundary><AdminLoginPage /></AdminErrorBoundary>} />
+            <Route path="/amministrazione" element={<AdminErrorBoundary><AdminLayout /></AdminErrorBoundary>}>
               <Route index element={<AdminDashboardPage />} />
               <Route path="pagine" element={<AdminPagesPage />} />
               <Route path="pagine/:id" element={<AdminPageEditPage />} />

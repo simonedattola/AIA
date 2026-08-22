@@ -1,8 +1,11 @@
 import axios from "axios";
 import { ADMIN_ROUTES } from "./appRoutes";
 
-const BACKEND_URL = process.env.REACT_APP_BACKEND_URL || "";
-export const API_BASE = `${BACKEND_URL}/api`;
+const BACKEND_URL = (process.env.REACT_APP_BACKEND_URL || "").replace(/\/$/, "");
+export const API_BASE = BACKEND_URL ? `${BACKEND_URL}/api` : "/api";
+
+/** Dispatched on admin 401 so AdminLayout can redirect without a hard reload. */
+export const ADMIN_UNAUTHORIZED_EVENT = "aia:admin-unauthorized";
 
 const api = axios.create({ baseURL: API_BASE });
 
@@ -15,11 +18,12 @@ api.interceptors.request.use((cfg) => {
 api.interceptors.response.use(
   (r) => r,
   (err) => {
-    if (err.response && err.response.status === 401) {
+    if (err.response?.status === 401) {
       const path = window.location.pathname;
       if (path.startsWith("/amministrazione") && path !== ADMIN_ROUTES.login) {
         localStorage.removeItem("aia_token");
-        window.location.href = ADMIN_ROUTES.login;
+        localStorage.removeItem("aia_admin");
+        window.dispatchEvent(new CustomEvent(ADMIN_UNAUTHORIZED_EVENT));
       }
     }
     return Promise.reject(err);

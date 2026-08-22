@@ -1,8 +1,8 @@
 import axios from "axios";
 import { PORTAL_ROUTES } from "./appRoutes";
 
-const BACKEND_URL = process.env.REACT_APP_BACKEND_URL || "";
-const PORTAL_BASE = `${BACKEND_URL}/api/portal`;
+const BACKEND_URL = (process.env.REACT_APP_BACKEND_URL || "").replace(/\/$/, "");
+const PORTAL_BASE = BACKEND_URL ? `${BACKEND_URL}/api/portal` : "/api/portal";
 
 const portalApi = axios.create({ baseURL: PORTAL_BASE });
 
