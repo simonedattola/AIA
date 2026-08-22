@@ -164,10 +164,28 @@ else:
     UPLOAD_DIR.mkdir(parents=True, exist_ok=True)
     app.mount("/api/uploads", StaticFiles(directory=str(UPLOAD_DIR)), name="uploads")
 
+
+def _cors_allow_origins() -> list[str]:
+    return [
+        origin.strip()
+        for origin in os.environ.get("CORS_ORIGINS", "*").split(",")
+        if origin.strip() and origin.strip() != "*"
+    ]
+
+
+_cors_origins = _cors_allow_origins()
+# Vercel preview/production URLs + future custom domain; explicit CORS_ORIGINS still apply.
+_cors_origin_regex = (
+    None
+    if not _cors_origins
+    else r"https://([a-z0-9-]+\.)*vercel\.app|https://(www\.)?aia-legnano\.it"
+)
+
 app.add_middleware(
     CORSMiddleware,
     allow_credentials=True,
-    allow_origins=os.environ.get("CORS_ORIGINS", "*").split(","),
+    allow_origins=_cors_origins or ["*"],
+    allow_origin_regex=_cors_origin_regex,
     allow_methods=["*"],
     allow_headers=["*"],
 )
