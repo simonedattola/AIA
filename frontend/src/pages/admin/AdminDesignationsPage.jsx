@@ -44,7 +44,24 @@ const Field = ({ label, children }) => (
 
 function DesignationEditForm({ editing, setEditing, members, onMemberChange }) {
   return (
-    <div data-testid="admin-designation-form">
+    <div data-testid="admin-designation-form" className="space-y-4">
+      {/* Fuori dalla griglia e non dentro <label>: su mobile i tap sui risultati devono funzionare. */}
+      <div className="min-w-0">
+        <span className="block text-sm font-medium text-slate-700 mb-1.5">Associato collegato</span>
+        <MemberSingleSelect
+          value={editing.memberId}
+          onChange={onMemberChange}
+          members={members}
+          label=""
+          testId="designation-member"
+        />
+        {editing.memberSlug && (
+          <a href={`/arbitri/${editing.memberSlug}`} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1 text-xs text-navy-600 mt-1.5 hover:underline">
+            <ExternalLink className="h-3 w-3" /> Vedi profilo pubblico
+          </a>
+        )}
+      </div>
+
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
         <Field label="Data*">
           <input data-testid="designation-date" type="date" value={(editing.matchDate || "").slice(0, 10)} onChange={(e) => setEditing({ ...editing, matchDate: e.target.value })} className={inputCls} />
@@ -68,20 +85,6 @@ function DesignationEditForm({ editing, setEditing, members, onMemberChange }) {
           <select value={editing.role} onChange={(e) => setEditing({ ...editing, role: e.target.value })} className={inputCls} data-testid="designation-role">
             {ROLES.map((r) => <option key={r} value={r}>{r}</option>)}
           </select>
-        </Field>
-        <Field label="Associato collegato">
-          <MemberSingleSelect
-            value={editing.memberId}
-            onChange={onMemberChange}
-            members={members}
-            label=""
-            testId="designation-member"
-          />
-          {editing.memberSlug && (
-            <a href={`/arbitri/${editing.memberSlug}`} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1 text-xs text-navy-600 mt-1 hover:underline">
-              <ExternalLink className="h-3 w-3" /> Vedi profilo pubblico
-            </a>
-          )}
         </Field>
         <Field label="Stato">
           <select value={editing.status} onChange={(e) => setEditing({ ...editing, status: e.target.value })} className={inputCls} data-testid="designation-status">

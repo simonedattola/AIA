@@ -1,4 +1,11 @@
-"""Email sender via Resend (no-op if keys not configured)."""
+"""Email sender via Resend (no-op if keys not configured).
+
+Config tipica (Resend + dominio aia-legnano.it verificato):
+  RESEND_API_KEY=re_...
+  SENDER_EMAIL=noreply@aia-legnano.it
+  NOTIFY_EMAIL=legnano@aia-figc.it
+  PORTAL_FRONTEND_URL=https://aia-virid.vercel.app
+"""
 
 import os
 import asyncio
@@ -6,12 +13,26 @@ import logging
 
 logger = logging.getLogger(__name__)
 
+DEFAULT_SENDER = "noreply@aia-legnano.it"
+DEFAULT_NOTIFY = "legnano@aia-figc.it"
+
+
+def sender_email() -> str:
+    return (os.environ.get("SENDER_EMAIL") or DEFAULT_SENDER).strip()
+
+
+def notify_email() -> str:
+    """Casella sezione: contatti, candidature, commenti comunicazioni."""
+    return (os.environ.get("NOTIFY_EMAIL") or DEFAULT_NOTIFY).strip()
+
 
 async def send_email(to: str, subject: str, html: str) -> bool:
     api_key = os.environ.get("RESEND_API_KEY", "").strip()
-    sender = os.environ.get("SENDER_EMAIL", "onboarding@resend.dev").strip()
+    sender = sender_email()
     if not api_key or not to:
-        logger.info(f"[mailer] Skipped (no key/recipient) - to={to} subject={subject}")
+        logger.info(
+            "[mailer] Skipped (no key/recipient) - to=%s subject=%s", to, subject
+        )
         return False
     try:
         import resend
@@ -24,10 +45,12 @@ async def send_email(to: str, subject: str, html: str) -> bool:
             "html": html,
         }
         result = await asyncio.to_thread(resend.Emails.send, params)
-        logger.info(f"[mailer] Email sent id={result.get('id')} to={to}")
+        logger.info(
+            "[mailer] Email sent id=%s to=%s from=%s", result.get("id"), to, sender
+        )
         return True
     except Exception as e:
-        logger.error(f"[mailer] Failed: {e}")
+        logger.error("[mailer] Failed: %s", e)
         return False
 
 
@@ -229,6 +252,63 @@ def render_message_email(
       </p>
       <p style="color:#64748B;font-size:12px;margin-top:24px;">
         Email inviata perché hai attivato le notifiche per i messaggi.
+      </p>
+    </div>
+    """
+
+
+def render_comunicazione_reply_staff_email(
+    *,
+    title: str,
+    author_name: str,
+    reply_text: str,
+    link: str,
+) -> str:
+    return f"""
+    <div style="font-family:Arial,sans-serif;max-width:600px;margin:0 auto;">
+      <h2 style="color:#004587;border-bottom:3px solid #D4AF37;padding-bottom:8px;">
+        Nuovo commento su comunicazione — AIA Legnano
+      </h2>
+      <p style="color:#334155;">
+        <strong>{author_name}</strong> ha commentato la comunicazione:
+      </p>
+      <p style="color:#004587;font-size:18px;font-weight:bold;margin:16px 0;">{title}</p>
+      <p style="color:#475569;background:#F8FAFC;padding:12px;border-radius:8px;white-space:pre-line;">{reply_text}</p>
+      <p style="margin-top:20px;">
+        <a href="{link}" style="background:#004587;color:#fff;padding:10px 18px;text-decoration:none;border-radius:6px;display:inline-block;">
+          Apri area associati
+        </a>
+      </p>
+    </div>
+    """
+
+
+def render_comunicazione_reply_member_email(
+    *,
+    member_name: str,
+    title: str,
+    author_name: str,
+    reply_text: str,
+    link: str,
+) -> str:
+    return f"""
+    <div style="font-family:Arial,sans-serif;max-width:600px;margin:0 auto;">
+      <h2 style="color:#004587;border-bottom:3px solid #D4AF37;padding-bottom:8px;">
+        Nuovo commento — AIA Legnano
+      </h2>
+      <p style="color:#334155;">Ciao {member_name},</p>
+      <p style="color:#334155;">
+        <strong>{author_name}</strong> ha commentato la comunicazione
+        <strong>{title}</strong>:
+      </p>
+      <p style="color:#475569;background:#F8FAFC;padding:12px;border-radius:8px;white-space:pre-line;">{reply_text}</p>
+      <p style="margin-top:20px;">
+        <a href="{link}" style="background:#004587;color:#fff;padding:10px 18px;text-decoration:none;border-radius:6px;display:inline-block;">
+          Apri comunicazione
+        </a>
+      </p>
+      <p style="color:#64748B;font-size:12px;margin-top:24px;">
+        Email inviata perché hai attivato le notifiche per le comunicazioni interne.
       </p>
     </div>
     """

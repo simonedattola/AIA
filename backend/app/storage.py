@@ -1,4 +1,5 @@
 """Upload storage adapter: local disk, MongoDB GridFS (Atlas), or S3/R2."""
+
 from __future__ import annotations
 
 import logging
@@ -81,7 +82,9 @@ def save_bytes(name: str, data: bytes, content_type: str | None = None) -> str:
     if use_object_storage():
         from .paths import _s3_bucket
 
-        ctype = content_type or mimetypes.guess_type(name)[0] or "application/octet-stream"
+        ctype = (
+            content_type or mimetypes.guess_type(name)[0] or "application/octet-stream"
+        )
         client = s3_client()
         extra = {"ContentType": ctype}
         client.put_object(Bucket=_s3_bucket(), Key=object_key(name), Body=data, **extra)

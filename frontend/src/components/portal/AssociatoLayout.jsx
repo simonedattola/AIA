@@ -5,7 +5,7 @@ import { portalNavLinkClass, NavActiveLabel } from "../../lib/navActive";
 import { PORTAL_NAV } from "./portalNavItems";
 import { PORTAL_ROUTES as R } from "../../lib/appRoutes";
 import { SECTION_LOGO, SECTION_LOGO_CLASS } from "../../lib/brand";
-import { LogOut, Menu } from "lucide-react";
+import { LogOut, Menu, ArrowLeft } from "lucide-react";
 
 export default function AssociatoLayout() {
   const navigate = useNavigate();
@@ -66,6 +66,14 @@ export default function AssociatoLayout() {
           ))}
         </nav>
         <div className="border-t border-white/10 p-4 space-y-2">
+          <Link
+            to="/"
+            onClick={() => setOpen(false)}
+            className="flex items-center gap-2 px-3 py-2 text-sm text-slate-300 hover:text-white hover:bg-navy-800 rounded transition-colors"
+            data-testid="portal-back-to-site"
+          >
+            <ArrowLeft className="h-4 w-4" /> Torna al sito
+          </Link>
           <button
             type="button"
             onClick={logout}

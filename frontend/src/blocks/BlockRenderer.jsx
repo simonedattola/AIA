@@ -24,10 +24,6 @@ import { parseInstagramPostEmbed, instagramPostEmbedSrc } from "../lib/instagram
 import PageBrandBar from "../components/PageBrandBar";
 import { eventDateKey, isUpcomingEvent } from "../lib/eventsDisplay";
 import EventDetailModal from "../components/events/EventDetailModal";
-import {
-  DesignationsTableBlock, MembersGridBlock, NewsGridBlock, EventsCalendarBlock,
-  ContactSectionBlock, OrganigrammaBlock, MemberProfileBlock, PortalLoginBlock,
-} from "./DynamicPageBlocks";
 
 
 /** Link CTA: route interne, anchor (#form) e scroll con offset header fisso. */
@@ -95,7 +91,7 @@ export function HeroBlock({ config: c, stats }) {
           <div className={`absolute inset-0 ${overlayClass}`} />
         </div>
       )}
-      <div className="relative z-10 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-6 pb-10 min-[1140px]:py-20 grid grid-cols-1 lg:grid-cols-12 gap-8 lg:gap-12 items-stretch min-[1140px]:items-center w-[...]
+      <div className="relative z-10 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-6 pb-10 min-[1140px]:py-20 grid grid-cols-1 lg:grid-cols-12 gap-8 lg:gap-12 items-stretch min-[1140px]:items-center w-full text-white min-h-full">
         <div
           className={`${c.showStats ? "lg:col-span-7" : "lg:col-span-12"} flex flex-col min-h-0 max-lg:flex-1 max-lg:justify-between max-lg:py-2`}
         >
@@ -345,7 +341,7 @@ export function CTABlock({ config: c }) {
         ) : (
           <div className="flex flex-wrap items-center justify-center gap-4">
             {c.primaryCta?.label && <CtaLink href={c.primaryCta.href || "/"} variant={c.style === "white" ? "primary" : "secondary"}>{c.primaryCta.label} <ArrowRight className="h-5 w-5"/></CtaLink>}
-            {c.secondaryCta?.label && <CtaLink href={c.secondaryCta.href || "/"} className={`underline font-medium ${c.style === "white" ? "text-navy-600" : "text-white"}`}>{c.secondaryCta.label}[...]</CtaLink>}
+            {c.secondaryCta?.label && <CtaLink href={c.secondaryCta.href || "/"} className={`underline font-medium ${c.style === "white" ? "text-navy-600" : "text-white"}`}>{c.secondaryCta.label}</CtaLink>}
           </div>
         )}
       </div>
@@ -601,7 +597,7 @@ export function NewsSliderBlock({ config: c }) {
         )}
 
         {c.ctaLabel && c.ctaHref && (
-          <div className="mt-10 flex justify-end">
+          <div className="mt-10 flex justify-start">
             <CtaLink href={c.ctaHref} variant="primary">{c.ctaLabel} <ArrowRight className="h-4 w-4"/></CtaLink>
           </div>
         )}
@@ -702,7 +698,7 @@ export function EventsListBlock({ config: c }) {
             )}
 
             {c.ctaLabel && c.ctaHref && (
-              <div className="mt-10 flex justify-end">
+              <div className="mt-10 flex justify-start">
                 <CtaLink href={c.ctaHref} variant="primary">{c.ctaLabel} <ArrowRight className="h-4 w-4"/></CtaLink>
               </div>
             )}

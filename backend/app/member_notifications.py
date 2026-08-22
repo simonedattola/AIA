@@ -7,7 +7,14 @@ import logging
 import os
 import re
 
-from .mailer import render_comunicazione_email, render_message_email, send_email
+from .mailer import (
+    render_comunicazione_email,
+    render_comunicazione_reply_member_email,
+    render_comunicazione_reply_staff_email,
+    render_message_email,
+    notify_email,
+    send_email,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -119,6 +126,68 @@ async def notify_group_message(
 def schedule_comunicazione_notifications(db, comm: dict) -> None:
     """Fire-and-forget dopo creazione comunicazione."""
     asyncio.create_task(notify_comunicazione_recipients(db, comm))
+
+
+async def notify_comunicazione_reply(
+    db, comm: dict, *, author_id: str, author_name: str, reply_text: str
+) -> int:
+    """Avvisa la sezione + gli associati opt-in (escluso chi ha commentato)."""
+    link = f"{PORTAL_BASE_URL}/area-associati/comunicazioni-interne"
+    title = comm.get("title") or "Comunicazione"
+    preview = (reply_text or "")[:400]
+    sent = 0
+
+    staff = notify_email()
+    if staff:
+        html = render_comunicazione_reply_staff_email(
+            title=title,
+            author_name=author_name,
+            reply_text=preview,
+            link=link,
+        )
+        if await send_email(
+            staff,
+            f"Commento su «{title}» da {author_name}",
+            html,
+        ):
+            sent += 1
+
+    from .comunicazioni_helpers import comunicazione_destinatari
+
+    for member in await comunicazione_destinatari(db, comm):
+        if member.get("id") == author_id:
+            continue
+        if not member.get("emailNotifyComunicazioni"):
+            continue
+        nome = f"{member.get('firstName', '')} {member.get('lastName', '')}".strip()
+        html = render_comunicazione_reply_member_email(
+            member_name=nome,
+            title=title,
+            author_name=author_name,
+            reply_text=preview,
+            link=link,
+        )
+        if await _send_to_member(member, f"Nuovo commento su «{title}»", html):
+            sent += 1
+    return sent
+
+
+def schedule_comunicazione_reply_notification(
+    db, comm: dict, *, author_id: str, author_name: str, reply_text: str
+) -> None:
+    async def _run():
+        try:
+            await notify_comunicazione_reply(
+                db,
+                comm,
+                author_id=author_id,
+                author_name=author_name,
+                reply_text=reply_text,
+            )
+        except Exception:
+            logger.exception("Invio notifica commento comunicazione fallito")
+
+    asyncio.create_task(_run())
 
 
 def schedule_message_notification(

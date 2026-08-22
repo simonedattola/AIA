@@ -1,4 +1,5 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef, useLayoutEffect, useCallback } from "react";
+import { createPortal } from "react-dom";
 import { adminMembers } from "../../lib/api";
 
 function memberHaystack(m) {
@@ -90,7 +91,7 @@ export function MemberMultiSelect({
       />
       {searchOnly ? (
         q.trim() && (
-          <div className="mt-1.5 border border-slate-200 rounded-md divide-y divide-slate-100 overflow-hidden bg-white shadow-sm">
+          <div className="mt-1.5 border border-slate-200 rounded-md divide-y divide-slate-100 overflow-hidden bg-white shadow-sm max-h-48 overflow-y-auto">
             {searchResults.length === 0 ? (
               <p className="px-2 py-1.5 text-xs text-slate-500">Nessun risultato</p>
             ) : (
@@ -99,7 +100,7 @@ export function MemberMultiSelect({
                   key={m.id}
                   type="button"
                   onClick={() => addFromSearch(m.id)}
-                  className="w-full text-left px-2 py-1.5 hover:bg-slate-50 text-xs"
+                  className="w-full text-left px-2 py-2.5 min-h-[44px] hover:bg-slate-50 text-xs"
                 >
                   <span className="text-navy-700 font-medium">
                     {m.firstName} {m.lastName}
@@ -142,7 +143,11 @@ export function MemberMultiSelect({
   );
 }
 
-/** Select singolo associato con ricerca. */
+/**
+ * Select singolo associato con ricerca.
+ * I risultati sono in portal fixed (sopra la modale) così su mobile non restano
+ * bloccati da overflow-y-auto del form sheet.
+ */
 export function MemberSingleSelect({
   value,
   onChange,
@@ -152,6 +157,10 @@ export function MemberSingleSelect({
 }) {
   const [members, setMembers] = useState([]);
   const [q, setQ] = useState("");
+  const [open, setOpen] = useState(false);
+  const [menuPos, setMenuPos] = useState(null);
+  const rootRef = useRef(null);
+  const inputRef = useRef(null);
 
   useEffect(() => {
     if (membersProp) {
@@ -162,15 +171,102 @@ export function MemberSingleSelect({
   }, [membersProp]);
 
   const selected = value ? members.find((m) => m.id === value) : null;
-  const results = filterMembers(members, q, { excludeIds: value ? [value] : [], requireQuery: true });
+  const results = filterMembers(members, q, { excludeIds: value ? [value] : [], requireQuery: true, limit: 12 });
+  const showMenu = open && q.trim().length > 0;
+
+  const updateMenuPos = useCallback(() => {
+    const el = inputRef.current;
+    if (!el) return;
+    const r = el.getBoundingClientRect();
+    const spaceBelow = window.innerHeight - r.bottom;
+    const preferUp = spaceBelow < 220 && r.top > spaceBelow;
+    setMenuPos({
+      left: Math.max(8, Math.min(r.left, window.innerWidth - Math.min(r.width, window.innerWidth - 16) - 8)),
+      width: Math.min(r.width, window.innerWidth - 16),
+      top: preferUp ? undefined : r.bottom + 4,
+      bottom: preferUp ? window.innerHeight - r.top + 4 : undefined,
+      maxHeight: Math.min(240, preferUp ? r.top - 16 : spaceBelow - 16),
+    });
+  }, []);
+
+  useLayoutEffect(() => {
+    if (!showMenu) {
+      setMenuPos(null);
+      return undefined;
+    }
+    updateMenuPos();
+    const onScroll = () => updateMenuPos();
+    window.addEventListener("resize", onScroll);
+    window.addEventListener("scroll", onScroll, true);
+    return () => {
+      window.removeEventListener("resize", onScroll);
+      window.removeEventListener("scroll", onScroll, true);
+    };
+  }, [showMenu, q, updateMenuPos]);
+
+  useEffect(() => {
+    if (!showMenu) return undefined;
+    const onDown = (e) => {
+      if (rootRef.current?.contains(e.target)) return;
+      if (e.target?.closest?.("[data-member-select-menu]")) return;
+      setOpen(false);
+    };
+    document.addEventListener("mousedown", onDown);
+    document.addEventListener("touchstart", onDown);
+    return () => {
+      document.removeEventListener("mousedown", onDown);
+      document.removeEventListener("touchstart", onDown);
+    };
+  }, [showMenu]);
 
   const pick = (id) => {
     onChange(id);
     setQ("");
+    setOpen(false);
   };
 
+  const menu =
+    showMenu &&
+    menuPos &&
+    createPortal(
+      <div
+        data-member-select-menu
+        data-testid={testId ? `${testId}-menu` : undefined}
+        className="fixed z-[80] rounded-md border border-slate-200 bg-white shadow-lg divide-y divide-slate-100 overflow-y-auto"
+        style={{
+          left: menuPos.left,
+          width: menuPos.width,
+          top: menuPos.top,
+          bottom: menuPos.bottom,
+          maxHeight: menuPos.maxHeight,
+        }}
+        role="listbox"
+      >
+        {results.length === 0 ? (
+          <p className="px-3 py-3 text-sm text-slate-500">Nessun risultato</p>
+        ) : (
+          results.map((m) => (
+            <button
+              key={m.id}
+              type="button"
+              role="option"
+              onMouseDown={(e) => e.preventDefault()}
+              onClick={() => pick(m.id)}
+              className="w-full text-left px-3 py-3 min-h-[48px] hover:bg-navy-50 active:bg-navy-100 text-sm"
+            >
+              <span className="text-navy-700 font-medium">
+                {m.firstName} {m.lastName}
+              </span>
+              {m.category && <span className="text-xs text-slate-400 ml-1">{m.category}</span>}
+            </button>
+          ))
+        )}
+      </div>,
+      document.body
+    );
+
   return (
-    <div data-testid={testId}>
+    <div ref={rootRef} data-testid={testId} className="relative min-w-0">
       {label ? (
         <span className="block text-sm font-medium text-slate-700 mb-1.5">{label}</span>
       ) : null}
@@ -179,40 +275,27 @@ export function MemberSingleSelect({
           <button
             type="button"
             onClick={() => onChange(null)}
-            className="inline-flex items-center gap-1 px-2 py-1 bg-navy-50 text-navy-700 rounded text-xs font-medium hover:bg-navy-100"
+            className="inline-flex items-center gap-1 px-2.5 py-1.5 bg-navy-50 text-navy-700 rounded text-sm font-medium hover:bg-navy-100 min-h-[40px]"
           >
             {selected.firstName} {selected.lastName} ×
           </button>
         </div>
       )}
       <input
+        ref={inputRef}
         type="search"
         value={q}
-        onChange={(e) => setQ(e.target.value)}
+        onChange={(e) => {
+          setQ(e.target.value);
+          setOpen(true);
+        }}
+        onFocus={() => setOpen(true)}
         placeholder={selected ? "Cerca per sostituire…" : "Cerca associato…"}
-        className="w-full px-3 py-2 border border-slate-300 rounded-md text-sm focus:border-navy-600 focus:outline-none"
+        className="w-full px-3 py-2.5 border border-slate-300 rounded-md text-sm focus:border-navy-600 focus:outline-none focus:ring-2 focus:ring-navy-600/20 min-h-[44px]"
+        autoComplete="off"
+        enterKeyHint="search"
       />
-      {q.trim() && (
-        <div className="mt-1.5 border border-slate-200 rounded-md divide-y divide-slate-100 overflow-hidden bg-white shadow-sm">
-          {results.length === 0 ? (
-            <p className="px-3 py-2 text-sm text-slate-500">Nessun risultato</p>
-          ) : (
-            results.map((m) => (
-              <button
-                key={m.id}
-                type="button"
-                onClick={() => pick(m.id)}
-                className="w-full text-left px-3 py-2 hover:bg-slate-50 text-sm"
-              >
-                <span className="text-navy-700 font-medium">
-                  {m.firstName} {m.lastName}
-                </span>
-                {m.category && <span className="text-xs text-slate-400 ml-1">{m.category}</span>}
-              </button>
-            ))
-          )}
-        </div>
-      )}
+      {menu}
     </div>
   );
 }

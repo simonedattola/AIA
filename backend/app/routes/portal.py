@@ -713,6 +713,15 @@ async def portal_comunicazione_risposta(
         {"id": comm_id},
         {"$push": {"risposte": risposta}},
     )
+    from ..member_notifications import schedule_comunicazione_reply_notification
+
+    schedule_comunicazione_reply_notification(
+        db,
+        c,
+        author_id=mid,
+        author_name=risposta["memberName"],
+        reply_text=testo,
+    )
     return risposta
 
 
