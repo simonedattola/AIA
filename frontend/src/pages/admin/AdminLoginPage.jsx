@@ -1,18 +1,32 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { SECTION_LOGO, SECTION_LOGO_CLASS } from "../../lib/brand";
 import { useNavigate, Navigate } from "react-router-dom";
 import { adminLogin } from "../../lib/api";
 import { ADMIN_ROUTES as R } from "../../lib/appRoutes";
 import { Shield, Lock, Mail } from "lucide-react";
 import { Button } from "@/design-system";
+import { AdminLoading } from "../../components/admin/admin-ui";
 
 export default function AdminLoginPage() {
   const navigate = useNavigate();
   const [form, setForm] = useState({ email: "", password: "" });
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
+  const [session, setSession] = useState({ ready: false, hasToken: false });
 
-  if (localStorage.getItem("aia_token")) {
+  useEffect(() => {
+    setSession({ ready: true, hasToken: !!localStorage.getItem("aia_token") });
+  }, []);
+
+  if (!session.ready) {
+    return (
+      <div className="app-canvas min-h-screen flex items-center justify-center bg-pattern-stadio p-4">
+        <AdminLoading label="Caricamento…" />
+      </div>
+    );
+  }
+
+  if (session.hasToken) {
     return <Navigate to={R.dashboard} replace />;
   }
 
