@@ -30,7 +30,9 @@ async def send_email(to: str, subject: str, html: str) -> bool:
     api_key = os.environ.get("RESEND_API_KEY", "").strip()
     sender = sender_email()
     if not api_key or not to:
-        logger.info("[mailer] Skipped (no key/recipient) - to=%s subject=%s", to, subject)
+        logger.info(
+            "[mailer] Skipped (no key/recipient) - to=%s subject=%s", to, subject
+        )
         return False
     try:
         import resend
@@ -43,7 +45,9 @@ async def send_email(to: str, subject: str, html: str) -> bool:
             "html": html,
         }
         result = await asyncio.to_thread(resend.Emails.send, params)
-        logger.info("[mailer] Email sent id=%s to=%s from=%s", result.get("id"), to, sender)
+        logger.info(
+            "[mailer] Email sent id=%s to=%s from=%s", result.get("id"), to, sender
+        )
         return True
     except Exception as e:
         logger.error("[mailer] Failed: %s", e)

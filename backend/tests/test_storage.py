@@ -1,4 +1,5 @@
 """Storage adapter smoke tests (local + GridFS auto-detect)."""
+
 from pathlib import Path
 
 import pytest

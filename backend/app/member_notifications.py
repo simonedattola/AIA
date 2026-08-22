@@ -167,9 +167,7 @@ async def notify_comunicazione_reply(
             reply_text=preview,
             link=link,
         )
-        if await _send_to_member(
-            member, f"Nuovo commento su «{title}»", html
-        ):
+        if await _send_to_member(member, f"Nuovo commento su «{title}»", html):
             sent += 1
     return sent
 
