@@ -7,6 +7,11 @@ export const API_BASE = BACKEND_URL ? `${BACKEND_URL}/api` : "/api";
 /** Dispatched on admin 401 so AdminLayout can redirect without a hard reload. */
 export const ADMIN_UNAUTHORIZED_EVENT = "aia:admin-unauthorized";
 
+/** List endpoints must always resolve to an array (avoids .filter/.map crashes in admin UI). */
+export function asAdminList(data) {
+  return Array.isArray(data) ? data : [];
+}
+
 const api = axios.create({ baseURL: API_BASE });
 
 api.interceptors.request.use((cfg) => {
@@ -58,10 +63,17 @@ export const submitContact = (data) => api.post("/public/forms/contatti", data).
 // ---- Admin ----
 export const adminLogin = (email, password) => api.post("/admin/login", { email, password }).then((r) => r.data);
 export const adminMe = () => api.get("/admin/me").then((r) => r.data);
-export const adminDashboard = () => api.get("/admin/dashboard").then((r) => r.data);
+export const adminDashboard = () =>
+  api.get("/admin/dashboard").then((r) => {
+    const data = r.data && typeof r.data === "object" ? r.data : {};
+    return {
+      ...data,
+      publicDesignations: asAdminList(data.publicDesignations),
+    };
+  });
 
-export const adminArticles = () => api.get("/admin/articles").then((r) => r.data);
-export const adminArticleCategories = () => api.get("/admin/article-categories").then((r) => r.data);
+export const adminArticles = () => api.get("/admin/articles").then((r) => asAdminList(r.data));
+export const adminArticleCategories = () => api.get("/admin/article-categories").then((r) => asAdminList(r.data));
 export const adminAddArticleCategory = (name) =>
   api.post("/admin/article-categories", { name }).then((r) => r.data);
 export const adminArticle = (id) => api.get(`/admin/articles/${id}`).then((r) => r.data);
@@ -69,19 +81,19 @@ export const adminCreateArticle = (data) => api.post("/admin/articles", data).th
 export const adminUpdateArticle = (id, data) => api.put(`/admin/articles/${id}`, data).then((r) => r.data);
 export const adminDeleteArticle = (id) => api.delete(`/admin/articles/${id}`).then((r) => r.data);
 
-export const adminEvents = () => api.get("/admin/events").then((r) => r.data);
-export const adminEventTypes = () => api.get("/admin/event-types").then((r) => r.data);
+export const adminEvents = () => api.get("/admin/events").then((r) => asAdminList(r.data));
+export const adminEventTypes = () => api.get("/admin/event-types").then((r) => asAdminList(r.data));
 export const adminAddEventType = (name) => api.post("/admin/event-types", { name }).then((r) => r.data);
 export const adminCreateEvent = (data) => api.post("/admin/events", data).then((r) => r.data);
 export const adminUpdateEvent = (id, data) => api.put(`/admin/events/${id}`, data).then((r) => r.data);
 export const adminDeleteEvent = (id) => api.delete(`/admin/events/${id}`).then((r) => r.data);
 
-export const adminAlbums = () => api.get("/admin/albums").then((r) => r.data);
+export const adminAlbums = () => api.get("/admin/albums").then((r) => asAdminList(r.data));
 export const adminCreateAlbum = (data) => api.post("/admin/albums", data).then((r) => r.data);
 export const adminUpdateAlbum = (id, data) => api.put(`/admin/albums/${id}`, data).then((r) => r.data);
 export const adminDeleteAlbum = (id) => api.delete(`/admin/albums/${id}`).then((r) => r.data);
 
-export const adminMembers = (params = {}) => api.get("/admin/members", { params }).then((r) => r.data);
+export const adminMembers = (params = {}) => api.get("/admin/members", { params }).then((r) => asAdminList(r.data));
 export const adminCreateMember = (data) => api.post("/admin/members", data).then((r) => r.data);
 export const adminUpdateMember = (id, data) => api.put(`/admin/members/${id}`, data).then((r) => r.data);
 export const adminDeleteMember = (id) => api.delete(`/admin/members/${id}`).then((r) => r.data);
@@ -97,7 +109,7 @@ export const adminImportMembersFile = (file, { dryRun = false } = {}) => {
   }).then((r) => r.data);
 };
 
-export const adminDesignations = () => api.get("/admin/designations").then((r) => r.data);
+export const adminDesignations = () => api.get("/admin/designations").then((r) => asAdminList(r.data));
 export const adminCreateDesignation = (data) => api.post("/admin/designations", data).then((r) => r.data);
 export const adminUpdateDesignation = (id, data) => api.put(`/admin/designations/${id}`, data).then((r) => r.data);
 export const adminDeleteDesignation = (id) => api.delete(`/admin/designations/${id}`).then((r) => r.data);
@@ -117,18 +129,18 @@ export const adminImportDesignationsFile = (file, { dryRun = false } = {}) => {
   }).then((r) => r.data);
 };
 
-export const adminLeads = () => api.get("/admin/leads").then((r) => r.data);
+export const adminLeads = () => api.get("/admin/leads").then((r) => asAdminList(r.data));
 export const adminUpdateLead = (id, data) => api.put(`/admin/leads/${id}`, data).then((r) => r.data);
 export const adminDeleteLead = (id) => api.delete(`/admin/leads/${id}`).then((r) => r.data);
 
-export const adminMessages = () => api.get("/admin/messages").then((r) => r.data);
+export const adminMessages = () => api.get("/admin/messages").then((r) => asAdminList(r.data));
 export const adminUpdateMessage = (id, data) => api.put(`/admin/messages/${id}`, data).then((r) => r.data);
 export const adminDeleteMessage = (id) => api.delete(`/admin/messages/${id}`).then((r) => r.data);
 
 export const adminSettings = () => api.get("/admin/settings").then((r) => r.data);
 export const adminPutSettings = (data) => api.put("/admin/settings", data).then((r) => r.data);
 
-export const adminPages = () => api.get("/admin/pages").then((r) => r.data);
+export const adminPages = () => api.get("/admin/pages").then((r) => asAdminList(r.data));
 export const adminReconcileSystemPages = () => api.post("/admin/pages/reconcile-system").then((r) => r.data);
 export const adminResetPageBlocks = (id) => api.post(`/admin/pages/${id}/reset-blocks`).then((r) => r.data);
 export const adminPage = (id) => api.get(`/admin/pages/${id}`).then((r) => r.data);
@@ -136,10 +148,10 @@ export const adminCreatePage = (data) => api.post("/admin/pages", data).then((r)
 export const adminUpdatePage = (id, data) => api.put(`/admin/pages/${id}`, data).then((r) => r.data);
 export const adminDeletePage = (id) => api.delete(`/admin/pages/${id}`).then((r) => r.data);
 
-export const adminDocumentSections = () => api.get("/admin/document-sections").then((r) => r.data);
+export const adminDocumentSections = () => api.get("/admin/document-sections").then((r) => asAdminList(r.data));
 export const adminAddDocumentSection = (name) =>
   api.post("/admin/document-sections", { name }).then((r) => r.data);
-export const adminDocuments = () => api.get("/admin/documents").then((r) => r.data);
+export const adminDocuments = () => api.get("/admin/documents").then((r) => asAdminList(r.data));
 export const adminCreateDocument = (data) => api.post("/admin/documents", data).then((r) => r.data);
 export const adminUpdateDocument = (id, data) => api.put(`/admin/documents/${id}`, data).then((r) => r.data);
 export const adminDeleteDocument = (id) => api.delete(`/admin/documents/${id}`).then((r) => r.data);
@@ -161,7 +173,7 @@ export const adminImportAiaDocuments = () => api.post("/admin/documents/import-a
 export const adminImportLegnanoDocuments = () => api.post("/admin/documents/import-aia-legnano").then((r) => r.data);
 export const adminImportAllDocuments = () => api.post("/admin/documents/import-all-sources").then((r) => r.data);
 
-export const adminTestimonials = () => api.get("/admin/testimonials").then((r) => r.data);
+export const adminTestimonials = () => api.get("/admin/testimonials").then((r) => asAdminList(r.data));
 export const adminCreateTestimonial = (data) => api.post("/admin/testimonials", data).then((r) => r.data);
 export const adminUpdateTestimonial = (id, data) => api.put(`/admin/testimonials/${id}`, data).then((r) => r.data);
 export const adminDeleteTestimonial = (id) => api.delete(`/admin/testimonials/${id}`).then((r) => r.data);
@@ -210,7 +222,7 @@ export const adminPresenzeEventoSave = (eventId, updates) =>
   api.put(`/portal/admin/presenze/eventi/${eventId}`, updates).then((r) => r.data);
 export const adminPresenzeAssociato = (memberId) =>
   api.get(`/portal/admin/presenze/associati/${memberId}`).then((r) => r.data);
-export const adminComunicazioni = () => api.get("/portal/admin/comunicazioni").then((r) => r.data);
+export const adminComunicazioni = () => api.get("/portal/admin/comunicazioni").then((r) => asAdminList(r.data));
 export const adminComunicazioneLetture = (id) =>
   api.get(`/admin/comunicazioni/${id}/letture`).then((r) => r.data);
 export const adminCreaComunicazione = (data) => api.post("/portal/admin/comunicazioni", data).then((r) => r.data);

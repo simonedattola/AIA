@@ -1,5 +1,5 @@
 import { Fragment, useEffect, useState, useMemo } from "react";
-import { adminMessages, adminUpdateMessage, adminDeleteMessage } from "../../lib/api";
+import { adminMessages, adminUpdateMessage, adminDeleteMessage, asAdminList } from "../../lib/api";
 import { formatDateTimeIt } from "../../lib/format";
 import { Trash2, Mail, ChevronDown, ChevronUp } from "lucide-react";
 import { SITE_ICONS } from "../../lib/siteIcons";
@@ -19,7 +19,10 @@ export default function AdminMessagesPage() {
   const [open, setOpen] = useState(null);
   const [filter, setFilter] = useState("all");
 
-  const load = () => adminMessages().then(setItems);
+  const load = () =>
+    adminMessages()
+      .then((data) => setItems(asAdminList(data)))
+      .catch(() => setItems([]));
   useEffect(() => {
     load();
   }, []);
