@@ -19,7 +19,10 @@ export default function AdminMessagesPage() {
   const [open, setOpen] = useState(null);
   const [filter, setFilter] = useState("all");
 
-  const load = () => adminMessages().then(setItems);
+  const load = () =>
+    adminMessages()
+      .then((data) => setItems(Array.isArray(data) ? data : []))
+      .catch(() => setItems([]));
   useEffect(() => {
     load();
   }, []);
