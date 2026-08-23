@@ -2,6 +2,7 @@ import { useCallback, useEffect, useState } from "react";
 import { useSearchParams } from "react-router-dom";
 import {
   adminGallery,
+  asAdminList,
   adminGalleryCreate,
   adminGalleryApprove,
   adminGalleryReject,
@@ -66,7 +67,9 @@ export default function AdminGalleryPage() {
   const [addingCategory, setAddingCategory] = useState(false);
   const loadCarousel = useCallback(() => {
     const status = carouselTab === "pending" ? "pending" : carouselTab === "rejected" ? "rejected" : "approved";
-    adminGallery({ status }).then(setCarouselItems).catch(() => setCarouselItems([]));
+    adminGallery({ status })
+      .then((data) => setCarouselItems(asAdminList(data)))
+      .catch(() => setCarouselItems([]));
   }, [carouselTab]);
 
   useEffect(() => {
