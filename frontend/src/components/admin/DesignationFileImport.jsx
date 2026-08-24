@@ -112,8 +112,13 @@ export default function DesignationFileImport({ onImported }) {
               <p className="font-medium text-slate-700">Formati accettati</p>
               <p>CSV, Excel (.xlsx), PDF con tabella, Word (.docx) con tabella.</p>
               <p>
-                Servono almeno <strong>data</strong>, <strong>gara</strong> (o squadre casa/ospite), <strong>ruolo</strong> e <strong>nominativo</strong>.
-                Le colonne possono chiamarsi in modi diversi e stare in qualsiasi ordine.
+                Servono almeno <strong>data</strong>, <strong>squadre</strong> (locale/ospite o gara),{" "}
+                <strong>ruolo</strong> (o colonna <strong>Att.</strong> con AE/AA) e{" "}
+                <strong>nominativo</strong> (o <strong>Associato</strong>).
+              </p>
+              <p>
+                Riconosciuti anche export tipici: <em>Data / Ora, Cat., Gir., Giorn., Sq. Locale, Sq. Ospite, Att., Associato</em>.
+                Le sigle Cat. (SEC, PRI, JUR, …) vengono espanse in etichetta leggibile.
               </p>
               <p>Le designazioni già presenti vengono aggiornate, non duplicate.</p>
             </div>

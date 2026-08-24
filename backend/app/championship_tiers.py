@@ -56,7 +56,9 @@ _WOMENS_CHAMPIONSHIP_PATTERNS: tuple[re.Pattern[str], ...] = (
 
 def is_womens_championship(championship: str | None) -> bool:
     """True se il testo indica un campionato calcistico femminile."""
-    raw = (championship or "").strip()
+    from .championship_codes import expand_championship_label
+
+    raw = expand_championship_label(championship)
     if not raw:
         return False
     norm = _normalize_text(raw)
@@ -64,10 +66,13 @@ def is_womens_championship(championship: str | None) -> bool:
 
 
 def detect_championship_tier(championship: str) -> str | None:
-    """Riconosce il livello campionato da testo championship/category."""
+    """Riconosce il livello campionato da testo championship/category (anche sigle)."""
+    from .championship_codes import expand_championship_label
+
     if not (championship or "").strip():
         return None
-    norm = _normalize_text(championship)
+    expanded = expand_championship_label(championship)
+    norm = _normalize_text(expanded)
     for label, pattern in _TIER_PATTERNS:
         if pattern.search(norm):
             return label
