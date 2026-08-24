@@ -222,9 +222,7 @@ ARTICLE_BODIES = {
 
 async def seed_admin():
     db = get_db()
-    email = (
-        os.environ.get("ADMIN_EMAIL") or "legnano@aia-figc.it"
-    ).strip().lower()
+    email = (os.environ.get("ADMIN_EMAIL") or "legnano@aia-figc.it").strip().lower()
     password = (os.environ.get("ADMIN_PASSWORD") or "").strip()
     if not password:
         raise RuntimeError(

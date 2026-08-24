@@ -126,7 +126,10 @@ async def reset_password(payload: ResetPasswordRequest):
         await reset_admin_password(payload.token, payload.password)
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e)) from e
-    return {"ok": True, "message": "Password aggiornata. Puoi accedere con le nuove credenziali."}
+    return {
+        "ok": True,
+        "message": "Password aggiornata. Puoi accedere con le nuove credenziali.",
+    }
 
 
 @router.get("/me")

@@ -189,7 +189,9 @@ async def list_officials():
     db = get_db()
     items = await db.officials.find({}, {"_id": 0}).sort("sortOrder", 1).to_list(100)
     for item in items:
-        first, last = format_person_name_parts(item.get("firstName"), item.get("lastName"))
+        first, last = format_person_name_parts(
+            item.get("firstName"), item.get("lastName")
+        )
         if first:
             item["firstName"] = first
         if last:

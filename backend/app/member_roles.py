@@ -401,7 +401,9 @@ def role_groups_member_query(role_groups: list[str] | None) -> dict:
     return {**base, "$or": or_clauses}
 
 
-def comunicazione_visibility_or_clauses(member_id: str, member: dict | None) -> list[dict]:
+def comunicazione_visibility_or_clauses(
+    member_id: str, member: dict | None
+) -> list[dict]:
     """Clausole $or per comunicazioni visibili a un associato."""
     clauses: list[dict] = [{"allMembers": True}, {"memberIds": member_id}]
     if member:

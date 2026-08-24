@@ -169,7 +169,7 @@ export function MembersGridBlock({ config: c }) {
     const s = search.trim().toLowerCase();
     if (!s) return list;
     return list.filter((m) => `${m.firstName} ${m.lastName} ${m.category} ${m.role} ${memberRoleLabel(m)}`.toLowerCase().includes(s));
-  }, [items, search, qualFilter, showArbitriFilters]);
+  }, [items, search, qualFilter, showArbitriFilters, isObserversPage]);
 
   return (
     <section className="site-section bg-background" data-testid="members-grid-block">
