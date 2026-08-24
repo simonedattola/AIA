@@ -50,7 +50,9 @@ def _thumbnail_from_item(item: dict[str, Any]) -> str:
     return (item.get("thumbnail_url") or item.get("display_url") or "").strip()
 
 
-def _widget_post_from_item(item: dict[str, Any], username: str) -> dict[str, Any] | None:
+def _widget_post_from_item(
+    item: dict[str, Any], username: str
+) -> dict[str, Any] | None:
     shortcode = _shortcode_from_item(item)
     if not shortcode:
         return None
@@ -157,7 +159,12 @@ def _merge_posts(
     merged: list[dict[str, Any]] = []
     for group in (live, gallery):
         for post in group:
-            key = (post.get("shortcode") or post.get("permalink") or post.get("imageUrl") or "").strip()
+            key = (
+                post.get("shortcode")
+                or post.get("permalink")
+                or post.get("imageUrl")
+                or ""
+            ).strip()
             if not key or key in seen:
                 continue
             seen.add(key)
@@ -239,4 +246,3 @@ async def build_instagram_widget_payload(
     if data.get("error") and data["posts"]:
         data.pop("error", None)
     return data
-

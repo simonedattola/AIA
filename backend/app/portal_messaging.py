@@ -152,9 +152,7 @@ async def member_display(
         email = (m.get("email") or "").strip()
         phone = (m.get("phone") or "").strip()
 
-    first, last = format_person_name_parts(
-        m.get("firstName"), m.get("lastName")
-    )
+    first, last = format_person_name_parts(m.get("firstName"), m.get("lastName"))
     return {
         "id": m["id"],
         "slug": m.get("slug") or "",
@@ -258,7 +256,9 @@ async def enrich_message(
         e = rx.get("emoji")
         if e:
             grouped.setdefault(e, []).append(
-                format_person_name(full=rx.get("memberName") or "") or rx.get("memberName") or ""
+                format_person_name(full=rx.get("memberName") or "")
+                or rx.get("memberName")
+                or ""
             )
     out["reactionSummary"] = [
         {"emoji": e, "count": len(names), "names": names}
@@ -612,9 +612,7 @@ async def send_message(
         raise HTTPException(status_code=400, detail="Messaggio vuoto")
 
     mitt = await get_member_fn(db, mid)
-    mitt_nome = format_person_name(
-        mitt.get("firstName"), mitt.get("lastName")
-    )
+    mitt_nome = format_person_name(mitt.get("firstName"), mitt.get("lastName"))
     kind, target_id = parse_chat_id(chat_id)
     group_size = 2
 

@@ -15,7 +15,11 @@ def test_member_matches_role_group():
     ae = {"role": "AE", "memberRole": "arbitro"}
     assert member_matches_role_group(ae, "AE") is True
     assert member_matches_role_group(ae, "AA") is False
-    cds = {"organigrammaKind": "cds", "memberRole": "consiglio_direttivo", "boardTitle": "Presidente"}
+    cds = {
+        "organigrammaKind": "cds",
+        "memberRole": "consiglio_direttivo",
+        "boardTitle": "Presidente",
+    }
     assert member_matches_role_group(cds, "cds") is True
 
 

@@ -28,11 +28,17 @@ class _FakeResets:
                     return doc
                 if doc.get("usedAt") == query.get("usedAt"):
                     return doc
-            if doc.get("tokenHash") == query.get("tokenHash") and query.get("usedAt") is None:
+            if (
+                doc.get("tokenHash") == query.get("tokenHash")
+                and query.get("usedAt") is None
+            ):
                 if doc.get("usedAt") is None:
                     return doc
         for doc in self.docs:
-            if doc.get("tokenHash") == query.get("tokenHash") and doc.get("usedAt") is None:
+            if (
+                doc.get("tokenHash") == query.get("tokenHash")
+                and doc.get("usedAt") is None
+            ):
                 return doc
         return None
 
@@ -98,7 +104,9 @@ async def test_reset_admin_password_updates_hash(monkeypatch):
     )
 
     await reset_admin_password(raw, "nuova-password-sicura")
-    assert verify_password("nuova-password-sicura", db.admin_users.admin["passwordHash"])
+    assert verify_password(
+        "nuova-password-sicura", db.admin_users.admin["passwordHash"]
+    )
     assert db.admin_password_resets.docs[0]["usedAt"] is not None
 
 

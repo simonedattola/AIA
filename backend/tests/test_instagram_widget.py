@@ -9,7 +9,9 @@ from app.instagram_widget import (
 
 
 def test_merge_posts_prefers_live_then_gallery():
-    live = [{"shortcode": "A", "permalink": "https://instagram.com/p/A/", "imageUrl": "a"}]
+    live = [
+        {"shortcode": "A", "permalink": "https://instagram.com/p/A/", "imageUrl": "a"}
+    ]
     gallery = [
         {"shortcode": "A", "permalink": "https://instagram.com/p/A/", "imageUrl": "a2"},
         {"shortcode": "B", "permalink": "https://instagram.com/p/B/", "imageUrl": "b"},
@@ -36,7 +38,9 @@ def test_fetch_instagram_widget_sync_structure():
                 "media_type": 1,
                 "product_type": "feed",
                 "caption": {"text": "Ciao"},
-                "image_versions2": {"candidates": [{"url": "https://cdn.example/post.jpg"}]},
+                "image_versions2": {
+                    "candidates": [{"url": "https://cdn.example/post.jpg"}]
+                },
             }
         ],
     }
@@ -83,7 +87,9 @@ async def test_build_widget_uses_gallery_when_live_empty():
     ):
         with patch(
             "app.media_urls.resolve_media_fields",
-            side_effect=lambda item: item.update({"url": "https://site.test/uploads/ig1.jpg"}),
+            side_effect=lambda item: item.update(
+                {"url": "https://site.test/uploads/ig1.jpg"}
+            ),
         ):
             data = await build_instagram_widget_payload(db, "aia_legnano", limit=8)
 

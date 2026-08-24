@@ -62,7 +62,12 @@ from ..portal_member import member_public, is_staff_portal
 from ..media_urls import resolve_media_fields, resolve_attachments
 from ..paths import UPLOAD_DIR
 from .. import storage as upload_storage
-from ..member_roles import MEMBER_ROLES, normalize_member, comunicazione_visibility_or_clauses, normalize_role_groups
+from ..member_roles import (
+    MEMBER_ROLES,
+    normalize_member,
+    comunicazione_visibility_or_clauses,
+    normalize_role_groups,
+)
 from ..comunicazioni_helpers import (
     comunicazione_destinatari,
     comunicazione_letture_map,
@@ -323,11 +328,9 @@ async def _portal_events_for_member(
     if limit:
         cursor = cursor.limit(limit * 3)
     events = await cursor.to_list(limit * 3 if limit else 500)
-    return [
-        ev
-        for ev in events
-        if member_invited_to_event(ev, mid, member=member)
-    ][: limit or len(events)]
+    return [ev for ev in events if member_invited_to_event(ev, mid, member=member)][
+        : limit or len(events)
+    ]
 
 
 @router.get("/dashboard")
@@ -1027,7 +1030,9 @@ async def portal_lista_associati(auth=Depends(require_member)):
     return [
         {
             "id": i["id"],
-            "firstName": (fn := format_person_name_parts(i.get("firstName"), i.get("lastName")))[0],
+            "firstName": (
+                fn := format_person_name_parts(i.get("firstName"), i.get("lastName"))
+            )[0],
             "lastName": fn[1],
             "photoUrl": i.get("photoUrl"),
             "roleLabel": member_role_label(i.get("memberRole"), i.get("observerType")),
@@ -1233,9 +1238,7 @@ async def admin_presenze_associato(member_id: str, admin=Depends(require_admin))
     db = get_db()
     from ..event_access import member_invited_to_event
 
-    m = await db.members.find_one(
-        {"id": member_id}, {"_id": 0}
-    )
+    m = await db.members.find_one({"id": member_id}, {"_id": 0})
     if not m:
         raise HTTPException(status_code=404, detail="Associato non trovato")
     normalize_member(m)
