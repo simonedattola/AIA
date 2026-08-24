@@ -4,6 +4,8 @@ from __future__ import annotations
 
 from typing import Any
 
+from .person_names import format_person_name_parts
+
 
 def is_staff_portal(member: dict) -> bool:
     r = (member.get("memberRole") or member.get("kind") or "").lower()
@@ -11,11 +13,14 @@ def is_staff_portal(member: dict) -> bool:
 
 
 def member_public(member: dict) -> dict:
+    first, last = format_person_name_parts(
+        member.get("firstName"), member.get("lastName")
+    )
     return {
         "id": member.get("id"),
         "slug": member.get("slug"),
-        "firstName": member.get("firstName"),
-        "lastName": member.get("lastName"),
+        "firstName": first or member.get("firstName"),
+        "lastName": last or member.get("lastName"),
         "memberRole": member.get("memberRole"),
         "category": member.get("category"),
         "photoUrl": member.get("photoUrl"),

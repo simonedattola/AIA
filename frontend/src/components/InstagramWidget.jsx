@@ -48,6 +48,24 @@ function processInstagramEmbeds() {
   }
 }
 
+function InstagramFollowButton({ profileUrl, username }) {
+  if (!profileUrl) return null;
+  const label = username ? `@${username.replace(/^@/, "")}` : "Instagram";
+  return (
+    <a
+      href={profileUrl}
+      target="_blank"
+      rel="noopener noreferrer"
+      className="inline-flex items-center justify-center gap-2 w-full sm:w-auto px-5 py-2.5 rounded-full text-sm font-semibold text-white shadow-md hover:shadow-lg transition-all bg-gradient-to-r from-[#f58529] via-[#dd2a7b] to-[#8134af] hover:opacity-95"
+      data-testid="instagram-follow-cta"
+    >
+      <Instagram className="h-4 w-4" />
+      Seguici su {label}
+      <ExternalLink className="h-3.5 w-3.5 opacity-80" />
+    </a>
+  );
+}
+
 /** Embed ufficiale di un singolo post/reel (blockquote + embed.js). */
 function InstagramOfficialEmbed({ permalink }) {
   useEffect(() => {
@@ -66,7 +84,7 @@ function InstagramOfficialEmbed({ permalink }) {
 
   return (
     <div
-      className="aia-ig-embed w-full overflow-hidden rounded-lg border border-slate-200 bg-white"
+      className="aia-ig-embed w-full overflow-hidden rounded-xl border border-slate-200/80 bg-white shadow-inner"
       data-testid="instagram-official-embed"
     >
       <blockquote
@@ -91,20 +109,24 @@ function InstagramOfficialEmbed({ permalink }) {
   );
 }
 
-/** Feed ufficiale del profilo Instagram (iframe /embed) — mostra i post reali. */
+/** Feed ufficiale del profilo Instagram (iframe /embed). */
 function InstagramProfileEmbed({ profileUrl }) {
   const src = instagramProfileEmbedSrc(profileUrl);
   if (!src) return null;
   return (
     <div
-      className="aia-ig-profile-embed w-full overflow-hidden rounded-lg border border-slate-200 bg-white"
+      className="aia-ig-profile-embed relative w-full overflow-hidden rounded-xl border border-slate-200/80 bg-white shadow-sm"
       data-testid="instagram-profile-embed"
     >
+      <div
+        className="pointer-events-none absolute inset-x-0 bottom-0 h-12 bg-gradient-to-t from-white to-transparent z-[1]"
+        aria-hidden
+      />
       <iframe
         title="Instagram AIA Legnano"
         src={src}
-        className="w-full border-0"
-        style={{ height: 540, maxWidth: "100%" }}
+        className="w-full border-0 relative z-0"
+        style={{ height: 520, maxWidth: "100%" }}
         loading="lazy"
         referrerPolicy="strict-origin-when-cross-origin"
         allow="encrypted-media; clipboard-write"
@@ -129,26 +151,21 @@ function InstagramGalleryFallback({ profileUrl }) {
   if (!images.length) {
     return (
       <div
-        className="aspect-[4/5] w-full rounded-lg bg-gradient-to-br from-fuchsia-100 via-rose-50 to-amber-100 border border-slate-200 flex items-center justify-center text-center p-6"
+        className="aspect-[4/5] w-full rounded-xl bg-gradient-to-br from-fuchsia-50 via-rose-50 to-amber-50 border border-rose-100/80 flex items-center justify-center text-center p-8 shadow-inner"
         data-testid="instagram-empty-fallback"
       >
-        <div className="space-y-3">
-          <Instagram className="h-10 w-10 text-rose-500 mx-auto" />
+        <div className="space-y-4">
+          <div className="mx-auto w-14 h-14 rounded-2xl bg-gradient-to-br from-fuchsia-500 via-rose-500 to-amber-400 flex items-center justify-center text-white shadow-lg">
+            <Instagram className="h-7 w-7" />
+          </div>
           <div>
-            <p className="text-navy-700 font-semibold">Scopri le ultime foto</p>
-            <p className="text-sm text-slate-500">
+            <p className="text-navy-800 font-display font-semibold text-lg">Scopri le ultime foto</p>
+            <p className="text-sm text-slate-500 mt-1 max-w-xs mx-auto leading-relaxed">
               Vita sezionale, eventi, successi e dietro le quinte.
             </p>
           </div>
           {profileUrl ? (
-            <a
-              href={profileUrl}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="inline-flex items-center gap-2 text-sm font-semibold text-navy-700 border-b border-navy-700 pb-0.5"
-            >
-              Apri Instagram <ExternalLink className="h-3.5 w-3.5" />
-            </a>
+            <InstagramFollowButton profileUrl={profileUrl} />
           ) : null}
         </div>
       </div>
@@ -157,10 +174,10 @@ function InstagramGalleryFallback({ profileUrl }) {
 
   return (
     <div
-      className="rounded-lg overflow-hidden border border-slate-200 bg-slate-50"
+      className="rounded-xl overflow-hidden border border-slate-200/80 bg-slate-50 shadow-sm"
       data-testid="instagram-gallery-grid"
     >
-      <div className="grid grid-cols-3 gap-0.5">
+      <div className="grid grid-cols-3 gap-1 p-1">
         {images.map((img) => {
           const src = mediaUrl(img.url || img.path || "");
           if (!src) return null;
@@ -170,28 +187,21 @@ function InstagramGalleryFallback({ profileUrl }) {
               href={profileUrl || src}
               target="_blank"
               rel="noopener noreferrer"
-              className="aspect-square overflow-hidden bg-slate-200"
+              className="group relative aspect-square overflow-hidden rounded-lg bg-slate-200"
             >
               <img
                 src={src}
                 alt={img.caption || "Foto sezione"}
-                className="h-full w-full object-cover"
+                className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-105"
                 loading="lazy"
               />
+              <div className="absolute inset-0 bg-navy-900/0 group-hover:bg-navy-900/25 transition-colors flex items-center justify-center opacity-0 group-hover:opacity-100">
+                <Instagram className="h-6 w-6 text-white drop-shadow" />
+              </div>
             </a>
           );
         })}
       </div>
-      {profileUrl ? (
-        <a
-          href={profileUrl}
-          target="_blank"
-          rel="noopener noreferrer"
-          className="flex items-center justify-center gap-2 px-3 py-3 text-sm font-semibold text-navy-700 hover:bg-white/80 transition-colors"
-        >
-          Apri Instagram <ExternalLink className="h-3.5 w-3.5" />
-        </a>
-      ) : null}
     </div>
   );
 }
@@ -210,6 +220,7 @@ export default function InstagramWidget({ config = {}, profileUrl = "" }) {
   const title = config.instagramTitle || "Instagram";
   const subtitle =
     config.instagramSubtitle || "Foto, aggiornamenti e vita della sezione su Instagram.";
+  const handle = profileUsername ? `@${profileUsername}` : "";
 
   let body;
   if (permalink) {
@@ -222,33 +233,55 @@ export default function InstagramWidget({ config = {}, profileUrl = "" }) {
 
   return (
     <div
-      className="rounded-xl border border-slate-200/80 bg-white p-4 sm:p-5 shadow-ds-sm"
+      className="relative overflow-hidden rounded-2xl border border-slate-200/90 bg-white shadow-ds-md"
       data-testid="instagram-widget"
     >
-      <div className="flex items-center gap-2 mb-3">
-        <div className="p-2 rounded-full bg-gradient-to-br from-fuchsia-500 via-rose-500 to-amber-400 text-white">
-          <Instagram className="h-5 w-5" />
+      <div
+        className="h-1 w-full bg-gradient-to-r from-[#f58529] via-[#dd2a7b] to-[#8134af]"
+        aria-hidden
+      />
+
+      <div className="p-4 sm:p-5">
+        <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4 mb-4">
+          <div className="flex items-start gap-3 min-w-0">
+            <div className="shrink-0 p-2.5 rounded-2xl bg-gradient-to-br from-fuchsia-500 via-rose-500 to-amber-400 text-white shadow-md ring-2 ring-white">
+              <Instagram className="h-5 w-5" />
+            </div>
+            <div className="min-w-0">
+              <div className="font-display font-semibold text-navy-800 text-lg leading-tight">
+                {title}
+              </div>
+              {handle && (
+                <a
+                  href={profileUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-sm font-medium text-rose-600 hover:text-rose-700 mt-0.5 inline-block"
+                >
+                  {handle}
+                </a>
+              )}
+              <p className="text-sm text-slate-500 mt-1 leading-snug">{subtitle}</p>
+            </div>
+          </div>
         </div>
-        <div>
-          <div className="font-display font-semibold text-navy-700 text-base">{title}</div>
-          <p className="text-sm text-slate-500">{subtitle}</p>
-        </div>
+
+        {body}
+
+        {profileUrl && (
+          <div className="mt-5 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 pt-4 border-t border-slate-100">
+            <InstagramFollowButton profileUrl={profileUrl} username={profileUsername} />
+            <a
+              href={profileUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-center sm:text-right text-xs text-slate-500 hover:text-navy-700 transition-colors"
+            >
+              Apri profilo completo
+            </a>
+          </div>
+        )}
       </div>
-
-      {body}
-
-      {profileUrl && (
-        <div className="mt-4 flex justify-end">
-          <a
-            href={profileUrl}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="inline-flex items-center gap-2 text-sm font-medium text-slate-600 hover:text-navy-700"
-          >
-            Profilo sezione <Instagram className="h-4 w-4" />
-          </a>
-        </div>
-      )}
     </div>
   );
 }

@@ -649,6 +649,18 @@ async def _comunicazione_visible_to(db, comm: dict, member_id: str) -> bool:
     return comunicazione_visible_to_member(comm, member_id, m)
 
 
+def _format_comunicazione_risposte(risposte: list) -> list:
+    from ..person_names import format_person_name
+
+    out = []
+    for r in risposte or []:
+        row = dict(r)
+        if row.get("memberName"):
+            row["memberName"] = format_person_name(full=row["memberName"])
+        out.append(row)
+    return out
+
+
 async def _comunicazione_letta(db, comm_id: str, member_id: str) -> bool:
     row = await db.comunicazioni_letture.find_one(
         {"comunicazioneId": comm_id, "memberId": member_id},
@@ -676,7 +688,7 @@ async def portal_comunicazioni(auth=Depends(require_member)):
     out = []
     for c in items:
         letta = await _comunicazione_letta(db, c["id"], mid)
-        risposte = c.get("risposte") or []
+        risposte = _format_comunicazione_risposte(c.get("risposte") or [])
         mie = [r for r in risposte if r.get("memberId") == mid]
         out.append(
             {
@@ -722,7 +734,7 @@ async def portal_comunicazione_detail(comm_id: str, auth=Depends(require_member)
         **c,
         "letta": True,
         "readAt": read_at,
-        "risposte": c.get("risposte") or [],
+        "risposte": _format_comunicazione_risposte(c.get("risposte") or []),
         "attachments": resolve_attachments(c.get("attachments")),
     }
 
@@ -764,11 +776,13 @@ async def portal_comunicazione_risposta(
         raise HTTPException(status_code=404, detail="Comunicazione non trovata")
     if c.get("allowReplies") is False:
         raise HTTPException(status_code=403, detail="Risposte non consentite")
+    from ..person_names import format_person_name
+
     m = await _get_member(db, mid)
     risposta = {
         "id": str(uuid.uuid4()),
         "memberId": mid,
-        "memberName": f"{m.get('firstName', '')} {m.get('lastName', '')}".strip(),
+        "memberName": format_person_name(m.get("firstName"), m.get("lastName")),
         "testo": testo,
         "createdAt": _now(),
     }
@@ -1008,12 +1022,13 @@ async def portal_lista_associati(auth=Depends(require_member)):
         normalize_member(it)
         resolve_media_fields(it)
     from ..member_roles import member_role_label
+    from ..person_names import format_person_name_parts
 
     return [
         {
             "id": i["id"],
-            "firstName": i.get("firstName"),
-            "lastName": i.get("lastName"),
+            "firstName": (fn := format_person_name_parts(i.get("firstName"), i.get("lastName")))[0],
+            "lastName": fn[1],
             "photoUrl": i.get("photoUrl"),
             "roleLabel": member_role_label(i.get("memberRole"), i.get("observerType")),
         }

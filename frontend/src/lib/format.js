@@ -62,3 +62,25 @@ export function formatFileSize(bytes) {
   if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
   return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
 }
+
+/** Nome Cognome in title case (es. MARIO ROSSI → Mario Rossi). */
+export function formatPersonName(firstName, lastName, fullName) {
+  const titleWord = (word) => {
+    const w = String(word || "").trim();
+    if (!w) return "";
+    if (w.includes(" ")) return w.split(/\s+/).filter(Boolean).map(titleWord).join(" ");
+    if (w.length === 1) return w.toUpperCase();
+    if (w.includes("-")) return w.split("-").map(titleWord).join("-");
+    return w.charAt(0).toUpperCase() + w.slice(1).toLowerCase();
+  };
+  if (fullName && !firstName && !lastName) {
+    return String(fullName)
+      .trim()
+      .split(/\s+/)
+      .filter(Boolean)
+      .map(titleWord)
+      .join(" ");
+  }
+  const parts = [titleWord(firstName), titleWord(lastName)].filter(Boolean);
+  return parts.join(" ");
+}

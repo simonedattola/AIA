@@ -10,6 +10,7 @@ from fastapi import HTTPException
 
 from .media_urls import resolve_media_fields, resolve_media_url
 from .member_roles import MEMBER_ROLES, normalize_member
+from .person_names import format_person_name, format_person_name_parts
 
 ALLOWED_EMOJI = {"👍", "❤️", "😂", "😮", "😢", "🙏", "🔥", "👏"}
 MESSAGE_EDIT_WINDOW = timedelta(minutes=15)
@@ -151,13 +152,15 @@ async def member_display(
         email = (m.get("email") or "").strip()
         phone = (m.get("phone") or "").strip()
 
+    first, last = format_person_name_parts(
+        m.get("firstName"), m.get("lastName")
+    )
     return {
         "id": m["id"],
         "slug": m.get("slug") or "",
-        "firstName": m.get("firstName") or "",
-        "lastName": m.get("lastName") or "",
-        "name": f"{m.get('firstName', '')} {m.get('lastName', '')}".strip()
-        or "Associato",
+        "firstName": first,
+        "lastName": last,
+        "name": format_person_name(first, last) or "Associato",
         "photo": m.get("photoUrl") or "",
         "email": email,
         "phone": phone,
@@ -228,6 +231,10 @@ async def enrich_message(
     msg_by_id: dict[str, dict],
 ) -> dict:
     out = dict(msg)
+    if out.get("mittenteNome"):
+        out["mittenteNome"] = format_person_name(full=out["mittenteNome"])
+    if out.get("destinatarioNome"):
+        out["destinatarioNome"] = format_person_name(full=out["destinatarioNome"])
     if out.get("attachmentUrl"):
         out["attachmentUrlResolved"] = resolve_media_url(out["attachmentUrl"])
     if out.get("deletedAt"):
@@ -237,7 +244,7 @@ async def enrich_message(
         r = msg_by_id[rid]
         out["replyTo"] = {
             "id": r["id"],
-            "mittenteNome": r.get("mittenteNome"),
+            "mittenteNome": format_person_name(full=r.get("mittenteNome") or ""),
             "testo": (
                 "Messaggio eliminato"
                 if r.get("deletedAt")
@@ -250,7 +257,9 @@ async def enrich_message(
     for rx in reactions:
         e = rx.get("emoji")
         if e:
-            grouped.setdefault(e, []).append(rx.get("memberName") or "")
+            grouped.setdefault(e, []).append(
+                format_person_name(full=rx.get("memberName") or "") or rx.get("memberName") or ""
+            )
     out["reactionSummary"] = [
         {"emoji": e, "count": len(names), "names": names}
         for e, names in grouped.items()
@@ -603,7 +612,9 @@ async def send_message(
         raise HTTPException(status_code=400, detail="Messaggio vuoto")
 
     mitt = await get_member_fn(db, mid)
-    mitt_nome = f"{mitt.get('firstName', '')} {mitt.get('lastName', '')}".strip()
+    mitt_nome = format_person_name(
+        mitt.get("firstName"), mitt.get("lastName")
+    )
     kind, target_id = parse_chat_id(chat_id)
     group_size = 2
 
@@ -634,7 +645,9 @@ async def send_message(
             mitt_nome,
             now_iso,
             destinatarioId=target_id,
-            destinatarioNome=f"{dest.get('firstName', '')} {dest.get('lastName', '')}".strip(),
+            destinatarioNome=format_person_name(
+                dest.get("firstName"), dest.get("lastName")
+            ),
             gruppoId=None,
             lettiDa=[],
             **extra,
@@ -797,7 +810,7 @@ async def toggle_reaction(
         reactions.pop(existing)
     else:
         mitt = await get_member_fn(db, mid)
-        nome = f"{mitt.get('firstName', '')} {mitt.get('lastName', '')}".strip()
+        nome = format_person_name(mitt.get("firstName"), mitt.get("lastName"))
         reactions = [r for r in reactions if r.get("memberId") != mid]
         reactions.append(
             {"emoji": emoji, "memberId": mid, "memberName": nome, "createdAt": now_iso}

@@ -12,7 +12,7 @@ import {
 
 } from "../../lib/portal-api";
 
-import { formatDateIt } from "../../lib/format";
+import { formatDateIt, formatPersonName } from "../../lib/format";
 
 import { AttachmentList } from "../../components/AttachmentList";
 
@@ -185,7 +185,9 @@ export default function PortalComunicazioniPage() {
 
                 <li key={r.id} className="bg-slate-50 rounded-md p-3 text-sm">
 
-                  <div className="font-medium text-navy-700">{r.memberName}</div>
+                  <div className="font-medium text-navy-700">
+                    {formatPersonName(null, null, r.memberName)}
+                  </div>
 
                   <div className="text-xs text-slate-400">{formatDateIt(r.createdAt?.slice(0, 10))}</div>
 
