@@ -1,6 +1,7 @@
 export function formatDateIt(input, opts = {}) {
-  if (!input) return "";
-  const d = typeof input === "string" ? new Date(input) : input;
+  const raw = typeof input === "string" ? input : input instanceof Date ? input : "";
+  if (!raw) return "";
+  const d = typeof raw === "string" ? new Date(raw) : raw;
   if (Number.isNaN(d.getTime())) return "";
   return d.toLocaleDateString("it-IT", {
     day: "2-digit", month: opts.short ? "short" : "long", year: "numeric",

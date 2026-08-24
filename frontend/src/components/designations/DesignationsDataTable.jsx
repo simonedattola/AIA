@@ -1,6 +1,7 @@
 import { Link } from "react-router-dom";
 import { CalendarDays } from "lucide-react";
 import { formatDateIt } from "../../lib/format";
+import { asAdminText } from "../../lib/safeText";
 import {
   displayDesignationGara,
   formatDesignationMeta,
@@ -8,8 +9,8 @@ import {
 import DesignationsTableBody from "./DesignationsTableBody";
 
 function NominativoLink({ d }) {
-  const label = d.memberName || "—";
-  const slug = (d.memberSlug || "").trim();
+  const label = asAdminText(d.memberName, "—");
+  const slug = asAdminText(d.memberSlug).trim();
   if (!slug) {
     return <span className="text-slate-700">{label}</span>;
   }
@@ -45,7 +46,7 @@ function DesignationsMobileList({
               {formatDateIt(d.matchDate, { short: true })}
             </span>
             <span className="text-xs bg-navy-50 text-navy-700 px-2.5 py-1 rounded font-medium shrink-0">
-              {d.role}
+              {asAdminText(d.role, "—")}
             </span>
           </div>
           <p className="text-sm font-medium text-navy-700 leading-snug break-words">

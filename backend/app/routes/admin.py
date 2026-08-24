@@ -85,7 +85,13 @@ async def login(payload: LoginRequest):
 
 @router.get("/me")
 async def me(admin=Depends(require_admin)):
-    return {"email": admin.get("sub"), "name": admin.get("name", "Admin")}
+    name = admin.get("name") or "Admin"
+    if not isinstance(name, str):
+        name = "Admin"
+    email = admin.get("sub") or ""
+    if not isinstance(email, str):
+        email = ""
+    return {"email": email, "name": name}
 
 
 # ---- Dashboard stats ----
@@ -118,6 +124,10 @@ async def dashboard(admin=Depends(require_admin)):
     if next_rows:
         ev = next_rows[0]
         next_event = {**ev, "attachments": resolve_attachments(ev.get("attachments"))}
+        for key in ("titolo", "tipo", "luogo", "orario", "date"):
+            val = next_event.get(key)
+            if val is not None and not isinstance(val, (str, int, float)):
+                next_event[key] = val.get("msg") if isinstance(val, dict) else ""
 
     settings = (
         await db.site_settings.find_one(
@@ -165,6 +175,11 @@ async def dashboard(admin=Depends(require_admin)):
         .to_list(1)
     )
     latest_comunicazione = latest_rows[0] if latest_rows else None
+    if latest_comunicazione:
+        for key in ("title", "bodyHtml", "createdAt", "publishedAt"):
+            val = latest_comunicazione.get(key)
+            if val is not None and not isinstance(val, (str, int, float)):
+                latest_comunicazione[key] = val.get("msg") if isinstance(val, dict) else ""
 
     return {
         "articles": await db.articles.count_documents({}),

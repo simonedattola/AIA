@@ -240,7 +240,8 @@ def has_designations(member_role: str | None) -> bool:
 
 
 def is_observer_designation_role(role: str | None) -> bool:
-    return "osservatore" in (role or "").lower()
+    text = role if isinstance(role, str) else ""
+    return "osservatore" in text.lower()
 
 
 def arbitri_query() -> dict:
