@@ -47,7 +47,10 @@ CHAMPIONSHIP_CODES: dict[str, str] = {
 # Codice AIA in colonna Att. → ruolo designazione
 AIA_ATT_ROLE_CODES: dict[str, str] = {
     "AE": "Arbitro",
+    "AR": "Arbitro",
     "AA": "Assistente 1",
+    "AA1": "Assistente 1",
+    "AA2": "Assistente 2",
     "AB": "Arbitro",
     "AFR": "Arbitro",
     "OA": "Osservatore",
@@ -61,11 +64,14 @@ def _strip_accents(text: str) -> str:
 
 
 def normalize_championship_code(value: str | None) -> str:
-    """Normalizza una cella Cat./Categoria a sigla uppercase (es. 'sec' → 'SEC')."""
+    """Normalizza una cella Cat./Categoria o Att. a sigla uppercase (es. 'aa1' → 'AA1')."""
     raw = _strip_accents(str(value or "")).strip().upper()
     if not raw:
         return ""
-    # Solo la sigla (eventuale suffisso dopo spazio/punto)
+    # Sigle ruolo tipo AA1/AA2: tenere lettere+cifre intere
+    compact = re.sub(r"[^A-Z0-9]+", "", raw)
+    if compact in AIA_ATT_ROLE_CODES or compact in CHAMPIONSHIP_CODES:
+        return compact
     token = re.split(r"[\s/|_·.-]+", raw)[0]
     return token
 
@@ -80,12 +86,14 @@ def expand_championship_label(value: str | None) -> str:
         return ""
     code = normalize_championship_code(raw)
     if code in CHAMPIONSHIP_CODES and (
-        raw.upper() == code or len(raw) <= 4 or raw.upper().startswith(code)
+        re.sub(r"[^A-Za-z0-9]+", "", raw).upper() == code
+        or len(raw) <= 4
+        or raw.upper().startswith(code)
     ):
-        # Sigla pura o "SEC · …" / "SEC-R"
-        if re.fullmatch(r"[A-Za-z0-9]{2,4}", raw.strip()) or raw.upper().strip() == code:
+        if re.fullmatch(r"[A-Za-z0-9]{2,4}", raw.strip()) or re.sub(
+            r"[^A-Za-z0-9]+", "", raw
+        ).upper() == code:
             return CHAMPIONSHIP_CODES[code]
-        # "SEC qualcosa" → etichetta + resto
         rest = raw[len(code) :].lstrip(" -_/·.|")
         label = CHAMPIONSHIP_CODES[code]
         return f"{label} {rest}".strip() if rest else label
@@ -93,6 +101,6 @@ def expand_championship_label(value: str | None) -> str:
 
 
 def resolve_att_role(value: str | None) -> str | None:
-    """Converte codice Att. AIA (AE/AA/…) in ruolo, oppure None se non riconosciuto."""
-    code = normalize_championship_code(value)  # stesso strip uppercase
+    """Converte codice Att. AIA (AE/AR/AA1/AA2/…) in ruolo, oppure None."""
+    code = normalize_championship_code(value)
     return AIA_ATT_ROLE_CODES.get(code)

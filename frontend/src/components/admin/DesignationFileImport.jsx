@@ -118,7 +118,8 @@ export default function DesignationFileImport({ onImported }) {
               </p>
               <p>
                 Riconosciuti anche export tipici: <em>Data / Ora, Cat., Gir., Giorn., Sq. Locale, Sq. Ospite, Att., Associato</em>.
-                Le sigle Cat. (SEC, PRI, JUR, …) vengono espanse in etichetta leggibile.
+                Le sigle Cat. (SEC, PRI, GIN, …) vengono espanse; Att. supporta AE/AR/AA/AA1/AA2.
+                Associato può essere <strong>Cognome Nome</strong>. Se sulla stessa gara le righe successive hanno solo ruolo e nominativo, vengono collegate automaticamente.
               </p>
               <p>Le designazioni già presenti vengono aggiornate, non duplicate.</p>
             </div>
