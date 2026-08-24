@@ -16,6 +16,10 @@
   display: block;
   width: 100%;
   min-height: 480px;
-  background: #fff;
+  background: linear-gradient(180deg, #fafafa 0%, #fff 100%);
+}
+
+.aia-ig-embed .instagram-media {
+  margin: 0 auto !important;
 }
 
