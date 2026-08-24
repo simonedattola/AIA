@@ -90,6 +90,16 @@ INDEX_SPECS: list[tuple[str, list[tuple[str, int]], dict[str, Any]]] = [
         [("email", 1)],
         {"unique": True, "name": "admin_users_email_unique"},
     ),
+    (
+        "admin_password_resets",
+        [("tokenHash", 1)],
+        {"unique": True, "name": "admin_password_resets_token_hash"},
+    ),
+    (
+        "admin_password_resets",
+        [("email", 1), ("createdAt", -1)],
+        {"name": "admin_password_resets_email_created"},
+    ),
 ]
 
 

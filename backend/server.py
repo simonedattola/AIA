@@ -216,7 +216,12 @@ def custom_openapi():
         if not isinstance(methods, dict):
             continue
         needs_auth = path.startswith("/api/admin/") or path.startswith("/api/portal/")
-        is_login = path in {"/api/admin/login", "/api/portal/login"}
+        is_login = path in {
+            "/api/admin/login",
+            "/api/admin/forgot-password",
+            "/api/admin/reset-password",
+            "/api/portal/login",
+        }
         if needs_auth and not is_login:
             for method, op in methods.items():
                 if method.startswith("x-") or not isinstance(op, dict):

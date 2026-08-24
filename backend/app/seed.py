@@ -222,7 +222,9 @@ ARTICLE_BODIES = {
 
 async def seed_admin():
     db = get_db()
-    email = (os.environ.get("ADMIN_EMAIL") or "admin@aia-legnano.it").strip().lower()
+    email = (
+        os.environ.get("ADMIN_EMAIL") or "legnano@aia-figc.it"
+    ).strip().lower()
     password = (os.environ.get("ADMIN_PASSWORD") or "").strip()
     if not password:
         raise RuntimeError(
@@ -230,19 +232,38 @@ async def seed_admin():
             "(vedi backend/.env.example) oppure in .env per docker compose."
         )
     name = os.environ.get("ADMIN_NAME", "Amministratore")
+    pwd_hash = hash_password(password)
+    force_pwd = os.environ.get("ADMIN_PASSWORD_FORCE_SYNC", "").strip().lower() in (
+        "1",
+        "true",
+        "yes",
+    )
+
+    root = await db.admin_users.find_one({"id": "admin-root"}, {"_id": 0})
+    if root:
+        old_email = (root.get("email") or "").strip().lower()
+        updates: dict = {"email": email, "name": name}
+        if force_pwd or not root.get("passwordHash"):
+            updates["passwordHash"] = pwd_hash
+        await db.admin_users.update_one({"id": "admin-root"}, {"$set": updates})
+        if old_email and old_email != email:
+            await db.admin_users.delete_many(
+                {"email": old_email, "id": {"$ne": "admin-root"}}
+            )
+        return
+
     existing = await db.admin_users.find_one({"email": email}, {"_id": 0})
     if existing:
-        # Always re-sync the password hash so env updates take effect (idempotent)
-        await db.admin_users.update_one(
-            {"email": email},
-            {"$set": {"passwordHash": hash_password(password), "name": name}},
-        )
+        updates = {"name": name}
+        if force_pwd or not existing.get("passwordHash"):
+            updates["passwordHash"] = pwd_hash
+        await db.admin_users.update_one({"email": email}, {"$set": updates})
         return
     await db.admin_users.insert_one(
         {
             "id": "admin-root",
             "email": email,
-            "passwordHash": hash_password(password),
+            "passwordHash": pwd_hash,
             "name": name,
             "createdAt": _now(),
         }

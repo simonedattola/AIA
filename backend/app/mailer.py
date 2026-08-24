@@ -17,6 +17,7 @@ logger = logging.getLogger(__name__)
 
 DEFAULT_SENDER = "noreply@aia-legnano.it"
 DEFAULT_NOTIFY = "legnano@aia-figc.it"
+DEFAULT_ADMIN_EMAIL = "legnano@aia-figc.it"
 DEFAULT_PORTAL_URL = "https://www.aia-legnano.it"
 EMAIL_LOGO_PATH = "/brand/logo-aia-legnano-email.png"
 EMAIL_LOGO_PUBLIC_PATH = "/public/email-logo.png"
@@ -571,5 +572,28 @@ def render_gallery_upload_staff_email(doc: dict) -> str:
       <p style="color:#64748B;font-size:12px;margin-top:24px;">
         Caricata dall'area associati — in attesa di approvazione in Amministrazione → Galleria.
       </p>
+        """)
+
+
+def render_admin_password_reset_email(*, name: str, link: str, ttl_minutes: int) -> str:
+    import html as html_lib
+
+    who = html_lib.escape(name or "Amministratore")
+    safe_link = html_lib.escape(link)
+    return wrap_email(f"""
+      <h2 style="color:#004587;border-bottom:3px solid #D4AF37;padding-bottom:8px;margin-top:0;">
+        Reimposta password amministrazione
+      </h2>
+      <p>Ciao {who},</p>
+      <p>Hai richiesto di reimpostare la password del <strong>pannello amministrativo</strong> AIA Legnano.</p>
+      <p style="margin:24px 0;text-align:center;">
+        <a href="{safe_link}" style="background:#004587;color:#fff;padding:12px 24px;text-decoration:none;border-radius:6px;display:inline-block;">
+          Scegli una nuova password
+        </a>
+      </p>
+      <p style="color:#64748B;font-size:13px;">
+        Il link scade tra <strong>{int(ttl_minutes)} minuti</strong>. Se non hai richiesto tu il reset, ignora questa email.
+      </p>
+      <p style="color:#94A3B8;font-size:12px;word-break:break-all;">{safe_link}</p>
         """)
 

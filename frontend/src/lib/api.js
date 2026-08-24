@@ -25,7 +25,15 @@ api.interceptors.response.use(
   (err) => {
     if (err.response?.status === 401) {
       const path = window.location.pathname;
-      if (path.startsWith("/amministrazione") && path !== ADMIN_ROUTES.login) {
+      const publicAdminPaths = [
+        ADMIN_ROUTES.login,
+        ADMIN_ROUTES.forgotPassword,
+        ADMIN_ROUTES.resetPassword,
+      ];
+      if (
+        path.startsWith("/amministrazione") &&
+        !publicAdminPaths.some((p) => path === p || path.startsWith(`${p}?`))
+      ) {
         localStorage.removeItem("aia_token");
         localStorage.removeItem("aia_admin");
         window.dispatchEvent(new CustomEvent(ADMIN_UNAUTHORIZED_EVENT));
@@ -64,6 +72,10 @@ export const submitContact = (data) => api.post("/public/forms/contatti", data).
 
 // ---- Admin ----
 export const adminLogin = (email, password) => api.post("/admin/login", { email, password }).then((r) => r.data);
+export const adminForgotPassword = (email) =>
+  api.post("/admin/forgot-password", { email }).then((r) => r.data);
+export const adminResetPassword = (token, password) =>
+  api.post("/admin/reset-password", { token, password }).then((r) => r.data);
 export const adminMe = () => api.get("/admin/me").then((r) => r.data);
 export const adminDashboard = () =>
   api.get("/admin/dashboard").then((r) => {

@@ -30,6 +30,15 @@ class TokenResponse(BaseModel):
     admin: AdminInfo
 
 
+class ForgotPasswordRequest(BaseModel):
+    email: EmailStr
+
+
+class ResetPasswordRequest(BaseModel):
+    token: str = Field(min_length=20)
+    password: str = Field(min_length=8)
+
+
 # ---- SiteSettings ----
 class SiteSettings(BaseModel):
     model_config = ConfigDict(extra="ignore")
