@@ -28,9 +28,27 @@ def sender_email() -> str:
     return (os.environ.get("SENDER_EMAIL") or DEFAULT_SENDER).strip()
 
 
+def sender_from() -> str:
+    """Mittente visibile (Resend from): nome sezione + indirizzo verificato."""
+    addr = sender_email()
+    if "<" in addr and ">" in addr:
+        return addr
+    return f"AIA Legnano <{addr}>"
+
+
 def notify_email() -> str:
     """Casella sezione: contatti, candidature, testimonianze, foto, commenti."""
     return (os.environ.get("NOTIFY_EMAIL") or DEFAULT_NOTIFY).strip()
+
+
+def reply_to_email() -> str:
+    """Reply-To per email agli associati: casella sezione (Aruba)."""
+    raw = (
+        os.environ.get("REPLY_TO_EMAIL")
+        or os.environ.get("NOTIFY_EMAIL")
+        or DEFAULT_NOTIFY
+    ).strip()
+    return raw or DEFAULT_NOTIFY
 
 
 def portal_frontend_url() -> str:
@@ -139,10 +157,11 @@ async def send_email(
     html: str,
     *,
     attachments: list[dict] | None = None,
+    reply_to: str | None = None,
 ) -> bool:
     """Invia email via Resend. attachments: [{filename, content}] con content bytes o str."""
     api_key = os.environ.get("RESEND_API_KEY", "").strip()
-    sender = sender_email()
+    sender = sender_from()
     if not api_key or not to:
         logger.info(
             "[mailer] Skipped (no key/recipient) - to=%s subject=%s", to, subject
@@ -159,6 +178,9 @@ async def send_email(
             "subject": subject,
             "html": html,
         }
+        rt = (reply_to if reply_to is not None else reply_to_email()).strip()
+        if rt:
+            params["reply_to"] = [rt]
         merged: list[dict] = []
         logo = email_logo_attachment()
         if logo and (
@@ -197,7 +219,11 @@ async def send_email(
                 params["attachments"] = packed
         result = await asyncio.to_thread(resend.Emails.send, params)
         logger.info(
-            "[mailer] Email sent id=%s to=%s from=%s", result.get("id"), to, sender
+            "[mailer] Email sent id=%s to=%s from=%s reply_to=%s",
+            result.get("id"),
+            to,
+            sender,
+            rt or "-",
         )
         return True
     except Exception as e:

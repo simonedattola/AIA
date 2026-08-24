@@ -12,9 +12,9 @@ from .mailer import (
     render_comunicazione_reply_member_email,
     render_comunicazione_reply_staff_email,
     render_message_email,
-    notify_email,
     send_email,
 )
+from .staff_email import staff_notify_email
 from .person_names import format_person_name
 
 logger = logging.getLogger(__name__)
@@ -138,7 +138,7 @@ async def notify_comunicazione_reply(
     preview = (reply_text or "")[:400]
     sent = 0
 
-    staff = notify_email()
+    staff = await staff_notify_email(db)
     if staff:
         html = render_comunicazione_reply_staff_email(
             title=title,

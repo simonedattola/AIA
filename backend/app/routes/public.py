@@ -31,8 +31,8 @@ from ..mailer import (
     render_lead_email,
     render_lead_confirmation_email,
     render_contact_email,
-    notify_email,
 )
+from ..staff_email import staff_notify_email
 import os
 
 router = APIRouter(prefix="/api/public", tags=["public"])
@@ -639,8 +639,8 @@ async def submit_lead(payload: LeadCreate, background: BackgroundTasks):
     lead = Lead(**payload.model_dump())
     doc = lead.model_dump()
     await db.leads.insert_one(doc.copy())  # copy to avoid _id mutation
-    # email notifications → casella sezione (NOTIFY_EMAIL / legnano@aia-figc.it)
-    notify = notify_email()
+    # email notifications → casella sezione (impostazioni sito / legnano@aia-figc.it)
+    notify = await staff_notify_email(db)
     if notify:
         background.add_task(
             send_email,
@@ -667,7 +667,7 @@ async def submit_contact(payload: ContactCreate, background: BackgroundTasks):
     msg = ContactMessage(**payload.model_dump())
     doc = msg.model_dump()
     await db.contact_messages.insert_one(doc.copy())
-    notify = notify_email()
+    notify = await staff_notify_email(db)
     if notify:
         background.add_task(
             send_email,
