@@ -5,6 +5,7 @@ import { normalizeMember, hasDesignations, memberRoleLabel, profileBackPath } fr
 import { formatDateIt } from "../../lib/format";
 import MediaImage from "../MediaImage";
 import DesignationsDataTable from "../designations/DesignationsDataTable";
+import { useDocumentTitle } from "../RouteDocumentTitle";
 import {
   ArrowLeft, ArrowRight, Award, CalendarDays, Calendar, Newspaper, Quote, Trophy,
 } from "lucide-react";
@@ -49,6 +50,11 @@ export default function MemberProfileContent({ memberSlug }) {
       })
       .catch(() => setError("Profilo non trovato"));
   }, [memberSlug, season]);
+
+  const memberName = data?.member
+    ? `${data.member.firstName || ""} ${data.member.lastName || ""}`.trim()
+    : "";
+  useDocumentTitle(error ? "Profilo non trovato" : memberName || "Arbitro");
 
   if (!memberSlug) {
     return <p className="text-slate-500 py-12 text-center">Slug associato mancante.</p>;
