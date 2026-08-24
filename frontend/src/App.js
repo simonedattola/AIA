@@ -1,6 +1,7 @@
 import "./App.css";
 import { BrowserRouter, Routes, Route, Navigate, useParams, useLocation } from "react-router-dom";
 import ScrollToTop from "./components/ScrollToTop";
+import RouteDocumentTitle from "./components/RouteDocumentTitle";
 import { SiteProvider } from "./lib/site-context";
 import { ToastContainer } from "./lib/toast";
 import SiteLayout from "./components/SiteLayout";
@@ -84,6 +85,7 @@ function App() {
       <SiteProvider>
         <BrowserRouter>
           <ScrollToTop />
+          <RouteDocumentTitle />
           <ToastContainer />
           <Routes>
             <Route path="/" element={<PublicWrapper><HomePage /></PublicWrapper>} />

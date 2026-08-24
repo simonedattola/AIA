@@ -151,8 +151,10 @@ export const BLOCK_TYPES = [
       ctaHref: "/eventi",
       showInstagramWidget: true,
       showPresidentCard: false,
-      instagramTitle: "",
+      instagramTitle: "AIA Legnano",
       instagramSubtitle: "Foto, aggiornamenti e vita della sezione su Instagram.",
+      instagramPostUrl: "",
+      instagramEmbed: {},
     },
   },
   {

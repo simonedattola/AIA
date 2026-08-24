@@ -434,11 +434,49 @@ export function NewsSliderEditor({ config, onChange }) {
 /* ============ EVENTS LIST ============ */
 export function EventsListEditor({ config, onChange }) {
   const c = config;
+  const embedValue =
+    typeof c.instagramEmbed === "string"
+      ? c.instagramEmbed
+      : c.instagramEmbed?.href || c.instagramPostUrl || "";
   return (
     <div>
       <AutoNote>Gli eventi si aggiornano automaticamente dal calendario.</AutoNote>
       <Field label="Titolo"><input value={c.title || ""} onChange={(e) => setCfg(c, "title", e.target.value, onChange)} className={I} /></Field>
       <PrimaryButtonFields config={c} onChange={onChange} flat fallbackLabel="Tutti gli eventi" fallbackHref="/eventi" />
+      <Field label="Widget Instagram">
+        <label className="inline-flex items-center gap-2 text-sm text-slate-700">
+          <input
+            type="checkbox"
+            checked={c.showInstagramWidget !== false}
+            onChange={(e) => setCfg(c, "showInstagramWidget", e.target.checked, onChange)}
+          />
+          Mostra widget Instagram a fianco degli eventi
+        </label>
+      </Field>
+      <Field
+        label="URL post Instagram (embed)"
+        hint="Incolla l’URL di un post o reel (es. https://www.instagram.com/p/…). Se vuoto, il widget mostra le foto della galleria sito."
+      >
+        <input
+          value={embedValue}
+          onChange={(e) => {
+            const href = e.target.value;
+            onChange({
+              ...c,
+              instagramPostUrl: href,
+              instagramEmbed: href ? { href } : {},
+            });
+          }}
+          className={I}
+          placeholder="https://www.instagram.com/p/…"
+        />
+      </Field>
+      <Field label="Titolo widget Instagram">
+        <input value={c.instagramTitle || ""} onChange={(e) => setCfg(c, "instagramTitle", e.target.value, onChange)} className={I} placeholder="AIA Legnano" />
+      </Field>
+      <Field label="Sottotitolo widget">
+        <input value={c.instagramSubtitle || ""} onChange={(e) => setCfg(c, "instagramSubtitle", e.target.value, onChange)} className={I} />
+      </Field>
     </div>
   );
 }
