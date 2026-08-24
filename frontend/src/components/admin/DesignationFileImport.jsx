@@ -119,6 +119,7 @@ export default function DesignationFileImport({ onImported }) {
               <p>
                 Riconosciuti anche export tipici: <em>Data / Ora, Cat., Gir., Giorn., Sq. Locale, Sq. Ospite, Att., Associato</em>.
                 Le sigle Cat. (SEC, PRI, JUR, …) vengono espanse in etichetta leggibile.
+                La colonna Associato può essere in formato <strong>Cognome Nome</strong> e viene collegata all’anagrafica.
               </p>
               <p>Le designazioni già presenti vengono aggiornate, non duplicate.</p>
             </div>

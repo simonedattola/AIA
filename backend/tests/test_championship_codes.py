@@ -54,8 +54,8 @@ class TestFormatBImport:
     def test_format_b_headers(self):
         content = (
             "Data / Ora;Cat.;Gir.;Giorn.;Num. Gara;Sq. Locale;Sq. Ospite;Impianto;Att.;Associato\n"
-            "17/05/2026 15:30;SEC;R;1;12345;PRO JUVENTUTE ASD;MAZZO 80 A.C.;Campo A;AE;Lorenzo Menapace\n"
-            "17/05/2026 15:30;SEC;R;1;12345;PRO JUVENTUTE ASD;MAZZO 80 A.C.;Campo A;AA;Marco Rossi\n"
+            "17/05/2026 15:30;SEC;R;1;12345;PRO JUVENTUTE ASD;MAZZO 80 A.C.;Campo A;AE;Menapace Lorenzo\n"
+            "17/05/2026 15:30;SEC;R;1;12345;PRO JUVENTUTE ASD;MAZZO 80 A.C.;Campo A;AA;Rossi Marco\n"
         ).encode("utf-8")
         rows, warnings, meta = parse_designations_file(content, "export.csv")
         assert len(rows) == 2
@@ -66,9 +66,9 @@ class TestFormatBImport:
         assert rows[0]["matchHome"] == "PRO JUVENTUTE ASD"
         assert rows[0]["matchAway"] == "MAZZO 80 A.C."
         assert rows[0]["role"] == "Arbitro"
-        assert rows[0]["memberName"] == "Lorenzo Menapace"
+        assert rows[0]["memberName"] == "Menapace Lorenzo"
         assert rows[1]["role"] == "Assistente 1"
-        assert rows[1]["memberName"] == "Marco Rossi"
+        assert rows[1]["memberName"] == "Rossi Marco"
         # Num. Gara must not become matchLabel
         assert "12345" not in rows[0]["matchLabel"]
 

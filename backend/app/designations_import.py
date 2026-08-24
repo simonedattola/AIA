@@ -16,6 +16,7 @@ from .championship_codes import expand_championship_label, resolve_att_role
 from .designations_sync import (
     _build_member_lookup,
     _designation_match_key,
+    _lookup_member_info,
     _normalize_name,
     _now,
     _resolve_member,
@@ -121,8 +122,8 @@ FIELD_KEYWORDS: dict[str, list[str]] = {
 
 IMPORT_TEMPLATE_CSV = (
     "data;cat.;gir.;giorn.;squadra locale;squadra ospite;att.;associato\r\n"
-    "2026-05-17;SEC;R;1;PRO JUVENTUTE ASD;MAZZO 80 A.C.;AE;Lorenzo Menapace\r\n"
-    "2026-05-17;SEC;R;1;PRO JUVENTUTE ASD;MAZZO 80 A.C.;AA;Marco Rossi\r\n"
+    "2026-05-17;SEC;R;1;PRO JUVENTUTE ASD;MAZZO 80 A.C.;AE;Menapace Lorenzo\r\n"
+    "2026-05-17;SEC;R;1;PRO JUVENTUTE ASD;MAZZO 80 A.C.;AA;Rossi Marco\r\n"
 )
 
 
@@ -516,20 +517,42 @@ async def _resolve_member_for_import(
     member_lookup: dict[str, dict],
     *,
     allow_create: bool = True,
-) -> tuple[Optional[str], str, bool]:
+) -> tuple[Optional[str], str, bool, str]:
+    """Return (memberId, memberSlug, created, canonicalMemberName)."""
     mec = (meccanografico or "").strip()
     if mec:
         key = f"mec:{mec.lower()}"
         if key in member_lookup:
             info = member_lookup[key]
-            return info["id"], info.get("slug", ""), False
-    key = _normalize_name(full_name)
-    if key in member_lookup:
-        info = member_lookup[key]
-        return info["id"], info.get("slug", ""), False
+            canonical = f"{info.get('firstName', '')} {info.get('lastName', '')}".strip() or full_name
+            return info["id"], info.get("slug", ""), False, canonical
+
+    existing = _lookup_member_info(member_lookup, full_name)
+    if existing:
+        canonical = (
+            f"{existing.get('firstName', '')} {existing.get('lastName', '')}".strip()
+            or full_name
+        )
+        return existing["id"], existing.get("slug", ""), False, canonical
+
     if not allow_create:
-        return None, "", False
-    return await _resolve_member(db, full_name, designation_role, member_lookup)
+        return None, "", False, full_name
+
+    # Export Associato = Cognome Nome: in creazione usa quell'ordine
+    member_id, member_slug, created = await _resolve_member(
+        db,
+        full_name,
+        designation_role,
+        member_lookup,
+        surname_first=True,
+    )
+    if created:
+        info = _lookup_member_info(member_lookup, full_name) or {}
+        canonical = (
+            f"{info.get('firstName', '')} {info.get('lastName', '')}".strip() or full_name
+        )
+        return member_id, member_slug, True, canonical
+    return member_id, member_slug, False, full_name
 
 
 async def _find_existing_by_match_key(db, doc_fields: dict) -> Optional[dict]:
@@ -575,7 +598,7 @@ async def import_designations_from_file(
     errors: list[str] = list(parse_warnings)
 
     for row in rows:
-        member_id, member_slug, created = await _resolve_member_for_import(
+        member_id, member_slug, created, canonical_name = await _resolve_member_for_import(
             db,
             row["memberName"],
             row.get("meccanografico", ""),
@@ -590,6 +613,8 @@ async def import_designations_from_file(
         if not linked and not would_create:
             unlinked += 1
 
+        display_name = canonical_name if linked or created else row["memberName"]
+
         doc_fields = {
             "matchDate": _to_iso_datetime(row["matchDate"]),
             "championship": row.get("championship", ""),
@@ -600,13 +625,17 @@ async def import_designations_from_file(
             "matchLabel": row.get("matchLabel", ""),
             "category": row.get("category", "") or row.get("championship", ""),
             "role": row["role"],
-            "memberName": row["memberName"],
+            "memberName": display_name,
             "memberId": member_id,
             "memberSlug": member_slug or "",
             "status": row.get("status", "published"),
             "source": SOURCE,
             "externalId": _file_import_external_id(
-                {**row, "matchDate": _to_iso_datetime(row["matchDate"])}
+                {
+                    **row,
+                    "memberName": display_name,
+                    "matchDate": _to_iso_datetime(row["matchDate"]),
+                }
             ),
             "importedAt": batch_at,
             "lastSeenAt": batch_at,
@@ -618,7 +647,7 @@ async def import_designations_from_file(
                     "matchDate": row["matchDate"],
                     "matchLabel": doc_fields["matchLabel"],
                     "role": row["role"],
-                    "memberName": row["memberName"],
+                    "memberName": display_name,
                     "linked": linked,
                     "wouldCreate": would_create and dry_run,
                 }

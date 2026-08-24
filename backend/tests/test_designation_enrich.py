@@ -38,6 +38,23 @@ def test_enrich_fills_slug_and_fields():
     assert item["matchLabel"] == "A - B"
 
 
+def test_enrich_matches_cognome_nome():
+    members = [
+        {
+            "id": "m1",
+            "slug": "luca-bianchi",
+            "firstName": "Luca",
+            "lastName": "Bianchi",
+            "memberRole": "arbitro",
+        },
+    ]
+    slug_by_id, member_by_name = build_member_lookups(members)
+    item = {"memberName": "Bianchi Luca", "role": "Arbitro", "matchHome": "A", "matchAway": "B"}
+    enrich_designation(item, slug_by_id, member_by_name)
+    assert item["memberSlug"] == "luca-bianchi"
+    assert item["memberId"] == "m1"
+
+
 def test_enrich_testimonial_by_member_id_and_name():
     members = [
         {

@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import re
 
-from .designations_sync import _normalize_name
+from .designations_sync import _normalize_name, _name_match_keys
 from .member_roles import (
     has_designations,
     is_observer_designation_role,
@@ -72,12 +72,13 @@ def enrich_designation(
         return item
 
     if not _as_str(item.get("memberSlug")):
-        key = _normalize_name(_as_str(item.get("memberName")))
-        m = member_by_name.get(key)
-        if m:
-            item["memberSlug"] = m.get("slug", "")
-            if not item.get("memberId"):
-                item["memberId"] = m.get("id")
+        for key in _name_match_keys(_as_str(item.get("memberName"))):
+            m = member_by_name.get(key)
+            if m:
+                item["memberSlug"] = m.get("slug", "")
+                if not item.get("memberId"):
+                    item["memberId"] = m.get("id")
+                break
 
     return item
 
@@ -97,8 +98,7 @@ def build_member_lookups(
         mid = m.get("id")
         if mid is not None:
             slug_by_id[str(mid)] = m.get("slug", "")
-        key = _normalize_name(f"{_as_str(m.get('firstName'))} {_as_str(m.get('lastName'))}")
-        if key:
+        for key in _name_match_keys(f"{_as_str(m.get('firstName'))} {_as_str(m.get('lastName'))}"):
             member_by_name[key] = m
     return slug_by_id, member_by_name
 
@@ -120,12 +120,13 @@ def enrich_testimonial(
             m = member_by_id.get(str(mid)) or member_by_id.get(mid)
 
     if not _as_str(item.get("memberSlug")):
-        key = _normalize_name(_as_str(item.get("name")))
-        m = member_by_name.get(key)
-        if m and m.get("slug"):
-            item["memberSlug"] = m["slug"]
-            if not item.get("memberId"):
-                item["memberId"] = m.get("id")
+        for key in _name_match_keys(_as_str(item.get("name"))):
+            m = member_by_name.get(key)
+            if m and m.get("slug"):
+                item["memberSlug"] = m["slug"]
+                if not item.get("memberId"):
+                    item["memberId"] = m.get("id")
+                break
 
     if m and not _as_str(item.get("photoUrl")):
         photo = _as_str(m.get("photoUrl"))

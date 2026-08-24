@@ -49,11 +49,51 @@ def _normalize_name(name: str) -> str:
     return "".join(c for c in text if not unicodedata.combining(c))
 
 
+def _name_match_keys(full_name: str) -> list[str]:
+    """
+    Chiavi di matching per Nome Cognome ↔ Cognome Nome.
+
+    Gli export sezione usano spesso «Cognome Nome»; in anagrafica è «Nome Cognome».
+    """
+    norm = _normalize_name(full_name)
+    if not norm:
+        return []
+    parts = norm.split()
+    keys = [norm]
+    if len(parts) == 2:
+        keys.append(f"{parts[1]} {parts[0]}")
+    elif len(parts) == 3:
+        a, b, c = parts
+        keys.extend(
+            [
+                f"{c} {a} {b}",  # CognomeComposto Nome → Nome CognomeComposto
+                f"{b} {c} {a}",
+                f"{c} {b} {a}",
+                f"{a} {c} {b}",
+            ]
+        )
+    elif len(parts) > 3:
+        keys.append(" ".join(reversed(parts)))
+        keys.append(f"{parts[-1]} {' '.join(parts[:-1])}")
+        keys.append(f"{' '.join(parts[1:])} {parts[0]}")
+    # dedupe preserving order
+    return list(dict.fromkeys(keys))
+
+
 def _split_full_name(full_name: str) -> tuple[str, str]:
+    """Nome Cognome → (firstName, lastName). Ultimo token = cognome."""
     parts = re.sub(r"\s+", " ", (full_name or "").strip()).split(" ")
     if len(parts) < 2:
         return parts[0] if parts else "", ""
     return " ".join(parts[:-1]), parts[-1]
+
+
+def _split_full_name_cognome_nome(full_name: str) -> tuple[str, str]:
+    """Cognome Nome → (firstName, lastName). Primo token = cognome."""
+    parts = re.sub(r"\s+", " ", (full_name or "").strip()).split(" ")
+    if len(parts) < 2:
+        return parts[0] if parts else "", ""
+    return " ".join(parts[1:]), parts[0]
 
 
 from .member_roles import is_observer_designation_role
@@ -92,9 +132,13 @@ async def _build_member_lookup(db) -> dict[str, dict]:
         normalize_member(m)
         if not has_designations(m.get("memberRole")):
             continue
-        info = {"id": m["id"], "slug": m.get("slug", "")}
-        key = _normalize_name(f"{m.get('firstName', '')} {m.get('lastName', '')}")
-        if key:
+        info = {
+            "id": m["id"],
+            "slug": m.get("slug", ""),
+            "firstName": m.get("firstName", ""),
+            "lastName": m.get("lastName", ""),
+        }
+        for key in _name_match_keys(f"{m.get('firstName', '')} {m.get('lastName', '')}"):
             lookup[key] = info
         mec = (m.get("meccanografico") or "").strip()
         if mec:
@@ -102,24 +146,36 @@ async def _build_member_lookup(db) -> dict[str, dict]:
     return lookup
 
 
+def _lookup_member_info(member_lookup: dict[str, dict], full_name: str) -> Optional[dict]:
+    for key in _name_match_keys(full_name):
+        info = member_lookup.get(key)
+        if info:
+            return info
+    return None
+
+
 async def _resolve_member(
     db,
     full_name: str,
     designation_role: str,
     member_lookup: dict[str, dict],
+    *,
+    surname_first: bool = False,
 ) -> tuple[Optional[str], str, bool]:
     """Return (memberId, memberSlug, created). Solo per ruoli arbitrali (non osservatore)."""
     if is_observer_designation_role(designation_role):
         return None, "", False
-    key = _normalize_name(full_name)
-    if not key:
+    if not _normalize_name(full_name):
         return None, "", False
 
-    if key in member_lookup:
-        m = member_lookup[key]
-        return m["id"], m.get("slug", ""), False
+    existing = _lookup_member_info(member_lookup, full_name)
+    if existing:
+        return existing["id"], existing.get("slug", ""), False
 
-    first_name, last_name = _split_full_name(full_name)
+    if surname_first:
+        first_name, last_name = _split_full_name_cognome_nome(full_name)
+    else:
+        first_name, last_name = _split_full_name(full_name)
     if not first_name or not last_name:
         logger.warning("Cannot create member from name: %r", full_name)
         return None, "", False
@@ -141,7 +197,9 @@ async def _resolve_member(
     )
     doc = member.model_dump()
     await db.members.insert_one(doc.copy())
-    member_lookup[key] = {"id": member_id, "slug": slug}
+    info = {"id": member_id, "slug": slug, "firstName": first_name, "lastName": last_name}
+    for key in _name_match_keys(f"{first_name} {last_name}"):
+        member_lookup[key] = info
     logger.info("Created member %s %s (%s)", first_name, last_name, member_id)
     return member_id, slug, True
 
