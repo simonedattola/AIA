@@ -13,6 +13,15 @@ from zoneinfo import ZoneInfo
 from .db import get_db
 from .event_access import member_invited_to_event
 from .mailer import render_event_created_email, render_event_reminder_email, send_email
+from .event_ics import build_ics, ics_filename
+
+
+def _event_ics_attachment(event: dict[str, Any]) -> list[dict] | None:
+    ics = build_ics(event)
+    if not ics:
+        return None
+    return [{"filename": ics_filename(event), "content": ics}]
+
 
 logger = logging.getLogger(__name__)
 
@@ -148,7 +157,9 @@ async def process_event_reminders(*, now: datetime | None = None) -> dict:
 
             subject = f"Promemoria evento: {event.get('titolo', 'Evento AIA Legnano')}"
             html = render_event_reminder_email(event, member, lead)
-            ok = await send_email(email, subject, html)
+            ok = await send_email(
+                email, subject, html, attachments=_event_ics_attachment(event)
+            )
             if ok:
                 await _mark_reminder_sent(db, event["id"], member["id"], lead)
                 sent += 1
@@ -187,7 +198,9 @@ async def notify_event_created(db, event: dict[str, Any]) -> int:
             continue
         subject = f"Nuovo evento: {event.get('titolo', 'Evento AIA Legnano')}"
         html = render_event_created_email(event, member, link=link)
-        if await send_email(email, subject, html):
+        if await send_email(
+            email, subject, html, attachments=_event_ics_attachment(event)
+        ):
             await _mark_reminder_sent(
                 db, event["id"], member["id"], EVENT_CREATED_LEAD_HOURS
             )

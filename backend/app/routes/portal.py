@@ -406,6 +406,34 @@ async def portal_calendario(auth=Depends(require_member)):
     return {"eventi": out, **stats}
 
 
+@router.get("/calendario/{event_id}/ics")
+async def portal_event_ics(event_id: str, auth=Depends(require_member)):
+    """Scarica .ics per aggiungere l'evento a Apple/Outlook/Google."""
+    from fastapi.responses import Response
+
+    from ..event_access import member_invited_to_event
+    from ..event_ics import build_ics, ics_filename
+
+    db = get_db()
+    ev = await db.events.find_one({"id": event_id}, {"_id": 0})
+    if not ev:
+        raise HTTPException(status_code=404, detail="Evento non trovato")
+    if not member_invited_to_event(ev, auth["memberId"]):
+        raise HTTPException(status_code=403, detail="Non sei invitato a questo evento")
+    ics = build_ics(ev)
+    if not ics:
+        raise HTTPException(status_code=400, detail="Data evento non valida")
+    filename = ics_filename(ev)
+    return Response(
+        content=ics,
+        media_type="text/calendar; charset=utf-8",
+        headers={
+            "Content-Disposition": f'attachment; filename="{filename}"',
+            "Cache-Control": "no-store",
+        },
+    )
+
+
 class SelfPresenzaBody(BaseModel):
     stato: str
 

@@ -26,7 +26,14 @@ def notify_email() -> str:
     return (os.environ.get("NOTIFY_EMAIL") or DEFAULT_NOTIFY).strip()
 
 
-async def send_email(to: str, subject: str, html: str) -> bool:
+async def send_email(
+    to: str,
+    subject: str,
+    html: str,
+    *,
+    attachments: list[dict] | None = None,
+) -> bool:
+    """Invia email via Resend. attachments: [{filename, content}] con content bytes o str."""
     api_key = os.environ.get("RESEND_API_KEY", "").strip()
     sender = sender_email()
     if not api_key or not to:
@@ -35,15 +42,35 @@ async def send_email(to: str, subject: str, html: str) -> bool:
         )
         return False
     try:
+        import base64
         import resend
 
         resend.api_key = api_key
-        params = {
+        params: dict = {
             "from": sender,
             "to": [to],
             "subject": subject,
             "html": html,
         }
+        if attachments:
+            packed = []
+            for att in attachments:
+                name = (att.get("filename") or "allegato.bin").strip()
+                raw = att.get("content")
+                if raw is None:
+                    continue
+                if isinstance(raw, str):
+                    raw_bytes = raw.encode("utf-8")
+                else:
+                    raw_bytes = bytes(raw)
+                packed.append(
+                    {
+                        "filename": name,
+                        "content": base64.b64encode(raw_bytes).decode("ascii"),
+                    }
+                )
+            if packed:
+                params["attachments"] = packed
         result = await asyncio.to_thread(resend.Emails.send, params)
         logger.info(
             "[mailer] Email sent id=%s to=%s from=%s", result.get("id"), to, sender
@@ -52,6 +79,25 @@ async def send_email(to: str, subject: str, html: str) -> bool:
     except Exception as e:
         logger.error("[mailer] Failed: %s", e)
         return False
+
+
+def _event_calendar_cta_html(event: dict) -> str:
+    """Pulsanti Google Calendar + nota Apple (.ics allegato)."""
+    from .event_ics import google_calendar_url
+
+    gcal = google_calendar_url(event) or ""
+    buttons = []
+    if gcal:
+        buttons.append(
+            f'<a href="{gcal}" style="background:#004587;color:#fff;padding:10px 18px;'
+            f'text-decoration:none;border-radius:6px;display:inline-block;margin:4px 8px 4px 0;">'
+            f"Aggiungi a Google Calendar</a>"
+        )
+    buttons.append(
+        '<span style="display:inline-block;padding:10px 0;color:#475569;font-size:13px;">'
+        "Su iPhone/Mac: apri l&apos;allegato <strong>.ics</strong> per aggiungerlo a Calendario.</span>"
+    )
+    return f'<p style="margin-top:20px;">{"".join(buttons)}</p>'
 
 
 def contact_preference_label(pref: str) -> str:
@@ -154,6 +200,7 @@ def render_event_reminder_email(event: dict, member: dict, lead_hours: int) -> s
         {luogo_row}
       </table>
       {desc_block}
+      {_event_calendar_cta_html(event)}
       <p style="color:#64748B;font-size:12px;margin-top:24px;">
         Promemoria inviato perché hai attivato le notifiche eventi nel tuo profilo area associati.
       </p>
@@ -190,9 +237,10 @@ def render_event_created_email(event: dict, member: dict, *, link: str) -> str:
         {luogo_row}
       </table>
       {desc_block}
-      <p style="margin-top:20px;">
-        <a href="{link}" style="background:#004587;color:#fff;padding:10px 18px;text-decoration:none;border-radius:6px;display:inline-block;">
-          Apri calendario
+      {_event_calendar_cta_html(event)}
+      <p style="margin-top:16px;">
+        <a href="{link}" style="background:#D4AF37;color:#004587;padding:10px 18px;text-decoration:none;border-radius:6px;display:inline-block;font-weight:bold;">
+          Apri calendario area associati
         </a>
       </p>
       <p style="color:#64748B;font-size:12px;margin-top:24px;">
