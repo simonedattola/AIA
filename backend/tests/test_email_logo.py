@@ -21,10 +21,12 @@ def test_email_logo_url_uses_portal_frontend(monkeypatch):
     assert portal_frontend_url() == "https://aia-virid.vercel.app"
 
 
-def test_wrap_email_uses_cid_logo(monkeypatch):
+def test_wrap_email_uses_https_logo(monkeypatch):
     monkeypatch.setenv("PORTAL_FRONTEND_URL", "https://example.test")
     html = wrap_email("<p>Ciao</p>")
-    assert 'src="cid:aia-legnano-logo"' in html
+    assert (
+        'src="https://example.test/brand/logo-aia-legnano-email.png"' in html
+    )
     assert "Sezione AIA Legnano" in html
     assert "Ciao" in html
     assert 'alt="AIA Legnano"' in html
@@ -64,9 +66,10 @@ def test_templates_include_logo(monkeypatch):
             "orario": "18:30",
             "luogo": "Sede",
         },
-        {"firstName": "Simone", "lastName": "D"},
+        {"firstName": "MARIO", "lastName": "ROSSI"},
         link="https://aia-virid.vercel.app/area-associati/calendario",
     )
     for html in (lead, contact, confirm, event):
-        assert "cid:aia-legnano-logo" in html
+        assert "logo-aia-legnano-email.png" in html
         assert "Sezione AIA Legnano" in html
+    assert "Ciao Mario Rossi," in event
