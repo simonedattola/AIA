@@ -22,7 +22,10 @@ class TestSplitFullName:
 
 class TestSplitCognomeNome:
     def test_two_parts(self):
-        assert _split_full_name_cognome_nome("Menapace Lorenzo") == ("Lorenzo", "Menapace")
+        assert _split_full_name_cognome_nome("Menapace Lorenzo") == (
+            "Lorenzo",
+            "Menapace",
+        )
 
     def test_compound_given_name(self):
         assert _split_full_name_cognome_nome("Conti Francesca Maria") == (

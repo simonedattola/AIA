@@ -21,10 +21,35 @@ class TestExpandChampionshipLabel:
 
     def test_all_user_codes_present(self):
         expected = {
-            "PRI", "SEC", "TER", "FED", "FEP", "CP1", "CR2", "CRJ", "FCR",
-            "JUR", "JRB", "JUP", "R18", "ALR", "ALP", "ARB", "ALB",
-            "GIR", "GIP", "GRB", "GIB", "CGB", "ARF", "GIF",
-            "ECC", "PRO", "JUN", "GIN", "ALA",
+            "PRI",
+            "SEC",
+            "TER",
+            "FED",
+            "FEP",
+            "CP1",
+            "CR2",
+            "CRJ",
+            "FCR",
+            "JUR",
+            "JRB",
+            "JUP",
+            "R18",
+            "ALR",
+            "ALP",
+            "ARB",
+            "ALB",
+            "GIR",
+            "GIP",
+            "GRB",
+            "GIB",
+            "CGB",
+            "ARF",
+            "GIF",
+            "ECC",
+            "PRO",
+            "JUN",
+            "GIN",
+            "ALA",
         }
         assert expected <= set(CHAMPIONSHIP_CODES)
 
@@ -92,7 +117,7 @@ class TestFormatBImport:
     def test_continuation_rows_same_match(self):
         # Prima riga = gara completa; righe successive solo Att. + Associato (Cognome Nome)
         content = (
-            'Data / Ora;Cat.;Gir.;Giorn.;Num. Gara;Sq. Locale;Sq. Ospite;Impianto;Att.;Associato\n'
+            "Data / Ora;Cat.;Gir.;Giorn.;Num. Gara;Sq. Locale;Sq. Ospite;Impianto;Att.;Associato\n"
             '"21/03/2026\n15:00";GIN;;0;1;INTERNAZIONALE MILANO S.P.A.;JACKSONVILLE FC;MILANO/AFFORI;AA2;LORENZO ALESSIO\n'
             ";;;;;;;;AR;MENAPACE LORENZO\n"
             ";;;;;;;;AA1;GIORGI FABRIZIO\n"

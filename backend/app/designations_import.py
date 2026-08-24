@@ -153,7 +153,9 @@ def _header_score(label: str, field: str) -> float:
         # Substring match solo se entrambi hanno lunghezza sufficiente
         if len(kn) >= 3 and len(norm) >= 2 and (kn in norm or norm in kn):
             # Penalizza match troppo generici tipo "gara" in "num gara" per matchLabel
-            if field == "matchLabel" and ("num" in norm or "numero" in norm or "n " in f" {norm} "):
+            if field == "matchLabel" and (
+                "num" in norm or "numero" in norm or "n " in f" {norm} "
+            ):
                 continue
             best = max(best, 0.9 if kn in norm else 0.85)
             continue
@@ -326,11 +328,7 @@ def _map_columns(df: pd.DataFrame) -> tuple[pd.DataFrame, dict[str, str], list[s
         )
 
     renamed = body.rename(columns={v: k for k, v in mapping.items()}).copy()
-    keep = [
-        k
-        for k in mapping
-        if k not in ("ignored", "matchNumber", "venue")
-    ]
+    keep = [k for k in mapping if k not in ("ignored", "matchNumber", "venue")]
     for k in (
         "matchLabel",
         "matchHome",
@@ -577,7 +575,10 @@ async def _resolve_member_for_import(
         key = f"mec:{mec.lower()}"
         if key in member_lookup:
             info = member_lookup[key]
-            canonical = f"{info.get('firstName', '')} {info.get('lastName', '')}".strip() or full_name
+            canonical = (
+                f"{info.get('firstName', '')} {info.get('lastName', '')}".strip()
+                or full_name
+            )
             return info["id"], info.get("slug", ""), False, canonical
 
     existing = _lookup_member_info(member_lookup, full_name)
@@ -602,7 +603,8 @@ async def _resolve_member_for_import(
     if created:
         info = _lookup_member_info(member_lookup, full_name) or {}
         canonical = (
-            f"{info.get('firstName', '')} {info.get('lastName', '')}".strip() or full_name
+            f"{info.get('firstName', '')} {info.get('lastName', '')}".strip()
+            or full_name
         )
         return member_id, member_slug, True, canonical
     return member_id, member_slug, False, full_name
@@ -651,13 +653,15 @@ async def import_designations_from_file(
     errors: list[str] = list(parse_warnings)
 
     for row in rows:
-        member_id, member_slug, created, canonical_name = await _resolve_member_for_import(
-            db,
-            row["memberName"],
-            row.get("meccanografico", ""),
-            row["role"],
-            member_lookup,
-            allow_create=not dry_run,
+        member_id, member_slug, created, canonical_name = (
+            await _resolve_member_for_import(
+                db,
+                row["memberName"],
+                row.get("meccanografico", ""),
+                row["role"],
+                member_lookup,
+                allow_create=not dry_run,
+            )
         )
         linked = bool(member_id)
         would_create = not linked and bool(_normalize_name(row["memberName"]))

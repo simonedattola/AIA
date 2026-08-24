@@ -98,7 +98,9 @@ def build_member_lookups(
         mid = m.get("id")
         if mid is not None:
             slug_by_id[str(mid)] = m.get("slug", "")
-        for key in _name_match_keys(f"{_as_str(m.get('firstName'))} {_as_str(m.get('lastName'))}"):
+        for key in _name_match_keys(
+            f"{_as_str(m.get('firstName'))} {_as_str(m.get('lastName'))}"
+        ):
             member_by_name[key] = m
     return slug_by_id, member_by_name
 
