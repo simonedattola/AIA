@@ -1,6 +1,7 @@
 import { NavLink, Outlet, useNavigate, Navigate, Link } from "react-router-dom";
 import { useEffect, useState } from "react";
 import { adminMe, ADMIN_UNAUTHORIZED_EVENT } from "../../lib/api";
+import { asAdminText } from "../../lib/safeText";
 import { portalNavLinkClass, NavActiveLabel } from "../../lib/navActive";
 import { ADMIN_NAV } from "../../components/admin/adminNavItems";
 import { ADMIN_ROUTES as R } from "../../lib/appRoutes";
@@ -128,8 +129,8 @@ export default function AdminLayout() {
             <LogOut className="h-4 w-4" /> Esci
           </button>
           {admin && (
-            <div className="text-xs text-slate-400 mt-3 px-3 truncate" title={admin.email}>
-              {admin.name}
+            <div className="text-xs text-slate-400 mt-3 px-3 truncate" title={asAdminText(admin.email)}>
+              {asAdminText(admin.name, "Admin")}
             </div>
           )}
         </div>

@@ -1,32 +1,39 @@
+import { asAdminText as asText } from "./safeText";
+
 export function displayDesignationGara(d) {
-  if (d.matchHome && d.matchAway) return `${d.matchHome} - ${d.matchAway}`;
-  return d.matchLabel || "—";
+  const home = asText(d?.matchHome);
+  const away = asText(d?.matchAway);
+  if (home && away) return `${home} - ${away}`;
+  return asText(d?.matchLabel) || "—";
 }
 
 export function displayDesignationCampionato(d) {
-  return (d.championship || d.category || "").trim() || "—";
+  return asText(d?.championship || d?.category).trim() || "—";
 }
 
 export function displayDesignationGirone(d) {
-  return (d.girone || "").trim() || "—";
+  return asText(d?.girone).trim() || "—";
 }
 
 export function displayDesignationGiornata(d) {
-  return (d.matchDay || "").trim() || "—";
+  return asText(d?.matchDay).trim() || "—";
 }
 
 export function formatDesignationMeta(d) {
+  const girone = asText(d?.girone);
+  const matchDay = asText(d?.matchDay);
   return [
     displayDesignationCampionato(d),
-    d.girone && `Gir. ${d.girone}`,
-    d.matchDay && `G.${d.matchDay}`,
+    girone && `Gir. ${girone}`,
+    matchDay && `G.${matchDay}`,
   ]
     .filter(Boolean)
     .join(" · ") || "—";
 }
 
 export function formatSeasonLabel(s) {
-  if (!s || !s.includes("-")) return s || "Stagione";
-  const [a, b] = s.split("-");
+  const label = asText(s);
+  if (!label || !label.includes("-")) return label || "Stagione";
+  const [a, b] = label.split("-");
   return `${a}/${b}`;
 }

@@ -15,6 +15,10 @@ _GIRONE_RE = re.compile(r"girone\s+([^\s·|,;]+)", re.I)
 _GIORNATA_RE = re.compile(r"giornat[a]?\s+([^\s·|,;]+)", re.I)
 
 
+def _as_str(value) -> str:
+    return value.strip() if isinstance(value, str) else ""
+
+
 def _parse_category_string(category: str) -> dict[str, str]:
     text = (category or "").strip()
     if not text:
@@ -38,21 +42,21 @@ def enrich_designation(
 ) -> dict:
     """Fill display fields and memberSlug for public/admin lists."""
     if not item.get("matchLabel"):
-        home = (item.get("matchHome") or "").strip()
-        away = (item.get("matchAway") or "").strip()
+        home = _as_str(item.get("matchHome"))
+        away = _as_str(item.get("matchAway"))
         if home and away:
             item["matchLabel"] = f"{home} - {away}"
 
-    if not (item.get("championship") or "").strip():
-        parsed = _parse_category_string(item.get("category") or "")
+    if not _as_str(item.get("championship")):
+        parsed = _parse_category_string(_as_str(item.get("category")))
         if parsed["championship"]:
             item["championship"] = parsed["championship"]
-    if not (item.get("girone") or "").strip():
-        parsed = _parse_category_string(item.get("category") or "")
+    if not _as_str(item.get("girone")):
+        parsed = _parse_category_string(_as_str(item.get("category")))
         if parsed["girone"]:
             item["girone"] = parsed["girone"]
-    if not (item.get("matchDay") or "").strip():
-        parsed = _parse_category_string(item.get("category") or "")
+    if not _as_str(item.get("matchDay")):
+        parsed = _parse_category_string(_as_str(item.get("category")))
         if parsed["matchDay"]:
             item["matchDay"] = parsed["matchDay"]
 
@@ -67,8 +71,8 @@ def enrich_designation(
         item["memberId"] = None
         return item
 
-    if not (item.get("memberSlug") or "").strip():
-        key = _normalize_name(item.get("memberName") or "")
+    if not _as_str(item.get("memberSlug")):
+        key = _normalize_name(_as_str(item.get("memberName")))
         m = member_by_name.get(key)
         if m:
             item["memberSlug"] = m.get("slug", "")
@@ -93,7 +97,7 @@ def build_member_lookups(
         mid = m.get("id")
         if mid is not None:
             slug_by_id[str(mid)] = m.get("slug", "")
-        key = _normalize_name(f"{m.get('firstName', '')} {m.get('lastName', '')}")
+        key = _normalize_name(f"{_as_str(m.get('firstName'))} {_as_str(m.get('lastName'))}")
         if key:
             member_by_name[key] = m
     return slug_by_id, member_by_name
@@ -115,16 +119,16 @@ def enrich_testimonial(
         if member_by_id:
             m = member_by_id.get(str(mid)) or member_by_id.get(mid)
 
-    if not (item.get("memberSlug") or "").strip():
-        key = _normalize_name(item.get("name") or "")
+    if not _as_str(item.get("memberSlug")):
+        key = _normalize_name(_as_str(item.get("name")))
         m = member_by_name.get(key)
         if m and m.get("slug"):
             item["memberSlug"] = m["slug"]
             if not item.get("memberId"):
                 item["memberId"] = m.get("id")
 
-    if m and not (item.get("photoUrl") or "").strip():
-        photo = (m.get("photoUrl") or "").strip()
+    if m and not _as_str(item.get("photoUrl")):
+        photo = _as_str(m.get("photoUrl"))
         if photo:
             item["photoUrl"] = photo
 

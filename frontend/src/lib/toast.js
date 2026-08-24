@@ -62,7 +62,11 @@ export function apiErrorMessage(err, fallback = "Errore. Riprova.") {
   if (typeof d.detail === "string") return d.detail;
   if (Array.isArray(d.detail)) {
     // Pydantic validation errors
-    return d.detail.map((e) => `${(e.loc || []).slice(-1)[0] || ""}: ${e.msg}`).join(" · ");
+    return d.detail.map((e) => `${(e.loc || []).slice(-1)[0] || ""}: ${e.msg || e.message || ""}`.trim()).filter(Boolean).join(" · ") || fallback;
+  }
+  if (d.detail && typeof d.detail === "object") {
+    if (typeof d.detail.msg === "string") return d.detail.msg;
+    if (typeof d.detail.message === "string") return d.detail.message;
   }
   return fallback;
 }

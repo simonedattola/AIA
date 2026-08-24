@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { adminDashboard } from "../../lib/api";
+import { asAdminText, asAdminCount } from "../../lib/safeText";
 import PortalEventCard from "../../components/portal/PortalEventCard";
 import DesignationsDataTable from "../../components/designations/DesignationsDataTable";
 import { formatDateIt } from "../../lib/format";
@@ -22,7 +23,7 @@ function StatCard({ to, icon: Icon, value, label, accent = "gold" }) {
         <Icon className="h-5 w-5" />
       </div>
       <div className="flex-1 min-w-0">
-        <div className="text-xl font-bold text-navy-700 tabular-nums">{value}</div>
+        <div className="text-xl font-bold text-navy-700 tabular-nums">{asAdminCount(value)}</div>
         <div className="text-sm text-slate-600">{label}</div>
       </div>
       <ChevronRight className="h-5 w-5 text-slate-300 group-hover:text-navy-600 shrink-0" />
@@ -112,14 +113,14 @@ export default function AdminDashboardPage() {
         <StatCard
           to={R.messaggiSito}
           icon={SITE_ICONS.messagesSite}
-          value={data.messagesNew ?? 0}
+          value={asAdminCount(data.messagesNew)}
           label="Messaggi dal sito da leggere"
           accent="navy"
         />
         <StatCard
           to={R.candidature}
           icon={SITE_ICONS.leads}
-          value={data.leadsNew ?? 0}
+          value={asAdminCount(data.leadsNew)}
           label="Candidature da leggere"
         />
       </div>
@@ -166,7 +167,7 @@ export default function AdminDashboardPage() {
           <Link
             to={`${R.eventi}?edit=${data.nextEvent.id}`}
             className="block rounded-xl transition-colors hover:opacity-95"
-            aria-label={`Modifica evento: ${data.nextEvent.titolo}`}
+            aria-label={`Modifica evento: ${asAdminText(data.nextEvent.titolo, "evento")}`}
           >
             <PortalEventCard event={data.nextEvent} />
           </Link>
@@ -196,16 +197,16 @@ export default function AdminDashboardPage() {
               </div>
               <div className="flex-1 min-w-0">
                 <h3 className="font-display font-semibold text-navy-800 group-hover:text-navy-900">
-                  {latestComunicazione.title}
+                  {asAdminText(latestComunicazione.title, "Comunicazione")}
                 </h3>
                 <p className="text-xs text-slate-500 mt-1">
                   {formatDateIt(
-                    (latestComunicazione.publishedAt || latestComunicazione.createdAt || "").slice(0, 10)
+                    asAdminText(latestComunicazione.publishedAt || latestComunicazione.createdAt).slice(0, 10)
                   )}
                 </p>
                 {latestComunicazione.bodyHtml && (
                   <p className="text-sm text-slate-600 mt-2 line-clamp-2">
-                    {stripHtml(latestComunicazione.bodyHtml)}
+                    {stripHtml(asAdminText(latestComunicazione.bodyHtml))}
                   </p>
                 )}
               </div>

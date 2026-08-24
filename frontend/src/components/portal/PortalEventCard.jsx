@@ -3,11 +3,15 @@ import { MapPin } from "lucide-react";
 import { formatEventDateTimeIt } from "../../lib/format";
 import { eventDateKey, MONTHS_SHORT, TYPE_COLOR, TYPE_LABEL } from "../../lib/eventsDisplay";
 import { PortalPresenzaPanel } from "./PortalEventPresenza";
+import { asAdminText } from "../../lib/safeText";
 
 function PortalEventCard({ event, saving, onSetStato, onOpen }) {
-  const d = new Date(`${eventDateKey(event.date)}T12:00:00`);
-  const tipoKey = (event.tipo || "").toLowerCase();
-  const tipoLabel = TYPE_LABEL[tipoKey] || event.tipo || "Evento";
+  const dateKey = eventDateKey(asAdminText(event.date));
+  const d = new Date(`${dateKey}T12:00:00`);
+  const tipoKey = asAdminText(event.tipo).toLowerCase();
+  const titolo = asAdminText(event.titolo, "Evento");
+  const luogo = asAdminText(event.luogo);
+  const tipoLabel = TYPE_LABEL[tipoKey] || asAdminText(event.tipo) || "Evento";
   const tipoColor = TYPE_COLOR[tipoKey] || "bg-slate-100 text-slate-700";
   const clickable = typeof onOpen === "function";
 
@@ -24,7 +28,7 @@ function PortalEventCard({ event, saving, onSetStato, onOpen }) {
         },
         className:
           "flex flex-1 min-w-0 flex-col sm:flex-row sm:items-stretch cursor-pointer",
-        "aria-label": `Apri dettagli: ${event.titolo}`,
+        "aria-label": `Apri dettagli: ${titolo}`,
       }
     : {
         className: "flex flex-1 min-w-0 flex-col sm:flex-row sm:items-stretch",
@@ -51,20 +55,20 @@ function PortalEventCard({ event, saving, onSetStato, onOpen }) {
             <span className={`inline-flex px-2 py-0.5 rounded text-[11px] font-semibold ${tipoColor}`}>
               {tipoLabel}
             </span>
-            {event.attachments?.length > 0 && (
+            {Array.isArray(event.attachments) && event.attachments.length > 0 && (
               <span className="text-[10px] text-slate-500 font-medium">
                 {event.attachments.length} {event.attachments.length === 1 ? "allegato" : "allegati"}
               </span>
             )}
           </div>
           <h2 className="font-display text-base sm:text-lg font-bold text-navy-800 leading-snug line-clamp-2">
-            {event.titolo}
+            {titolo}
           </h2>
-          <p className="mt-1 text-xs text-slate-500">{formatEventDateTimeIt(event.date, event.orario)}</p>
-          {event.luogo && (
+          <p className="mt-1 text-xs text-slate-500">{formatEventDateTimeIt(asAdminText(event.date), asAdminText(event.orario))}</p>
+          {luogo && (
             <p className="mt-1 text-xs text-slate-600 flex items-center gap-1 line-clamp-1">
               <MapPin className="h-3.5 w-3.5 shrink-0 text-navy-500" />
-              {event.luogo}
+              {luogo}
             </p>
           )}
         </div>

@@ -26,7 +26,7 @@ export const MONTHS_IT = [
 export const WEEKDAYS_IT = ["Lun", "Mar", "Mer", "Gio", "Ven", "Sab", "Dom"];
 
 export function eventDateKey(dateStr) {
-  return (dateStr || "").slice(0, 10);
+  return String(typeof dateStr === "string" ? dateStr : "").slice(0, 10);
 }
 
 export function todayKey() {

@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import { SECTION_LOGO, SECTION_LOGO_CLASS } from "../../lib/brand";
 import { useNavigate, Navigate } from "react-router-dom";
 import { adminLogin } from "../../lib/api";
+import { apiErrorMessage } from "../../lib/toast";
 import { ADMIN_ROUTES as R } from "../../lib/appRoutes";
 import { Shield, Lock, Mail } from "lucide-react";
 import { Button } from "@/design-system";
@@ -40,7 +41,7 @@ export default function AdminLoginPage() {
       localStorage.setItem("aia_admin", JSON.stringify(res.admin));
       navigate(R.dashboard);
     } catch (err) {
-      setError(err?.response?.data?.detail || "Credenziali non valide");
+      setError(apiErrorMessage(err, "Credenziali non valide"));
     } finally {
       setLoading(false);
     }

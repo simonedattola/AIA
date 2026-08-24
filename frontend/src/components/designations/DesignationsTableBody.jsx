@@ -2,14 +2,15 @@ import { Fragment } from "react";
 import { Link } from "react-router-dom";
 import { CalendarDays } from "lucide-react";
 import { formatDateIt } from "../../lib/format";
+import { asAdminText } from "../../lib/safeText";
 import {
   displayDesignationGara,
   formatDesignationMeta,
 } from "../../lib/designationsDisplay";
 
 function NominativoLink({ d }) {
-  const label = d.memberName || "—";
-  const slug = (d.memberSlug || "").trim();
+  const label = asAdminText(d.memberName, "—");
+  const slug = asAdminText(d.memberSlug).trim();
   if (!slug) {
     return <span className="text-slate-700">{label}</span>;
   }
@@ -77,7 +78,7 @@ export default function DesignationsTableBody({
                 <td className="px-3 py-3.5 text-sm font-medium text-navy-700 break-words">{displayDesignationGara(d)}</td>
                 <td className="px-3 py-3.5 text-sm">
                   <span className="text-xs bg-navy-50 text-navy-700 px-2 py-1 rounded font-medium">
-                    {d.role}
+                    {asAdminText(d.role, "—")}
                   </span>
                 </td>
                 {showNominativoCol && (
