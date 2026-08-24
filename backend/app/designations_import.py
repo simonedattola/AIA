@@ -12,6 +12,7 @@ import pandas as pd
 
 from .db import get_db
 from .models import _id
+from .championship_codes import expand_championship_label, resolve_att_role
 from .designations_sync import (
     _build_member_lookup,
     _designation_match_key,
@@ -29,8 +30,17 @@ from .scrapers.aia_lombardia import ROLE_MAP, _clean_text
 
 SOURCE = "file-import"
 
+# Keyword fuzzy matching. Prefer exact/longer tokens; short aliases are listed
+# explicitly so "Cat." / "Gir." / "Att." from export AIA mappano correttamente.
 FIELD_KEYWORDS: dict[str, list[str]] = {
-    "matchDate": ["data", "date", "giorno", "giornata data", "when", "match date"],
+    "matchDate": [
+        "data ora",
+        "data / ora",
+        "data",
+        "date",
+        "when",
+        "match date",
+    ],
     "championship": [
         "campionato",
         "categoria",
@@ -38,47 +48,81 @@ FIELD_KEYWORDS: dict[str, list[str]] = {
         "competizione",
         "livello",
         "torneo",
+        "cat",
     ],
-    "girone": ["girone", "group", "gruppo"],
-    "matchDay": ["giornata", "turno", "matchday", "round"],
-    "matchHome": ["casa", "home", "domicilio", "squadra casa", "match home", "locale"],
+    "girone": ["girone", "giron", "gir", "group", "gruppo"],
+    "matchDay": ["giornata", "giorn", "turno", "matchday", "round"],
+    "matchHome": [
+        "squadra locale",
+        "sq locale",
+        "squadra casa",
+        "casa",
+        "home",
+        "domicilio",
+        "match home",
+        "locale",
+    ],
     "matchAway": [
+        "squadra ospite",
+        "sq ospite",
         "ospite",
         "away",
         "trasferta",
-        "squadra ospite",
         "match away",
         "visit",
     ],
     "matchLabel": [
-        "gara",
         "partita",
         "incontro",
-        "match",
         "avversari",
         "squadre",
         "teams",
+        "match",
+        "gara",
     ],
-    "role": ["ruolo", "role", "incarico", "designazione", "funzione"],
+    # Consuma "Num. Gara" senza usarlo come matchLabel
+    "matchNumber": ["num gara", "numero gara", "n gara", "codice gara"],
+    "venue": ["impianto", "campo", "stadio", "venue"],
+    "role": [
+        "ruolo",
+        "role",
+        "incarico",
+        "designazione",
+        "funzione",
+        "att",
+        "qualifica",
+    ],
     "memberName": [
+        "associato",
         "nominativo",
         "arbitro",
-        "nome",
-        "cognome",
-        "ufficiale",
-        "designato",
-        "name",
-        "referee",
         "nome cognome",
         "nome e cognome",
+        "ufficiale",
+        "designato",
+        "referee",
+        "cognome",
+        "nome",
+        "name",
     ],
     "meccanografico": ["meccanografico", "matricola", "codice", "mec", "cod"],
+    # Colonne da ignorare (Formato A: voti/rimborsi) — mappate per non rubare altri campi
+    "ignored": [
+        "ris",
+        "risultato",
+        "voto oa",
+        "voto ot",
+        "voto",
+        "stato",
+        "rimb",
+        "rimborso",
+    ],
 }
 
 IMPORT_TEMPLATE_CSV = (
-    "data;campionato;girone;giornata;squadra casa;squadra ospite;ruolo;nominativo\r\n"
-    "2026-05-17;SECONDA CATEGORIA;R;1;PRO JUVENTUTE ASD;MAZZO 80 A.C.;Arbitro;Lorenzo Menapace\r\n"
-    "2026-05-17;SECONDA CATEGORIA;R;1;PRO JUVENTUTE ASD;MAZZO 80 A.C.;Assistente 1;Marco Rossi\r\n"
+    "data;cat.;gir.;giorn.;squadra locale;squadra ospite;att.;associato\r\n"
+    "2026-05-17;SEC;R;1;PRO JUVENTUTE ASD;MAZZO 80 A.C.;AE;Lorenzo Menapace\r\n"
+    "2026-05-17;SEC;R;1;PRO JUVENTUTE ASD;MAZZO 80 A.C.;AA;Marco Rossi\r\n"
 )
 
 
@@ -93,17 +137,27 @@ def _norm_label(text: str) -> str:
 
 
 def _header_score(label: str, field: str) -> float:
+    """Score header→field. Avoid short-token false positives (es. girone 'R')."""
     norm = _norm_label(label)
     if not norm:
         return 0.0
     best = 0.0
     for kw in FIELD_KEYWORDS.get(field, []):
         kn = _norm_label(kw)
+        if not kn:
+            continue
         if norm == kn:
             best = max(best, 1.0)
-        elif kn in norm or norm in kn:
-            best = max(best, 0.85)
-        elif any(tok in norm.split() for tok in kn.split() if len(tok) > 2):
+            continue
+        # Substring match solo se entrambi hanno lunghezza sufficiente
+        if len(kn) >= 3 and len(norm) >= 2 and (kn in norm or norm in kn):
+            # Penalizza match troppo generici tipo "gara" in "num gara" per matchLabel
+            if field == "matchLabel" and ("num" in norm or "numero" in norm or "n " in f" {norm} "):
+                continue
+            best = max(best, 0.9 if kn in norm else 0.85)
+            continue
+        tokens = [tok for tok in kn.split() if len(tok) >= 3]
+        if tokens and any(tok in norm.split() for tok in tokens):
             best = max(best, 0.65)
     return best
 
@@ -113,6 +167,8 @@ def _looks_like_date(value: str) -> bool:
 
 
 def _looks_like_role(value: str) -> bool:
+    if resolve_att_role(value):
+        return True
     key = _normalize_name(value)
     return key in ROLE_MAP or "assistente" in key or key == "arbitro"
 
@@ -269,7 +325,11 @@ def _map_columns(df: pd.DataFrame) -> tuple[pd.DataFrame, dict[str, str], list[s
         )
 
     renamed = body.rename(columns={v: k for k, v in mapping.items()}).copy()
-    keep = [k for k in mapping]
+    keep = [
+        k
+        for k in mapping
+        if k not in ("ignored", "matchNumber", "venue")
+    ]
     for k in (
         "matchLabel",
         "matchHome",
@@ -278,6 +338,9 @@ def _map_columns(df: pd.DataFrame) -> tuple[pd.DataFrame, dict[str, str], list[s
         "girone",
         "matchDay",
         "meccanografico",
+        "role",
+        "memberName",
+        "matchDate",
     ):
         if k in renamed.columns and k not in keep:
             keep.append(k)
@@ -312,6 +375,9 @@ def _parse_date(value: str) -> Optional[str]:
 
 
 def _normalize_role(role: str) -> str:
+    att = resolve_att_role(role)
+    if att:
+        return att
     key = _normalize_name(role)
     if key in ROLE_MAP:
         return ROLE_MAP[key]
@@ -364,20 +430,23 @@ def _row_dict_from_mapped(
         warnings.append(f"Riga {line}: nominativo mancante — saltata.")
         return None
 
-    role = _normalize_role(row.get("role", "Arbitro"))
+    role_raw = row.get("role", "")
+    role = _normalize_role(role_raw or "Arbitro")
     if is_observer_designation_role(role):
         warnings.append(f"Riga {line}: ruolo Osservatore — saltata.")
         return None
 
+    championship = expand_championship_label(row.get("championship", ""))
+
     return {
         "matchDate": match_date,
-        "championship": row.get("championship", ""),
+        "championship": championship,
         "girone": row.get("girone", ""),
         "matchDay": row.get("matchDay", ""),
         "matchHome": match_home,
         "matchAway": match_away,
         "matchLabel": match_label,
-        "category": row.get("championship", ""),
+        "category": championship,
         "role": role,
         "memberName": member_name,
         "meccanografico": row.get("meccanografico", ""),
