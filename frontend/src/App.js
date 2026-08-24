@@ -130,7 +130,7 @@ function App() {
             <Route path="/admin/login" element={<Navigate to={ADMIN_ROUTES.login} replace />} />
             <Route path="/admin/*" element={<LegacyPrefixRedirect from="/admin" to="/amministrazione" />} />
             <Route path="/amministrazione/login" element={<AdminErrorBoundary><AdminLoginPage /></AdminErrorBoundary>} />
-            <Route path="/amministrazione" element={<AdminErrorBoundary><AdminLayout /></AdminErrorBoundary>}>
+            <Route path="/amministrazione" element={<AdminLayout />}>
               <Route index element={<AdminDashboardPage />} />
               <Route path="pagine" element={<AdminPagesPage />} />
               <Route path="pagine/:id" element={<AdminPageEditPage />} />

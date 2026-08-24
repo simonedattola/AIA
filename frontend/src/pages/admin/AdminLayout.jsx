@@ -6,6 +6,7 @@ import { ADMIN_NAV } from "../../components/admin/adminNavItems";
 import { ADMIN_ROUTES as R } from "../../lib/appRoutes";
 import { SECTION_LOGO, SECTION_LOGO_CLASS } from "../../lib/brand";
 import { AdminLoading } from "../../components/admin/admin-ui";
+import AdminErrorBoundary from "../../components/admin/AdminErrorBoundary";
 import { LogOut, Menu, ArrowLeft } from "lucide-react";
 
 export default function AdminLayout() {
@@ -160,7 +161,9 @@ export default function AdminLayout() {
           className="flex-1 overflow-x-hidden min-w-0 px-3 pb-6 pt-16 sm:px-6 sm:pt-16 lg:p-10"
           data-testid="admin-content"
         >
-          <Outlet />
+          <AdminErrorBoundary variant="inline">
+            <Outlet />
+          </AdminErrorBoundary>
         </main>
       </div>
     </div>

@@ -196,7 +196,7 @@ export const adminGallery = (filters = {}) => {
   if (filters.category) params.category = filters.category;
   if (filters.dateFrom) params.dateFrom = filters.dateFrom;
   if (filters.dateTo) params.dateTo = filters.dateTo;
-  return api.get("/admin/gallery", { params }).then((r) => r.data);
+  return api.get("/admin/gallery", { params }).then((r) => asAdminList(r.data));
 };
 export const adminGalleryCreate = (data) => api.post("/admin/gallery", data).then((r) => r.data);
 export const adminGalleryUpload = (file, opts = {}) => {
