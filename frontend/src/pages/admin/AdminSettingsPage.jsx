@@ -66,6 +66,29 @@ export default function AdminSettingsPage() {
           <h2 className="font-display font-bold text-navy-700 mb-5">Social</h2>
           <Field label="URL Facebook"><input value={form.facebookUrl || ""} onChange={set("facebookUrl")} className={inputCls}/></Field>
           <Field label="URL Instagram"><input value={form.instagramUrl || ""} onChange={set("instagramUrl")} className={inputCls}/></Field>
+          <Field label="Follower Instagram (widget home)">
+            <input
+              type="number"
+              min="0"
+              value={form.instagramFollowers ?? ""}
+              onChange={set("instagramFollowers")}
+              className={inputCls}
+              placeholder="es. 1200"
+            />
+          </Field>
+          <Field label="Following Instagram (widget home)">
+            <input
+              type="number"
+              min="0"
+              value={form.instagramFollowing ?? ""}
+              onChange={set("instagramFollowing")}
+              className={inputCls}
+              placeholder="opzionale"
+            />
+          </Field>
+          <p className="text-xs text-slate-500 -mt-2 mb-2">
+            I post mostrati nel widget sono caricati live da Instagram. Follower e following vanno inseriti manualmente se vuoi mostrarli nel widget.
+          </p>
         </div>
 
         <div className="bg-white rounded-lg border border-slate-200 p-4 sm:p-6 min-w-0 overflow-hidden">

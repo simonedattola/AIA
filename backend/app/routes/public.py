@@ -566,6 +566,54 @@ async def get_gallery():
     return [resolve_media_fields(i) for i in items]
 
 
+@router.get("/instagram/widget")
+async def get_instagram_widget(limit: int = 12):
+    """Profilo + griglia post per widget home (feed Instagram pubblico)."""
+    from ..instagram_widget import get_instagram_widget_data
+    from ..instagram_gallery import parse_instagram_username
+
+    db = get_db()
+    settings = (
+        await db.settings.find_one(
+            {"_id": "site"},
+            {
+                "_id": 0,
+                "instagramUrl": 1,
+                "instagramFollowers": 1,
+                "instagramFollowing": 1,
+            },
+        )
+        or {}
+    )
+    username = parse_instagram_username(settings.get("instagramUrl") or "aia_legnano")
+
+    ig_posts_count = await db.gallery_images.count_documents(
+        {"source": "instagram", "status": "approved"}
+    )
+    stats = {
+        "posts": ig_posts_count or None,
+        "followers": None,
+        "following": None,
+    }
+    for key, field in (
+        ("followers", "instagramFollowers"),
+        ("following", "instagramFollowing"),
+    ):
+        raw = settings.get(field)
+        if isinstance(raw, int) and raw >= 0:
+            stats[key] = raw
+        elif isinstance(raw, str) and raw.strip().isdigit():
+            stats[key] = int(raw.strip())
+
+    data = await build_instagram_widget_payload(
+        db,
+        username,
+        limit=max(4, min(limit, 24)),
+        stats=stats,
+    )
+    return data
+
+
 @router.post("/forms/corso-arbitri", status_code=201)
 async def submit_lead(payload: LeadCreate, background: BackgroundTasks):
     db = get_db()

@@ -56,6 +56,8 @@ export const fetchDocumentSections = () => api.get("/public/document-sections").
 export const fetchAlbums = () => api.get("/public/albums").then((r) => r.data);
 export const fetchAlbum = (slug) => api.get(`/public/albums/${slug}`).then((r) => r.data);
 export const fetchGallery = () => api.get("/public/gallery").then((r) => r.data);
+export const fetchInstagramWidget = (params = {}) =>
+  api.get("/public/instagram/widget", { params }).then((r) => r.data);
 
 export const submitLead = (data) => api.post("/public/forms/corso-arbitri", data).then((r) => r.data);
 export const submitContact = (data) => api.post("/public/forms/contatti", data).then((r) => r.data);

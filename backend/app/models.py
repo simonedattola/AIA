@@ -44,6 +44,8 @@ class SiteSettings(BaseModel):
     email: str = "legnano@aia-figc.it"
     facebookUrl: str = "https://www.facebook.com/aialegnano"
     instagramUrl: str = "https://www.instagram.com/aia_legnano/"
+    instagramFollowers: str = ""
+    instagramFollowing: str = ""
     mapEmbedUrl: str = ""
     foundedYear: str = "1927"
     associatedCount: str = "150"
