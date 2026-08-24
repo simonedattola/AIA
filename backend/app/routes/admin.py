@@ -59,13 +59,30 @@ UPLOAD_DIR.mkdir(parents=True, exist_ok=True)
 
 
 # ---- Auth ----
+LEGACY_ADMIN_EMAILS = frozenset(
+    {
+        "admin@aia-legnano.it",
+        "admin@aia.it",
+    }
+)
+
+
+async def _find_admin_by_login_email(db, email: str) -> dict | None:
+    admin = await db.admin_users.find_one({"email": email}, {"_id": 0})
+    if admin:
+        return admin
+    if email not in LEGACY_ADMIN_EMAILS:
+        return None
+    return await db.admin_users.find_one({"id": "admin-root"}, {"_id": 0})
+
+
 @router.post("/login", response_model=TokenResponse)
 async def login(payload: LoginRequest):
     from ..logging_config import log_event
 
     email = (payload.email or "").lower().strip()
     db = get_db()
-    admin = await db.admin_users.find_one({"email": email}, {"_id": 0})
+    admin = await _find_admin_by_login_email(db, email)
     if not admin or not verify_password(payload.password, admin["passwordHash"]):
         log_event(
             logger,

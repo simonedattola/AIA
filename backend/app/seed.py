@@ -850,8 +850,8 @@ async def ensure_home_events_limit():
         if cfg.get("showInstagramWidget") is False:
             cfg["showInstagramWidget"] = True
             changed = True
-        if cfg.get("showCalendar") is False:
-            cfg["showCalendar"] = True
+        if cfg.get("showCalendar") is True:
+            cfg["showCalendar"] = False
             changed = True
         block["config"] = cfg
     if changed:
@@ -859,23 +859,46 @@ async def ensure_home_events_limit():
 
 
 async def ensure_eventi_list_layout():
-    """Pagina /eventi: lista card come in home, senza calendario mensile."""
-    from .system_page_blocks import default_blocks_for_slug
-    from .blocks_sanitize import sanitize_blocks
-
+    """Pagina /eventi: elenco (3 prossimi) + calendario affiancato."""
     db = get_db()
     page = await db.pages.find_one({"slug": "eventi"}, {"_id": 0, "blocks": 1})
     if not page:
         return 0
     blocks = page.get("blocks") or []
-    needs = (not blocks) or any(b.get("type") == "events_calendar" for b in blocks)
-    if not needs:
-        # Also migrate events_calendar-like config if still showCalendar true on wrong type
-        return 0
-    new_blocks = sanitize_blocks(default_blocks_for_slug("eventi", page))
-    await db.pages.update_one({"slug": "eventi"}, {"$set": {"blocks": new_blocks}})
-    logger.info("Eventi: layout lista (senza calendario) applicato")
-    return 1
+    changed = False
+    desired = {
+        "eyebrow": "Calendario sezionale",
+        "title": "Prossimi eventi",
+        "limit": 3,
+        "upcomingOnly": True,
+        "ctaLabel": "",
+        "ctaHref": "/eventi",
+        "showInstagramWidget": False,
+        "showPresidentCard": False,
+        "showCalendar": True,
+    }
+    if not blocks:
+        from .system_page_blocks import default_blocks_for_slug
+        from .blocks_sanitize import sanitize_blocks
+
+        new_blocks = sanitize_blocks(default_blocks_for_slug("eventi", page))
+        await db.pages.update_one({"slug": "eventi"}, {"$set": {"blocks": new_blocks}})
+        logger.info("Eventi: layout lista + calendario applicato")
+        return 1
+    for block in blocks:
+        if block.get("type") != "events_list":
+            continue
+        cfg = dict(block.get("config") or {})
+        for key, val in desired.items():
+            if cfg.get(key) != val:
+                cfg[key] = val
+                changed = True
+        block["config"] = cfg
+    if changed:
+        await db.pages.update_one({"slug": "eventi"}, {"$set": {"blocks": blocks}})
+        logger.info("Eventi: aggiornato blocco events_list (calendario + 3 eventi)")
+        return 1
+    return 0
 
 
 async def ensure_diventa_arbitro_text_image_aspect():
@@ -1350,7 +1373,7 @@ def build_system_pages():
                 "ctaLabel": "Tutti gli eventi",
                 "ctaHref": "/eventi",
                 "showInstagramWidget": True,
-                "showCalendar": True,
+                "showCalendar": False,
                 "showPresidentCard": False,
                 "instagramTitle": "AIA Legnano",
                 "instagramSubtitle": "Foto, aggiornamenti e vita della sezione su Instagram.",

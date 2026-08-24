@@ -14,7 +14,7 @@ import {
 import { portalLogin } from "../lib/portal-api";
 import { PORTAL_ROUTES } from "../lib/appRoutes";
 import { useSite } from "../lib/site-context";
-import { normalizeMember, memberRoleLabel } from "../lib/memberRoles";
+import { normalizeMember, memberRoleLabel, isObserverMember } from "../lib/memberRoles";
 import { formatDateIt, formatEventDateTimeIt, contactPreferenceLabel, formatPersonName } from "../lib/format";
 import DesignationsDataTable from "../components/designations/DesignationsDataTable";
 import EventsMonthCalendar from "../components/events/EventsMonthCalendar";
@@ -148,13 +148,21 @@ export function MembersGridBlock({ config: c }) {
   useEffect(() => {
     setLoading(true);
     const params = { limit: c.limit || 500 };
-    if (c.defaultRole) params.memberRole = c.defaultRole;
-    else if (role && !showArbitriFilters) params.memberRole = role;
+    if (c.defaultRole === "osservatore") {
+      params.scope = "osservatori";
+    } else if (c.defaultRole) {
+      params.memberRole = c.defaultRole;
+    } else if (role && !showArbitriFilters) {
+      params.memberRole = role;
+    }
     fetchMembers(params).then((d) => setItems(d.map(normalizeMember))).finally(() => setLoading(false));
   }, [role, c.limit, c.defaultRole, showArbitriFilters]);
 
   const filtered = useMemo(() => {
     let list = items;
+    if (isObserversPage) {
+      list = list.filter((m) => isObserverMember(m));
+    }
     if (showArbitriFilters) {
       list = list.filter((m) => matchesArbitriFilter(m, qualFilter));
     }

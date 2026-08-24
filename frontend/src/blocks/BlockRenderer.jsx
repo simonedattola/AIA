@@ -20,7 +20,7 @@ import {
   DesignationsTableBlock, MembersGridBlock, NewsGridBlock, EventsCalendarBlock,
   ContactSectionBlock, OrganigrammaBlock, MemberProfileBlock, PortalLoginBlock,
 } from "./DynamicPageBlocks";
-import InstagramWidget from "../components/InstagramWidget";
+import InstagramSidebarWidget from "../components/InstagramSidebarWidget";
 import PageBrandBar from "../components/PageBrandBar";
 import { eventDateKey, isUpcomingEvent } from "../lib/eventsDisplay";
 import EventDetailModal from "../components/events/EventDetailModal";
@@ -659,12 +659,12 @@ export function EventsListBlock({ config: c }) {
     const n = new Date();
     return new Date(n.getFullYear(), n.getMonth(), 1);
   });
-  const [eventsColHeight, setEventsColHeight] = useState(null);
   const eventsColRef = useRef(null);
   const gridRef = useRef(null);
   const { settings } = useSite();
   const instaUrl = (settings || {}).instagramUrl || "";
-  const showCalendar = c.showCalendar !== false;
+  const showCalendar = c.showCalendar === true;
+  const showInstagram = c.showInstagramWidget !== false;
   const eventLimit = c.limit || 3;
 
   useEffect(() => {
@@ -694,13 +694,11 @@ export function EventsListBlock({ config: c }) {
     const syncHeight = () => {
       const wide = window.matchMedia("(min-width: 1024px)").matches;
       if (!wide) {
-        setEventsColHeight(null);
-        gridRef.current?.style.removeProperty("--home-events-col-h");
+        gridRef.current?.style.removeProperty("--events-col-h");
         return;
       }
       const h = Math.round(el.getBoundingClientRect().height);
-      setEventsColHeight(h);
-      gridRef.current?.style.setProperty("--home-events-col-h", `${h}px`);
+      gridRef.current?.style.setProperty("--events-col-h", `${h}px`);
     };
 
     syncHeight();
@@ -711,7 +709,7 @@ export function EventsListBlock({ config: c }) {
       ro.disconnect();
       window.removeEventListener("resize", syncHeight);
     };
-  }, [loading, items.length, c.ctaLabel, c.ctaHref]);
+  }, [loading, items.length, c.ctaLabel, c.ctaHref, showCalendar, showInstagram]);
 
   const shiftViewMonth = (delta) => {
     setViewMonth((prev) => {
@@ -727,6 +725,8 @@ export function EventsListBlock({ config: c }) {
     setViewMonth(new Date(Number(y), Number(m) - 1, 1));
   };
 
+  const syncableSide = showInstagram || showCalendar;
+
   return (
     <section className="site-section bg-background" data-testid="events-list-block">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -737,22 +737,18 @@ export function EventsListBlock({ config: c }) {
         <div
           ref={gridRef}
           className={cn(
-            "grid grid-cols-1 gap-8 lg:gap-6 xl:gap-8 mt-10 lg:items-start",
-            showCalendar && c.showInstagramWidget !== false
-              ? "lg:grid-cols-12"
-              : showCalendar
-                ? "lg:grid-cols-2"
-                : c.showInstagramWidget !== false
-                  ? "lg:grid-cols-12"
-                  : "max-w-3xl"
+            "grid grid-cols-1 gap-8 lg:gap-10 mt-10 lg:items-start",
+            showCalendar && showInstagram && "lg:grid-cols-12",
+            showCalendar && !showInstagram && "lg:grid-cols-2",
+            !showCalendar && showInstagram && "lg:grid-cols-12"
           )}
         >
           <div
             ref={eventsColRef}
             className={cn(
-              showCalendar && c.showInstagramWidget !== false && "lg:col-span-5",
-              showCalendar && c.showInstagramWidget === false && "min-w-0",
-              !showCalendar && c.showInstagramWidget !== false && "lg:col-span-7"
+              showInstagram && !showCalendar && "lg:col-span-7",
+              showCalendar && !showInstagram && "min-w-0",
+              showCalendar && showInstagram && "lg:col-span-5"
             )}
           >
             {loading ? (
@@ -763,10 +759,7 @@ export function EventsListBlock({ config: c }) {
               <ul className="space-y-3">
                 {items.map((e) => (
                   <li key={e.id}>
-                    <HomeEventCard
-                      e={e}
-                      onClick={() => handleSelectEvent(e)}
-                    />
+                    <HomeEventCard e={e} onClick={() => handleSelectEvent(e)} />
                   </li>
                 ))}
               </ul>
@@ -785,9 +778,10 @@ export function EventsListBlock({ config: c }) {
             <div
               className={cn(
                 "min-w-0",
-                c.showInstagramWidget !== false ? "lg:col-span-4" : ""
+                showInstagram && "lg:col-span-4",
+                syncableSide && "lg:max-h-[var(--events-col-h)] lg:overflow-y-auto"
               )}
-              data-testid="home-events-calendar"
+              data-testid="events-list-calendar"
             >
               <EventsMonthCalendar
                 events={allEvents}
@@ -799,16 +793,21 @@ export function EventsListBlock({ config: c }) {
             </div>
           )}
 
-          {c.showInstagramWidget !== false && (
+          {showInstagram && (
             <div
               className={cn(
                 "min-w-0 flex flex-col",
-                showCalendar ? "lg:col-span-3" : "lg:col-span-5",
-                eventsColHeight != null && "lg:h-[var(--home-events-col-h)]"
+                "lg:col-span-5",
+                syncableSide && "lg:h-[var(--events-col-h)]"
               )}
               data-testid="home-events-instagram"
             >
-              <InstagramWidget config={c} profileUrl={instaUrl} fillHeight />
+              <InstagramSidebarWidget
+                profileUrl={instaUrl}
+                title={c.instagramTitle || "AIA Legnano"}
+                subtitle={c.instagramSubtitle || "Foto, aggiornamenti e vita della sezione su Instagram."}
+                className="h-full"
+              />
             </div>
           )}
         </div>

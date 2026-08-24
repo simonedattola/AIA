@@ -208,7 +208,11 @@ async def list_members(
 ):
     """Lista membri. Default: arbitri+assistenti+benemeriti. scope=chi_siamo per organigramma."""
     db = get_db()
-    if memberRole:
+    if memberRole in ("osservatore", "osservatori"):
+        from ..member_roles import osservatori_query
+
+        query = osservatori_query()
+    elif memberRole:
         query = {"memberRole": memberRole}
     elif scope in ("chi_siamo", "organigramma"):
         query = legacy_chi_siamo_query()
