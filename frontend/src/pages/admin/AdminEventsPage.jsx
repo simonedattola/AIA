@@ -129,7 +129,7 @@ function EventEditForm({
                 className={inputCls}
               />
             </Field>
-            <Field label="Orario fine" hint="Opzionale. Se vuoto, durata default 2 ore in calendario.">
+            <Field label="Orario fine">
               <input
                 data-testid="event-orario-fine"
                 type="time"

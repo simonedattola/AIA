@@ -162,7 +162,7 @@ export default function AdminTestimonialsPage() {
             active={filter}
             onChange={setFilter}
             tabs={[
-              { id: "all", label: "Tutti", count: items.length },
+              { id: "all", label: "Tutte", count: items.length },
               { id: "pending", label: "In attesa di approvazione", count: pendingCount },
               { id: "approved", label: "Approvate", count: approvedCount },
             ]}

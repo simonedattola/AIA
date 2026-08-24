@@ -46,13 +46,27 @@ Scarica posts/pages/media/categories via WP REST (77+ articoli su aia-legnano.it
 
 L’hosting Aruba ~65€/anno è tipicamente PHP/MySQL: **non** adatto a FastAPI+Mongo.
 
-### 5) Casella mail Aruba
+### 5) Email (Resend + casella sezione)
 
-Nel pannello Aruba → Email:
+Il backend invia con **Resend** (non SMTP Aruba). Destinatario sezione di default: `legnano@aia-figc.it`.
 
-- Crea es. `segreteria@aia-legnano.it` (o `info@…`)
-- Usala come destinatario form Contatti / candidature
-- Per invii automatici dal backend preferisci SMTP Aruba o Brevo/Resend (DKIM/SPF)
+Variabili su Railway (backend):
+
+| Variabile | Valore tipico |
+|-----------|----------------|
+| `RESEND_API_KEY` | chiave `re_…` da resend.com (obbligatoria per inviare) |
+| `SENDER_EMAIL` | `noreply@aia-legnano.it` (dominio verificato in Resend) |
+| `NOTIFY_EMAIL` | `legnano@aia-figc.it` |
+| `PORTAL_FRONTEND_URL` | `https://aia-virid.vercel.app` (link nelle mail agli associati) |
+
+Flussi:
+
+- **Alla sezione** (`NOTIFY_EMAIL`): contatti sito, candidature corso, testimonianze e foto da approvare, commenti su comunicazioni.
+- **Agli associati** (opt-in in Area associati → Profilo): comunicazioni interne, messaggi, invito/promemoria eventi.
+
+Senza `RESEND_API_KEY` i form salvano comunque i dati; le email vengono saltate (log `[mailer] Skipped`).
+
+Nel pannello Aruba mantieni MX e la casella `legnano@aia-figc.it` (o alias) per ricevere. Per DKIM/SPF del mittente `noreply@aia-legnano.it` configura i record DNS indicati da Resend.
 
 ### 6) DNS cutover (quando API+frontend sono online)
 
