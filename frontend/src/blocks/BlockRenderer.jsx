@@ -15,12 +15,12 @@ import { AttachmentList } from "../components/AttachmentList";
 import NewsArticleCard from "../components/cards/NewsArticleCard";
 import TestimonialAuthor from "../components/testimonials/TestimonialAuthor";
 import DocumentsDownloadLayout from "../components/documents/DocumentsDownloadLayout";
-import { CheckCircle2, ArrowRight, ChevronDown, ChevronRight, CalendarDays, MapPin, Crown, Download as DownloadIcon, ArrowLeft, X, Instagram, ExternalLink } from "lucide-react";
+import { CheckCircle2, ArrowRight, ChevronDown, ChevronRight, CalendarDays, MapPin, Crown, Download as DownloadIcon, ArrowLeft, X } from "lucide-react";
 import {
   DesignationsTableBlock, MembersGridBlock, NewsGridBlock, EventsCalendarBlock,
   ContactSectionBlock, OrganigrammaBlock, MemberProfileBlock, PortalLoginBlock,
 } from "./DynamicPageBlocks";
-import { parseInstagramPostEmbed, instagramPostEmbedSrc } from "../lib/instagram-embed";
+import InstagramWidget from "../components/InstagramWidget";
 import PageBrandBar from "../components/PageBrandBar";
 import { eventDateKey, isUpcomingEvent } from "../lib/eventsDisplay";
 import EventDetailModal from "../components/events/EventDetailModal";
@@ -654,9 +654,6 @@ export function EventsListBlock({ config: c }) {
   const [modalEvent, setModalEvent] = useState(null);
   const { settings } = useSite();
   const instaUrl = (settings || {}).instagramUrl || "";
-  const parsedInsta = parseInstagramPostEmbed((c.instagramEmbed || {}).href || "");
-  const instaHref = (c.instagramEmbed || {}).href || "";
-  const instaSrc = parsedInsta ? instagramPostEmbedSrc(parsedInsta) : null;
 
   useEffect(() => {
     setLoading(true);
@@ -706,48 +703,7 @@ export function EventsListBlock({ config: c }) {
 
           <div className="lg:col-span-5 space-y-6">
             {c.showInstagramWidget !== false && (
-              <Card padding="default" variant="soft" className="shadow-ds-sm">
-                <div className="flex items-center gap-2 mb-3">
-                  <div className="p-2 rounded-full bg-gradient-to-br from-fuchsia-500 via-rose-500 to-amber-400 text-white">
-                    <Instagram className="h-5 w-5" />
-                  </div>
-                  <div>
-                    <CardTitle as="div" className="text-base">{c.instagramTitle || "Instagram"}</CardTitle>
-                    <p className="text-sm text-slate-500">{c.instagramSubtitle || "Foto, aggiornamenti e vita della sezione."}</p>
-                  </div>
-                </div>
-                {instaSrc ? (
-                  <div className="aspect-[4/5] w-full rounded-lg overflow-hidden border border-slate-200 bg-slate-50">
-                    <iframe src={instaSrc} title="Instagram" className="w-full h-full" loading="lazy" />
-                  </div>
-                ) : (
-                  <div className="aspect-[4/5] w-full rounded-lg bg-gradient-to-br from-fuchsia-100 via-rose-50 to-amber-100 border border-slate-200 flex items-center justify-center text-center p-6">
-                    <div className="space-y-3">
-                      <Instagram className="h-10 w-10 text-rose-500 mx-auto" />
-                      <div>
-                        <p className="text-navy-700 font-semibold">Scopri le ultime foto</p>
-                        <p className="text-sm text-slate-500">Vita sezionale, eventi, successi e dietro le quinte.</p>
-                      </div>
-                      {instaUrl ? (
-                        <a href={instaUrl} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-2 text-sm font-semibold text-navy-700 border-b border-navy-700 pb-0.5">
-                          Apri Instagram <ExternalLink className="h-3.5 w-3.5" />
-                        </a>
-                      ) : instaHref ? (
-                        <a href={instaHref} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-2 text-sm font-semibold text-navy-700 border-b border-navy-700 pb-0.5">
-                          Vedi il post <ExternalLink className="h-3.5 w-3.5" />
-                        </a>
-                      ) : null}
-                    </div>
-                  </div>
-                )}
-                {instaUrl && (
-                  <div className="mt-4 flex justify-end">
-                    <a href={instaUrl} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-2 text-sm font-medium text-slate-600 hover:text-navy-700">
-                      Profilo sezione <Instagram className="h-4 w-4" />
-                    </a>
-                  </div>
-                )}
-              </Card>
+              <InstagramWidget config={c} profileUrl={instaUrl} />
             )}
           </div>
         </div>

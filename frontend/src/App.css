@@ -3,3 +3,12 @@
   min-height: 100vh;
   @apply bg-background;
 }
+
+/* Instagram official embed: force responsive width inside home widget */
+.aia-ig-embed .instagram-media,
+.aia-ig-embed iframe {
+  max-width: 100% !important;
+  min-width: 0 !important;
+  width: 100% !important;
+}
+
