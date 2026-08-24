@@ -24,6 +24,8 @@ import InstagramWidget from "../components/InstagramWidget";
 import PageBrandBar from "../components/PageBrandBar";
 import { eventDateKey, isUpcomingEvent } from "../lib/eventsDisplay";
 import EventDetailModal from "../components/events/EventDetailModal";
+import EventsMonthCalendar from "../components/events/EventsMonthCalendar";
+import { cn } from "../lib/utils";
 
 
 /** Link CTA: route interne, anchor (#form) e scroll con offset header fisso. */
@@ -648,12 +650,22 @@ function HomeEventCard({ e, onClick }) {
 }
 
 export function EventsListBlock({ config: c }) {
+  const [allEvents, setAllEvents] = useState([]);
   const [items, setItems] = useState([]);
   const [loading, setLoading] = useState(true);
   const [selectedId, setSelectedId] = useState(null);
   const [modalEvent, setModalEvent] = useState(null);
+  const [viewMonth, setViewMonth] = useState(() => {
+    const n = new Date();
+    return new Date(n.getFullYear(), n.getMonth(), 1);
+  });
+  const [eventsColHeight, setEventsColHeight] = useState(null);
+  const eventsColRef = useRef(null);
+  const gridRef = useRef(null);
   const { settings } = useSite();
   const instaUrl = (settings || {}).instagramUrl || "";
+  const showCalendar = c.showCalendar !== false;
+  const eventLimit = c.limit || 3;
 
   useEffect(() => {
     setLoading(true);
@@ -665,11 +677,55 @@ export function EventsListBlock({ config: c }) {
           list = list.filter((e) => isUpcomingEvent(e, { now }));
         }
         list.sort((a, b) => eventDateKey(a.date).localeCompare(eventDateKey(b.date)));
-        setItems(list.slice(0, c.limit || 3));
+        setAllEvents(list);
+        setItems(list.slice(0, eventLimit));
       })
-      .catch(() => setItems([]))
+      .catch(() => {
+        setAllEvents([]);
+        setItems([]);
+      })
       .finally(() => setLoading(false));
-  }, [c.limit, c.upcomingOnly]);
+  }, [c.limit, c.upcomingOnly, eventLimit]);
+
+  useEffect(() => {
+    const el = eventsColRef.current;
+    if (!el || typeof ResizeObserver === "undefined") return undefined;
+
+    const syncHeight = () => {
+      const wide = window.matchMedia("(min-width: 1024px)").matches;
+      if (!wide) {
+        setEventsColHeight(null);
+        gridRef.current?.style.removeProperty("--home-events-col-h");
+        return;
+      }
+      const h = Math.round(el.getBoundingClientRect().height);
+      setEventsColHeight(h);
+      gridRef.current?.style.setProperty("--home-events-col-h", `${h}px`);
+    };
+
+    syncHeight();
+    const ro = new ResizeObserver(syncHeight);
+    ro.observe(el);
+    window.addEventListener("resize", syncHeight);
+    return () => {
+      ro.disconnect();
+      window.removeEventListener("resize", syncHeight);
+    };
+  }, [loading, items.length, c.ctaLabel, c.ctaHref]);
+
+  const shiftViewMonth = (delta) => {
+    setViewMonth((prev) => {
+      const base = prev instanceof Date ? prev : new Date();
+      return new Date(base.getFullYear(), base.getMonth() + delta, 1);
+    });
+  };
+
+  const handleSelectEvent = (event) => {
+    setSelectedId(event.id);
+    setModalEvent(event);
+    const [y, m] = eventDateKey(event.date).split("-");
+    setViewMonth(new Date(Number(y), Number(m) - 1, 1));
+  };
 
   return (
     <section className="site-section bg-background" data-testid="events-list-block">
@@ -678,8 +734,27 @@ export function EventsListBlock({ config: c }) {
         {c.title && <SectionTitle className="mb-3">{c.title}</SectionTitle>}
         {(c.title || c.eyebrow) && <span className="gold-divider mt-6 block" />}
 
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 lg:gap-10 mt-10">
-          <div className="lg:col-span-7">
+        <div
+          ref={gridRef}
+          className={cn(
+            "grid grid-cols-1 gap-8 lg:gap-6 xl:gap-8 mt-10 lg:items-start",
+            showCalendar && c.showInstagramWidget !== false
+              ? "lg:grid-cols-12"
+              : showCalendar
+                ? "lg:grid-cols-2"
+                : c.showInstagramWidget !== false
+                  ? "lg:grid-cols-12"
+                  : "max-w-3xl"
+          )}
+        >
+          <div
+            ref={eventsColRef}
+            className={cn(
+              showCalendar && c.showInstagramWidget !== false && "lg:col-span-5",
+              showCalendar && c.showInstagramWidget === false && "min-w-0",
+              !showCalendar && c.showInstagramWidget !== false && "lg:col-span-7"
+            )}
+          >
             {loading ? (
               <p className="text-slate-500">Caricamento…</p>
             ) : items.length === 0 ? (
@@ -688,7 +763,10 @@ export function EventsListBlock({ config: c }) {
               <ul className="space-y-3">
                 {items.map((e) => (
                   <li key={e.id}>
-                    <HomeEventCard e={e} onClick={() => { setSelectedId(e.id); setModalEvent(e); }} />
+                    <HomeEventCard
+                      e={e}
+                      onClick={() => handleSelectEvent(e)}
+                    />
                   </li>
                 ))}
               </ul>
@@ -696,16 +774,43 @@ export function EventsListBlock({ config: c }) {
 
             {c.ctaLabel && c.ctaHref && (
               <div className="mt-10 flex justify-start">
-                <CtaLink href={c.ctaHref} variant="primary">{c.ctaLabel} <ArrowRight className="h-4 w-4"/></CtaLink>
+                <CtaLink href={c.ctaHref} variant="primary">
+                  {c.ctaLabel} <ArrowRight className="h-4 w-4" />
+                </CtaLink>
               </div>
             )}
           </div>
 
-          <div className="lg:col-span-5 space-y-6">
-            {c.showInstagramWidget !== false && (
-              <InstagramWidget config={c} profileUrl={instaUrl} />
-            )}
-          </div>
+          {showCalendar && (
+            <div
+              className={cn(
+                "min-w-0",
+                c.showInstagramWidget !== false ? "lg:col-span-4" : ""
+              )}
+              data-testid="home-events-calendar"
+            >
+              <EventsMonthCalendar
+                events={allEvents}
+                month={viewMonth}
+                onMonthChange={shiftViewMonth}
+                selectedEventId={selectedId}
+                onSelectEvent={handleSelectEvent}
+              />
+            </div>
+          )}
+
+          {c.showInstagramWidget !== false && (
+            <div
+              className={cn(
+                "min-w-0 flex flex-col",
+                showCalendar ? "lg:col-span-3" : "lg:col-span-5",
+                eventsColHeight != null && "lg:h-[var(--home-events-col-h)]"
+              )}
+              data-testid="home-events-instagram"
+            >
+              <InstagramWidget config={c} profileUrl={instaUrl} fillHeight />
+            </div>
+          )}
         </div>
 
         {modalEvent && (

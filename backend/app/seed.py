@@ -850,6 +850,9 @@ async def ensure_home_events_limit():
         if cfg.get("showInstagramWidget") is False:
             cfg["showInstagramWidget"] = True
             changed = True
+        if cfg.get("showCalendar") is False:
+            cfg["showCalendar"] = True
+            changed = True
         block["config"] = cfg
     if changed:
         await db.pages.update_one({"slug": "home"}, {"$set": {"blocks": blocks}})
@@ -1347,6 +1350,7 @@ def build_system_pages():
                 "ctaLabel": "Tutti gli eventi",
                 "ctaHref": "/eventi",
                 "showInstagramWidget": True,
+                "showCalendar": True,
                 "showPresidentCard": False,
                 "instagramTitle": "AIA Legnano",
                 "instagramSubtitle": "Foto, aggiornamenti e vita della sezione su Instagram.",
