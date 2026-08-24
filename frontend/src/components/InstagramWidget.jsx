@@ -3,7 +3,9 @@ import { Instagram, ExternalLink } from "lucide-react";
 import { fetchGallery } from "../lib/api";
 import {
   parseInstagramPostEmbed,
+  parseInstagramUsername,
   instagramPermalink,
+  instagramProfileEmbedSrc,
   resolveInstagramEmbedInput,
 } from "../lib/instagram-embed";
 import { mediaUrl } from "../lib/media";
@@ -25,7 +27,6 @@ function loadInstagramEmbedScript() {
         return;
       }
       existing.addEventListener("load", () => resolve(), { once: true });
-      // se già caricato ma senza callback
       setTimeout(() => resolve(), 1500);
       return;
     }
@@ -47,14 +48,13 @@ function processInstagramEmbeds() {
   }
 }
 
-/** Embed ufficiale Instagram (blockquote + embed.js) — più affidabile dell'iframe grezzo. */
+/** Embed ufficiale di un singolo post/reel (blockquote + embed.js). */
 function InstagramOfficialEmbed({ permalink }) {
   useEffect(() => {
     let cancelled = false;
     loadInstagramEmbedScript().then(() => {
       if (!cancelled) processInstagramEmbeds();
     });
-    // Instagram a volte monta in ritardo
     const t1 = setTimeout(processInstagramEmbeds, 400);
     const t2 = setTimeout(processInstagramEmbeds, 1200);
     return () => {
@@ -65,7 +65,10 @@ function InstagramOfficialEmbed({ permalink }) {
   }, [permalink]);
 
   return (
-    <div className="aia-ig-embed w-full overflow-hidden rounded-lg border border-slate-200 bg-white" data-testid="instagram-official-embed">
+    <div
+      className="aia-ig-embed w-full overflow-hidden rounded-lg border border-slate-200 bg-white"
+      data-testid="instagram-official-embed"
+    >
       <blockquote
         className="instagram-media"
         data-instgrm-permalink={permalink}
@@ -88,7 +91,29 @@ function InstagramOfficialEmbed({ permalink }) {
   );
 }
 
-/** Griglia foto dal sito quando non c'è un post embed configurato. */
+/** Feed ufficiale del profilo Instagram (iframe /embed) — mostra i post reali. */
+function InstagramProfileEmbed({ profileUrl }) {
+  const src = instagramProfileEmbedSrc(profileUrl);
+  if (!src) return null;
+  return (
+    <div
+      className="aia-ig-profile-embed w-full overflow-hidden rounded-lg border border-slate-200 bg-white"
+      data-testid="instagram-profile-embed"
+    >
+      <iframe
+        title="Instagram AIA Legnano"
+        src={src}
+        className="w-full border-0"
+        style={{ height: 540, maxWidth: "100%" }}
+        loading="lazy"
+        referrerPolicy="strict-origin-when-cross-origin"
+        allow="encrypted-media; clipboard-write"
+      />
+    </div>
+  );
+}
+
+/** Griglia foto dal sito se non c'è profilo né post configurato. */
 function InstagramGalleryFallback({ profileUrl }) {
   const [images, setImages] = useState([]);
 
@@ -111,7 +136,9 @@ function InstagramGalleryFallback({ profileUrl }) {
           <Instagram className="h-10 w-10 text-rose-500 mx-auto" />
           <div>
             <p className="text-navy-700 font-semibold">Scopri le ultime foto</p>
-            <p className="text-sm text-slate-500">Vita sezionale, eventi, successi e dietro le quinte.</p>
+            <p className="text-sm text-slate-500">
+              Vita sezionale, eventi, successi e dietro le quinte.
+            </p>
           </div>
           {profileUrl ? (
             <a
@@ -129,7 +156,10 @@ function InstagramGalleryFallback({ profileUrl }) {
   }
 
   return (
-    <div className="rounded-lg overflow-hidden border border-slate-200 bg-slate-50" data-testid="instagram-gallery-grid">
+    <div
+      className="rounded-lg overflow-hidden border border-slate-200 bg-slate-50"
+      data-testid="instagram-gallery-grid"
+    >
       <div className="grid grid-cols-3 gap-0.5">
         {images.map((img) => {
           const src = mediaUrl(img.url || img.path || "");
@@ -168,18 +198,33 @@ function InstagramGalleryFallback({ profileUrl }) {
 
 /**
  * Widget Instagram per il blocco eventi home.
- * Preferisce embed ufficiale del post; altrimenti griglia galleria + link profilo.
+ * 1) URL post/reel configurato → embed singolo
+ * 2) altrimenti profilo (settings.instagramUrl) → feed ufficiale /embed
+ * 3) altrimenti galleria sito
  */
 export default function InstagramWidget({ config = {}, profileUrl = "" }) {
   const embedInput = useMemo(() => resolveInstagramEmbedInput(config), [config]);
   const parsed = useMemo(() => parseInstagramPostEmbed(embedInput), [embedInput]);
   const permalink = parsed ? instagramPermalink(parsed) : "";
+  const profileUsername = useMemo(() => parseInstagramUsername(profileUrl), [profileUrl]);
   const title = config.instagramTitle || "Instagram";
   const subtitle =
     config.instagramSubtitle || "Foto, aggiornamenti e vita della sezione su Instagram.";
 
+  let body;
+  if (permalink) {
+    body = <InstagramOfficialEmbed permalink={permalink} />;
+  } else if (profileUsername) {
+    body = <InstagramProfileEmbed profileUrl={profileUrl || profileUsername} />;
+  } else {
+    body = <InstagramGalleryFallback profileUrl={profileUrl} />;
+  }
+
   return (
-    <div className="rounded-xl border border-slate-200/80 bg-white p-4 sm:p-5 shadow-ds-sm" data-testid="instagram-widget">
+    <div
+      className="rounded-xl border border-slate-200/80 bg-white p-4 sm:p-5 shadow-ds-sm"
+      data-testid="instagram-widget"
+    >
       <div className="flex items-center gap-2 mb-3">
         <div className="p-2 rounded-full bg-gradient-to-br from-fuchsia-500 via-rose-500 to-amber-400 text-white">
           <Instagram className="h-5 w-5" />
@@ -190,11 +235,7 @@ export default function InstagramWidget({ config = {}, profileUrl = "" }) {
         </div>
       </div>
 
-      {permalink ? (
-        <InstagramOfficialEmbed permalink={permalink} />
-      ) : (
-        <InstagramGalleryFallback profileUrl={profileUrl} />
-      )}
+      {body}
 
       {profileUrl && (
         <div className="mt-4 flex justify-end">

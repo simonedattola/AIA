@@ -25,8 +25,8 @@ export function formatDateTimeIt(input) {
   });
 }
 
-/** Data evento + orario (HH:MM) in italiano. */
-export function formatEventDateTimeIt(date, orario) {
+/** Data evento + orario (HH:MM) in italiano. orarioFine opzionale. */
+export function formatEventDateTimeIt(date, orario, orarioFine) {
   if (!date) return "";
   const d = new Date(`${String(date).slice(0, 10)}T12:00:00`);
   if (Number.isNaN(d.getTime())) return "";
@@ -35,8 +35,12 @@ export function formatEventDateTimeIt(date, orario) {
     month: "long",
     year: "numeric",
   });
-  const time = (orario || "09:00").slice(0, 5);
-  return `${datePart} alle ${time}`;
+  const start = (orario || "09:00").slice(0, 5);
+  const end = (orarioFine || "").slice(0, 5);
+  if (end && end !== start) {
+    return `${datePart} dalle ${start} alle ${end}`;
+  }
+  return `${datePart} alle ${start}`;
 }
 
 export function formatMonthYear(input) {

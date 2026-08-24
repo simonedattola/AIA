@@ -1,5 +1,18 @@
 const IG_POST_RE = /instagram\.com\/(?:[^/]+\/)?p\/([A-Za-z0-9_-]+)/i;
 const IG_REEL_RE = /instagram\.com\/(?:[^/]+\/)?reel\/([A-Za-z0-9_-]+)/i;
+const IG_RESERVED = new Set([
+  "p",
+  "reel",
+  "reels",
+  "tv",
+  "stories",
+  "explore",
+  "accounts",
+  "direct",
+  "about",
+  "legal",
+  "embed",
+]);
 
 /** Estrae post/reel Instagram da URL, permalink o HTML embed incollato da Instagram. */
 export function parseInstagramPostEmbed(htmlOrUrl) {
@@ -15,6 +28,30 @@ export function parseInstagramPostEmbed(htmlOrUrl) {
   if (post) return { shortcode: post[1], kind: "post" };
 
   return null;
+}
+
+/** Username da URL profilo, handle (@user) o stringa grezza. */
+export function parseInstagramUsername(urlOrHandle) {
+  const raw = String(urlOrHandle || "").trim();
+  if (!raw) return "";
+  if (raw.startsWith("@")) {
+    const handle = raw.slice(1).replace(/[/?#].*$/, "").trim();
+    return /^[A-Za-z0-9._]+$/.test(handle) ? handle : "";
+  }
+  const m = raw.match(/instagram\.com\/([^/?#]+)/i);
+  if (m) {
+    const user = decodeURIComponent(m[1]).trim();
+    if (user && !IG_RESERVED.has(user.toLowerCase())) return user;
+    return "";
+  }
+  if (/^[A-Za-z0-9._]+$/.test(raw)) return raw;
+  return "";
+}
+
+export function instagramProfileEmbedSrc(usernameOrUrl) {
+  const user = parseInstagramUsername(usernameOrUrl);
+  if (!user) return "";
+  return `https://www.instagram.com/${user}/embed`;
 }
 
 export function instagramPostEmbedSrc({ shortcode, kind }, { captioned = true } = {}) {

@@ -454,8 +454,8 @@ export function EventsListEditor({ config, onChange }) {
         </label>
       </Field>
       <Field
-        label="URL post Instagram (embed)"
-        hint="Incolla l’URL di un post o reel (es. https://www.instagram.com/p/…). Se vuoto, il widget mostra le foto della galleria sito."
+        label="URL post Instagram (opzionale)"
+        hint="Se vuoto, il widget mostra il feed ufficiale del profilo (Impostazioni → URL Instagram). Altrimenti incolla un post/reel: https://www.instagram.com/p/…"
       >
         <input
           value={embedValue}

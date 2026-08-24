@@ -12,3 +12,10 @@
   width: 100% !important;
 }
 
+.aia-ig-profile-embed iframe {
+  display: block;
+  width: 100%;
+  min-height: 480px;
+  background: #fff;
+}
+

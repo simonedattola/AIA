@@ -7,6 +7,7 @@ import {
 import { formatEventDateTimeIt } from "../../lib/format";
 import { AttachmentEditor } from "../../components/admin/AttachmentEditor";
 import { MemberMultiSelect } from "../../components/admin/MemberSelect";
+import { RoleGroupPicker, roleGroupsSummary } from "../../components/admin/RoleGroupPicker";
 import EventPresenzePanel from "../../components/admin/EventPresenzePanel";
 import { Plus, Pencil, Trash2, UserCheck, Calendar, Users } from "lucide-react";
 import { SITE_ICONS } from "../../lib/siteIcons";
@@ -18,25 +19,33 @@ const TIPI_DEFAULT = ["Rto", "Riunione", "Allenamento", "Corso", "Sociale", "Rad
 const empty = () => ({
   date: new Date().toISOString().slice(0, 10),
   orario: "09:00",
+  orarioFine: "",
   titolo: "",
   descrizione: "",
   luogo: "",
   tipo: "Riunione",
   invitedMemberIds: [],
-  inviteAllMembers: true,
+  invitedRoleGroups: [],
+  inviteMode: "all",
   portalOnly: false,
   attachments: [],
 });
 
 function normalizeEvent(e) {
   const invitedMemberIds = e.invitedMemberIds || e.relatedMemberIds || [];
+  const invitedRoleGroups = e.invitedRoleGroups || [];
+  let inviteMode = "all";
+  if (invitedRoleGroups.length) inviteMode = "roles";
+  else if (invitedMemberIds.length) inviteMode = "manual";
   return {
     ...e,
     date: (e.date || "").slice(0, 10),
     orario: (e.orario || "09:00").slice(0, 5),
+    orarioFine: (e.orarioFine || "").slice(0, 5),
     attachments: e.attachments || [],
     invitedMemberIds,
-    inviteAllMembers: invitedMemberIds.length === 0,
+    invitedRoleGroups,
+    inviteMode,
     portalOnly: !!e.portalOnly,
   };
 }
@@ -111,12 +120,21 @@ function EventEditForm({
                 className={inputCls}
               />
             </Field>
-            <Field label="Orario*">
+            <Field label="Orario inizio*">
               <input
                 data-testid="event-orario"
                 type="time"
                 value={editing.orario || "09:00"}
                 onChange={(e) => setEditing({ ...editing, orario: e.target.value })}
+                className={inputCls}
+              />
+            </Field>
+            <Field label="Orario fine">
+              <input
+                data-testid="event-orario-fine"
+                type="time"
+                value={editing.orarioFine || ""}
+                onChange={(e) => setEditing({ ...editing, orarioFine: e.target.value })}
                 className={inputCls}
               />
             </Field>
@@ -188,15 +206,18 @@ function EventEditForm({
             </span>
           </label>
 
-          <div className="mb-4">
-            <label className="flex items-center gap-2 mb-3">
+          <div className="mb-4 space-y-3">
+            <span className="block text-sm font-medium text-slate-700">Invitati</span>
+            <label className="flex items-center gap-2">
               <input
-                type="checkbox"
-                checked={!!editing.inviteAllMembers}
-                onChange={(e) => setEditing({
+                type="radio"
+                name="inviteMode"
+                checked={editing.inviteMode === "all"}
+                onChange={() => setEditing({
                   ...editing,
-                  inviteAllMembers: e.target.checked,
-                  invitedMemberIds: e.target.checked ? [] : editing.invitedMemberIds,
+                  inviteMode: "all",
+                  invitedMemberIds: [],
+                  invitedRoleGroups: [],
                 })}
                 data-testid="event-invite-all"
               />
@@ -204,7 +225,43 @@ function EventEditForm({
                 <Users className="h-4 w-4" /> Tutti gli associati con profilo
               </span>
             </label>
-            {!editing.inviteAllMembers && (
+            <label className="flex items-center gap-2">
+              <input
+                type="radio"
+                name="inviteMode"
+                checked={editing.inviteMode === "roles"}
+                onChange={() => setEditing({
+                  ...editing,
+                  inviteMode: "roles",
+                  invitedMemberIds: [],
+                })}
+                data-testid="event-invite-roles"
+              />
+              <span className="text-sm">Filtra per ruolo / qualifica</span>
+            </label>
+            {editing.inviteMode === "roles" && (
+              <RoleGroupPicker
+                value={editing.invitedRoleGroups || []}
+                onChange={(invitedRoleGroups) => setEditing({ ...editing, invitedRoleGroups })}
+                label="Gruppi invitati"
+                hint="AE, AA, AB, AFR, OA, OT, CDS, Collaboratori, ORS"
+              />
+            )}
+            <label className="flex items-center gap-2">
+              <input
+                type="radio"
+                name="inviteMode"
+                checked={editing.inviteMode === "manual"}
+                onChange={() => setEditing({
+                  ...editing,
+                  inviteMode: "manual",
+                  invitedRoleGroups: [],
+                })}
+                data-testid="event-invite-manual"
+              />
+              <span className="text-sm">Selezione manuale associati</span>
+            </label>
+            {editing.inviteMode === "manual" && (
               <MemberMultiSelect
                 value={editing.invitedMemberIds || []}
                 onChange={(invitedMemberIds) => setEditing({ ...editing, invitedMemberIds })}
@@ -227,7 +284,9 @@ function EventEditForm({
       {editing.id && activeTab === "presenze" && (
         <EventPresenzePanel
           eventId={editing.id}
-          invitedCount={editing.inviteAllMembers ? 0 : (editing.invitedMemberIds || []).length}
+          invitedCount={
+            editing.inviteMode === "manual" ? (editing.invitedMemberIds || []).length : 0
+          }
         />
       )}
     </div>
@@ -298,15 +357,24 @@ export default function AdminEventsPage() {
 
   const save = async () => {
     if (!editing?.titolo || !editing?.date) return alert("Titolo e data sono obbligatori");
-    if (!editing.inviteAllMembers && !(editing.invitedMemberIds || []).length) {
-      return alert("Seleziona almeno un associato oppure attiva «Tutti gli associati con profilo».");
+    if (editing.inviteMode === "manual" && !(editing.invitedMemberIds || []).length) {
+      return alert("Seleziona almeno un associato oppure usa «Tutti» o filtri per ruolo.");
+    }
+    if (editing.inviteMode === "roles" && !(editing.invitedRoleGroups || []).length) {
+      return alert("Seleziona almeno un gruppo ruolo oppure cambia modalità invitati.");
     }
     setSaving(true);
     try {
-      const { inviteAllMembers, utilityMaterial: _utilityMaterial, ...rest } = editing;
+      const {
+        inviteMode,
+        utilityMaterial: _utilityMaterial,
+        ...rest
+      } = editing;
       const payload = {
         ...rest,
-        invitedMemberIds: inviteAllMembers ? [] : (editing.invitedMemberIds || []),
+        invitedMemberIds: inviteMode === "manual" ? (editing.invitedMemberIds || []) : [],
+        invitedRoleGroups: inviteMode === "roles" ? (editing.invitedRoleGroups || []) : [],
+        orarioFine: editing.orarioFine || "",
         portalOnly: !!editing.portalOnly,
         attachments: editing.attachments || [],
       };
@@ -333,6 +401,12 @@ export default function AdminEventsPage() {
   };
 
   const invitedCount = (e) => (e.invitedMemberIds || e.relatedMemberIds || []).length;
+  const inviteLabel = (e) => {
+    const roles = roleGroupsSummary(e.invitedRoleGroups);
+    if (roles) return roles;
+    const n = invitedCount(e);
+    return n ? `${n} invitati` : "Tutti";
+  };
   const hideFooter = editing?.id && activeTab === "presenze";
 
   return (
@@ -389,7 +463,9 @@ export default function AdminEventsPage() {
                   <div className="flex items-start justify-between gap-3">
                     <div className="min-w-0 flex-1">
                       <div className="font-medium text-navy-700 break-words">{e.titolo}</div>
-                      <div className="text-sm text-slate-600 mt-1">{formatEventDateTimeIt(e.date, e.orario)}</div>
+                      <div className="text-sm text-slate-600 mt-1">
+                        {formatEventDateTimeIt(e.date, e.orario, e.orarioFine)}
+                      </div>
                       <div className="flex flex-wrap gap-1.5 mt-2">
                         <span className="text-xs bg-slate-100 px-2 py-0.5 rounded">{e.tipo}</span>
                         {e.portalOnly ? (
@@ -402,7 +478,7 @@ export default function AdminEventsPage() {
                         <div className="text-xs text-slate-500 mt-1.5 break-words">
                           {e.luogo || "—"}
                           {" · "}
-                          {invitedCount(e) ? `${invitedCount(e)} invitati` : "Tutti"}
+                          {inviteLabel(e)}
                         </div>
                       )}
                     </div>
@@ -432,14 +508,14 @@ export default function AdminEventsPage() {
                 <tbody>
                   {items.map((e) => (
                     <tr key={e.id} className="border-t border-slate-100 hover:bg-slate-50" data-testid={`event-row-desktop-${e.id}`}>
-                      <td className="px-4 py-3 text-sm">{formatEventDateTimeIt(e.date, e.orario)}</td>
+                      <td className="px-4 py-3 text-sm">{formatEventDateTimeIt(e.date, e.orario, e.orarioFine)}</td>
                       <td className="px-4 py-3 min-w-0">
                         <div className="font-medium text-navy-700 truncate">{e.titolo}</div>
                         <div className="text-xs text-slate-500 mt-0.5 truncate">
                           <span className="bg-slate-100 px-1.5 py-0.5 rounded mr-1.5">{e.tipo}</span>
                           {e.luogo || "—"}
                           {" · "}
-                          {invitedCount(e) ? `${invitedCount(e)} invitati` : "Tutti"}
+                          {inviteLabel(e)}
                         </div>
                       </td>
                       <td className="px-4 py-3 text-sm">
