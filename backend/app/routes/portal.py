@@ -9,7 +9,15 @@ from typing import Optional, List
 from pathlib import Path
 import shutil
 
-from fastapi import APIRouter, Depends, HTTPException, UploadFile, File, Form
+from fastapi import (
+    APIRouter,
+    BackgroundTasks,
+    Depends,
+    HTTPException,
+    UploadFile,
+    File,
+    Form,
+)
 from pydantic import BaseModel, Field
 
 from ..db import get_db
@@ -979,6 +987,7 @@ async def portal_gallery_categories(auth=Depends(require_member)):
 
 @router.post("/gallery/upload")
 async def portal_gallery_upload(
+    background: BackgroundTasks,
     file: UploadFile = File(...),
     caption: str = Form(""),
     category: str = Form(""),
@@ -991,6 +1000,11 @@ async def portal_gallery_upload(
     from ..article_categories import validate_member_category_choice
     from ..media_urls import resolve_media_url
     from ..gallery import save_uploaded_gallery_image
+    from ..mailer import (
+        notify_email,
+        render_gallery_upload_staff_email,
+        send_email,
+    )
 
     rel_path = upload_storage.save_upload(name, file)
     db = get_db()
@@ -1012,6 +1026,14 @@ async def portal_gallery_upload(
         member_name=member_name,
         category=category_resolved,
     )
+    notify = notify_email()
+    if notify:
+        background.add_task(
+            send_email,
+            notify,
+            f"[Sito AIA Legnano] Nuova foto da {member_name or 'associato'}",
+            render_gallery_upload_staff_email(doc),
+        )
     return doc
 
 
@@ -1054,7 +1076,9 @@ async def portal_delete_foto(auth=Depends(require_member)):
 
 @router.post("/testimonianza")
 async def portal_submit_testimonial(
-    payload: TestimonialSubmit, auth=Depends(require_member)
+    payload: TestimonialSubmit,
+    background: BackgroundTasks,
+    auth=Depends(require_member),
 ):
     quote = (payload.quote or "").strip()
     if len(quote) < 20:
@@ -1062,6 +1086,11 @@ async def portal_submit_testimonial(
     db = get_db()
     m = await _get_member(db, auth["memberId"])
     from ..models import Testimonial
+    from ..mailer import (
+        notify_email,
+        render_testimonial_staff_email,
+        send_email,
+    )
 
     t = Testimonial(
         name=f"{m.get('firstName', '')} {m.get('lastName', '')}".strip(),
@@ -1074,6 +1103,14 @@ async def portal_submit_testimonial(
     )
     doc = t.model_dump()
     await db.testimonials.insert_one(doc.copy())
+    notify = notify_email()
+    if notify:
+        background.add_task(
+            send_email,
+            notify,
+            f"[Sito AIA Legnano] Nuova testimonianza da {t.name or 'associato'}",
+            render_testimonial_staff_email(doc),
+        )
     return {"ok": True, "status": "pending", "message": "Inviata per approvazione"}
 
 
