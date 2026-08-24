@@ -2,6 +2,8 @@
 export const ADMIN_ROUTES = {
   root: "/amministrazione",
   login: "/amministrazione/login",
+  forgotPassword: "/amministrazione/password-dimenticata",
+  resetPassword: "/amministrazione/reimposta-password",
   dashboard: "/amministrazione",
   anagrafica: "/amministrazione/anagrafica",
   designazioni: "/amministrazione/designazioni",

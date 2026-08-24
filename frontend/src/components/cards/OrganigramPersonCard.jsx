@@ -2,8 +2,10 @@ import { memo } from "react";
 import { Link } from "react-router-dom";
 import { Card, CardTitle, Eyebrow } from "@/design-system";
 import MediaImage from "../MediaImage";
+import { formatPersonName } from "../../lib/format";
 
 function OrganigramPersonCard({ member, subtitle }) {
+  const displayName = formatPersonName(member.firstName, member.lastName);
   const to = member.slug ? `/arbitri/${member.slug}` : "#";
   return (
     <Card as={Link} to={to} interactive padding="none" className="overflow-hidden block">
@@ -21,9 +23,7 @@ function OrganigramPersonCard({ member, subtitle }) {
         <Eyebrow as="div" className="text-gold-600 tracking-wider mb-1">
           {subtitle}
         </Eyebrow>
-        <CardTitle as="h3">
-          {member.firstName} {member.lastName}
-        </CardTitle>
+        <CardTitle as="h3">{displayName}</CardTitle>
       </div>
     </Card>
   );

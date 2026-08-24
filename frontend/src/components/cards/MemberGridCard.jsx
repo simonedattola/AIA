@@ -2,9 +2,11 @@ import { memo } from "react";
 import { Link } from "react-router-dom";
 import { Card, CardTitle, Eyebrow } from "@/design-system";
 import MediaImage from "../MediaImage";
+import { formatPersonName } from "../../lib/format";
 import { memberRoleLabel } from "../../lib/memberRoles";
 
 function MemberGridCard({ member }) {
+  const displayName = formatPersonName(member.firstName, member.lastName);
   const to = member.slug ? `/arbitri/${member.slug}` : "#";
   return (
     <Card as={Link} to={to} interactive padding="none" className="overflow-hidden hover:border-navy-600 block">
@@ -22,9 +24,7 @@ function MemberGridCard({ member }) {
         <Eyebrow as="div" className="text-gold-600 tracking-wider mb-1">
           {memberRoleLabel(member)}
         </Eyebrow>
-        <CardTitle as="h3">
-          {member.firstName} {member.lastName}
-        </CardTitle>
+        <CardTitle as="h3">{displayName}</CardTitle>
         {member.category && <p className="text-sm text-slate-500 mt-1">{member.category}</p>}
       </div>
     </Card>

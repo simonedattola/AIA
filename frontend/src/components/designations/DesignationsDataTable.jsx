@@ -1,6 +1,6 @@
 import { Link } from "react-router-dom";
 import { CalendarDays } from "lucide-react";
-import { formatDateIt } from "../../lib/format";
+import { formatDateIt, formatPersonName } from "../../lib/format";
 import { asAdminText } from "../../lib/safeText";
 import {
   displayDesignationGara,
@@ -9,7 +9,7 @@ import {
 import DesignationsTableBody from "./DesignationsTableBody";
 
 function NominativoLink({ d }) {
-  const label = asAdminText(d.memberName, "—");
+  const label = formatPersonName(null, null, asAdminText(d.memberName, "—"));
   const slug = asAdminText(d.memberSlug).trim();
   if (!slug) {
     return <span className="text-slate-700">{label}</span>;
@@ -71,6 +71,7 @@ export default function DesignationsDataTable({
   maxVisibleRows = null,
   tableTestId = "designations-data-table",
   rowTestIdPrefix = "member-designation",
+  preferTableOnMobile = false,
 }) {
   if (!designations.length) return null;
 
@@ -78,19 +79,22 @@ export default function DesignationsDataTable({
   const rowPx = 52;
   const headPx = 44;
   const scrollMaxHeight = scrollable ? headPx + maxVisibleRows * rowPx : undefined;
+  const showMobileCards = !preferTableOnMobile && !scrollable;
 
   return (
     <div
       className={`border border-slate-200 rounded-xl overflow-hidden shadow-sm ${className}`}
       data-testid={tableTestId === "designations-data-table" ? "designations-data-table" : undefined}
     >
-      <DesignationsMobileList
-        designations={designations}
-        showNominativo={showNominativo}
-        rowTestIdPrefix={rowTestIdPrefix}
-      />
+      {showMobileCards && (
+        <DesignationsMobileList
+          designations={designations}
+          showNominativo={showNominativo}
+          rowTestIdPrefix={rowTestIdPrefix}
+        />
+      )}
       <div
-        className={`hidden lg:block min-w-0 ${scrollable ? "overflow-y-auto" : ""}`}
+        className={`${showMobileCards ? "hidden lg:block" : "block"} min-w-0 overflow-x-auto ${scrollable ? "overflow-y-auto" : ""}`}
         style={scrollMaxHeight ? { maxHeight: `${scrollMaxHeight}px` } : undefined}
         data-testid={scrollable ? "designations-scroll" : undefined}
       >

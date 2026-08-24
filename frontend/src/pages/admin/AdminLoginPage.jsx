@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
+import { Link, useLocation, useNavigate, Navigate } from "react-router-dom";
 import { SECTION_LOGO, SECTION_LOGO_CLASS } from "../../lib/brand";
-import { useNavigate, Navigate } from "react-router-dom";
 import { adminLogin } from "../../lib/api";
 import { apiErrorMessage } from "../../lib/toast";
 import { ADMIN_ROUTES as R } from "../../lib/appRoutes";
@@ -10,10 +10,19 @@ import { AdminLoading } from "../../components/admin/admin-ui";
 
 export default function AdminLoginPage() {
   const navigate = useNavigate();
-  const [form, setForm] = useState({ email: "", password: "" });
+  const location = useLocation();
+  const [form, setForm] = useState({ email: "legnano@aia-figc.it", password: "" });
   const [error, setError] = useState("");
+  const [success, setSuccess] = useState("");
   const [loading, setLoading] = useState(false);
   const [session, setSession] = useState({ ready: false, hasToken: false });
+
+  useEffect(() => {
+    if (location.state?.resetOk) {
+      setSuccess("Password aggiornata. Accedi con la nuova password.");
+      window.history.replaceState({}, document.title);
+    }
+  }, [location.state]);
 
   useEffect(() => {
     setSession({ ready: true, hasToken: !!localStorage.getItem("aia_token") });
@@ -67,6 +76,9 @@ export default function AdminLoginPage() {
         </div>
 
         <form onSubmit={submit} className="space-y-5" data-testid="admin-login-form">
+          {success && (
+            <div className="bg-emerald-50 border border-emerald-200 text-emerald-800 p-3 rounded text-sm">{success}</div>
+          )}
           {error && <div className="bg-red-50 border border-red-200 text-red-700 p-3 rounded text-sm" data-testid="admin-login-error">{error}</div>}
           <label className="block">
             <span className="block text-sm font-medium text-slate-700 mb-1.5">Email</span>
@@ -96,6 +108,15 @@ export default function AdminLoginPage() {
               />
             </div>
           </label>
+          <div className="flex justify-end">
+            <Link
+              to={R.forgotPassword}
+              className="text-sm text-navy-700 hover:text-navy-900 font-medium"
+              data-testid="admin-forgot-password-link"
+            >
+              Password dimenticata?
+            </Link>
+          </div>
           <Button
             disabled={loading}
             type="submit"

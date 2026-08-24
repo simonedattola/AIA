@@ -1,5 +1,6 @@
 import { Link } from "react-router-dom";
 import MediaImage from "../MediaImage";
+import { formatPersonName } from "../../lib/format";
 
 const NO_HOVER_LINK =
   "flex items-center gap-3 text-inherit no-underline hover:text-inherit hover:no-underline hover:bg-transparent active:text-inherit focus:outline-none focus-visible:outline-none";
@@ -19,12 +20,13 @@ function AuthorAvatar({ name, photoUrl }) {
 export default function TestimonialAuthor({ testimonial: t, linkToProfile = true }) {
   const slug = (t.memberSlug || "").trim();
   const profileTo = linkToProfile && slug ? `/arbitri/${slug}` : null;
+  const displayName = formatPersonName(null, null, t.name);
 
   const author = (
     <>
-      <AuthorAvatar name={t.name} photoUrl={t.photoUrl} />
+      <AuthorAvatar name={displayName} photoUrl={t.photoUrl} />
       <div className="min-w-0">
-        <div className="font-semibold text-navy-700">{t.name}</div>
+        <div className="font-semibold text-navy-700">{displayName}</div>
         {t.role && <div className="text-sm text-slate-500 mt-0.5">{t.role}</div>}
       </div>
     </>
@@ -36,7 +38,7 @@ export default function TestimonialAuthor({ testimonial: t, linkToProfile = true
         to={profileTo}
         className={NO_HOVER_LINK}
         data-testid={`testimonial-profile-${slug}`}
-        aria-label={`Profilo di ${t.name}`}
+        aria-label={`Profilo di ${displayName}`}
       >
         {author}
       </Link>

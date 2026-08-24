@@ -218,7 +218,7 @@ function InstagramProfileCard({ profile, stats, posts, profileUrl, displayName }
         </div>
         <div className="min-w-0 flex-1">
           <div className="flex items-center gap-1.5 min-w-0">
-            <h3 className="font-semibold text-slate-900 text-sm sm:text-base uppercase tracking-wide truncate">
+            <h3 className="font-semibold text-slate-900 text-sm sm:text-base tracking-wide truncate">
               {name}
             </h3>
             {profile?.isVerified && (

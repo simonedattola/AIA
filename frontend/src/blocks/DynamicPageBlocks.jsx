@@ -15,7 +15,7 @@ import { portalLogin } from "../lib/portal-api";
 import { PORTAL_ROUTES } from "../lib/appRoutes";
 import { useSite } from "../lib/site-context";
 import { normalizeMember, memberRoleLabel } from "../lib/memberRoles";
-import { formatDateIt, formatEventDateTimeIt, contactPreferenceLabel } from "../lib/format";
+import { formatDateIt, formatEventDateTimeIt, contactPreferenceLabel, formatPersonName } from "../lib/format";
 import DesignationsDataTable from "../components/designations/DesignationsDataTable";
 import EventsMonthCalendar from "../components/events/EventsMonthCalendar";
 import EventDetailModal from "../components/events/EventDetailModal";
@@ -559,7 +559,8 @@ export function OrganigrammaBlock({ config: c, stats }) {
                   <Crown className="h-3.5 w-3.5" /> Presidente di Sezione
                 </div>
                 <CtaTitle as="h3" className="text-4xl lg:text-5xl leading-tight mb-3">
-                  {president.firstName} <span className="text-gold-400">{president.lastName}</span>
+                  {formatPersonName(president.firstName, null)}{" "}
+                  <span className="text-gold-400">{formatPersonName(null, president.lastName)}</span>
                 </CtaTitle>
                 <p className="text-slate-600 text-lg leading-relaxed whitespace-pre-line">
                   {(president.chiSiamoText || "").trim() || c.presidentFallback || "Guida la Sezione promuovendo formazione tecnica, spirito associativo e crescita delle nuove generazioni arbitrali."}

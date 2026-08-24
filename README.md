@@ -228,9 +228,10 @@ Integration tests require a running API + `ADMIN_PASSWORD` and are excluded from
 
 ## Credenziali admin (seed)
 
-- Email: valore di `ADMIN_EMAIL` in `.env` / `backend/.env`
-- Password: valore di `ADMIN_PASSWORD` (obbligatorio; senza default in codice)
-- All'avvio il seed sincronizza l'hash della password admin dall'env
+- Email: `ADMIN_EMAIL` (default produzione: `legnano@aia-figc.it`)
+- Password iniziale: `ADMIN_PASSWORD` in env (solo alla creazione; i reset via email restano validi)
+- Rotazione da env: imposta `ADMIN_PASSWORD_FORCE_SYNC=true` per un deploy, poi rimuovi
+- **Password dimenticata:** `/amministrazione/password-dimenticata` → email con link (richiede `RESEND_API_KEY`)
 
 ## Status & Roadmap
 

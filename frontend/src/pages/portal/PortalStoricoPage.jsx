@@ -57,6 +57,8 @@ export default function PortalStoricoPage() {
           seasonsAvailable={data.seasonsAvailable || []}
           season={season}
           onSeasonChange={setSeason}
+          maxVisibleRows={8}
+          preferTableOnMobile
         />
       </div>
     </div>

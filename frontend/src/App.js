@@ -32,6 +32,8 @@ import PortalMessaggiPage from "./pages/portal/PortalMessaggiPage";
 import AdminComunicazioniPage from "./pages/admin/AdminComunicazioniPage";
 
 import AdminLoginPage from "./pages/admin/AdminLoginPage";
+import AdminForgotPasswordPage from "./pages/admin/AdminForgotPasswordPage";
+import AdminResetPasswordPage from "./pages/admin/AdminResetPasswordPage";
 import AdminLayout from "./pages/admin/AdminLayout";
 import AdminErrorBoundary from "./components/admin/AdminErrorBoundary";
 import AdminDashboardPage from "./pages/admin/AdminDashboardPage";
@@ -132,6 +134,8 @@ function App() {
             <Route path="/admin/login" element={<Navigate to={ADMIN_ROUTES.login} replace />} />
             <Route path="/admin/*" element={<LegacyPrefixRedirect from="/admin" to="/amministrazione" />} />
             <Route path="/amministrazione/login" element={<AdminErrorBoundary><AdminLoginPage /></AdminErrorBoundary>} />
+            <Route path="/amministrazione/password-dimenticata" element={<AdminErrorBoundary><AdminForgotPasswordPage /></AdminErrorBoundary>} />
+            <Route path="/amministrazione/reimposta-password" element={<AdminErrorBoundary><AdminResetPasswordPage /></AdminErrorBoundary>} />
             <Route path="/amministrazione" element={<AdminLayout />}>
               <Route index element={<AdminDashboardPage />} />
               <Route path="pagine" element={<AdminPagesPage />} />

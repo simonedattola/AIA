@@ -5,6 +5,7 @@ import { Search, Users, X } from "lucide-react";
 import { Link } from "react-router-dom";
 import MediaImage from "../components/MediaImage";
 import { Card, CardTitle, FilterPill } from "@/design-system";
+import { formatPersonName } from "../lib/format";
 
 const KINDS = [
   { key: "", label: "Tutti" },
@@ -102,7 +103,7 @@ export default function AssociatiPage() {
                     </div>
                   )}
                   <CardTitle as="h3" className="text-lg leading-tight">
-                    {m.firstName} {m.lastName}
+                    {formatPersonName(m.firstName, m.lastName)}
                   </CardTitle>
                   <div className="mt-2 text-xs uppercase tracking-wider text-gold-500 font-semibold">{m.role}</div>
                   {(m.role === "AE" || m.role === "AA") && m.category && (

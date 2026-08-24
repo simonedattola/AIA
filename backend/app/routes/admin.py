@@ -18,6 +18,8 @@ from ..models import (
     LoginRequest,
     TokenResponse,
     AdminInfo,
+    ForgotPasswordRequest,
+    ResetPasswordRequest,
     SiteSettings,
     Page,
     Article,
@@ -81,6 +83,33 @@ async def login(payload: LoginRequest):
         token=token,
         admin=AdminInfo(email=admin["email"], name=admin.get("name", "Admin")),
     )
+
+
+@router.post("/forgot-password")
+async def forgot_password(payload: ForgotPasswordRequest):
+    """Invia link di reset all'email admin (risposta generica anti-enumeration)."""
+    from ..admin_password_reset import request_admin_password_reset
+
+    await request_admin_password_reset(payload.email)
+    return {
+        "ok": True,
+        "message": (
+            "Se l'indirizzo è registrato come amministratore, "
+            "riceverai a breve un'email con le istruzioni."
+        ),
+    }
+
+
+@router.post("/reset-password")
+async def reset_password(payload: ResetPasswordRequest):
+    """Reimposta password admin con token monouso."""
+    from ..admin_password_reset import reset_admin_password
+
+    try:
+        await reset_admin_password(payload.token, payload.password)
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e)) from e
+    return {"ok": True, "message": "Password aggiornata. Puoi accedere con le nuove credenziali."}
 
 
 @router.get("/me")

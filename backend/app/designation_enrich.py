@@ -10,6 +10,7 @@ from .member_roles import (
     is_observer_designation_role,
     normalize_member,
 )
+from .person_names import format_person_name
 
 _GIRONE_RE = re.compile(r"girone\s+([^\s·|,;]+)", re.I)
 _GIORNATA_RE = re.compile(r"giornat[a]?\s+([^\s·|,;]+)", re.I)
@@ -69,7 +70,14 @@ def enrich_designation(
     if is_observer_designation_role(item.get("role")):
         item["memberSlug"] = ""
         item["memberId"] = None
+        member_name = _as_str(item.get("memberName"))
+        if member_name:
+            item["memberName"] = format_person_name(full=member_name)
         return item
+
+    member_name = _as_str(item.get("memberName"))
+    if member_name:
+        item["memberName"] = format_person_name(full=member_name)
 
     if not _as_str(item.get("memberSlug")):
         for key in _name_match_keys(_as_str(item.get("memberName"))):
@@ -134,5 +142,9 @@ def enrich_testimonial(
         photo = _as_str(m.get("photoUrl"))
         if photo:
             item["photoUrl"] = photo
+
+    name = _as_str(item.get("name"))
+    if name:
+        item["name"] = format_person_name(full=name)
 
     return item
