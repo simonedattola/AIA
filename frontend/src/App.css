@@ -23,3 +23,12 @@
   margin: 0 auto !important;
 }
 
+/* Instagram profile widget (home events block) */
+.aia-ig-profile-card {
+  @apply text-left;
+}
+
+.aia-ig-profile-card .scrollbar-none::-webkit-scrollbar {
+  display: none;
+}
+

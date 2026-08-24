@@ -1,14 +1,15 @@
-import { useEffect, useMemo, useState } from "react";
-import { Instagram, ExternalLink } from "lucide-react";
-import { fetchGallery } from "../lib/api";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { Instagram, BadgeCheck, ChevronRight, Layers, Play } from "lucide-react";
+import { fetchGallery, fetchInstagramWidget } from "../lib/api";
 import {
   parseInstagramPostEmbed,
   parseInstagramUsername,
   instagramPermalink,
-  instagramProfileEmbedSrc,
   resolveInstagramEmbedInput,
 } from "../lib/instagram-embed";
 import { mediaUrl } from "../lib/media";
+import { SECTION_LOGO } from "../lib/brand";
+import { formatIgCount } from "./instagram-widget-utils";
 
 function loadInstagramEmbedScript() {
   return new Promise((resolve) => {
@@ -48,21 +49,211 @@ function processInstagramEmbeds() {
   }
 }
 
-function InstagramFollowButton({ profileUrl, username }) {
+function InstagramFollowButton({ profileUrl, className = "" }) {
   if (!profileUrl) return null;
-  const label = username ? `@${username.replace(/^@/, "")}` : "Instagram";
   return (
     <a
       href={profileUrl}
       target="_blank"
       rel="noopener noreferrer"
-      className="inline-flex items-center justify-center gap-2 w-full sm:w-auto px-5 py-2.5 rounded-full text-sm font-semibold text-white shadow-md hover:shadow-lg transition-all bg-gradient-to-r from-[#f58529] via-[#dd2a7b] to-[#8134af] hover:opacity-95"
+      className={`inline-flex items-center justify-center gap-2 w-full px-4 py-2 rounded-md text-sm font-semibold text-white bg-[#0095f6] hover:bg-[#1877f2] transition-colors ${className}`}
       data-testid="instagram-follow-cta"
     >
-      <Instagram className="h-4 w-4" />
-      Seguici su {label}
-      <ExternalLink className="h-3.5 w-3.5 opacity-80" />
+      <Instagram className="h-4 w-4" strokeWidth={2.5} />
+      Follow
     </a>
+  );
+}
+
+function InstagramStat({ value, label }) {
+  if (value == null) return null;
+  return (
+    <div className="flex-1 text-center min-w-0 px-1">
+      <div className="text-base sm:text-lg font-semibold text-slate-900 tabular-nums leading-tight">
+        {value}
+      </div>
+      <div className="text-[11px] sm:text-xs text-slate-500 mt-0.5">{label}</div>
+    </div>
+  );
+}
+
+function InstagramPostTile({ post, profileUrl }) {
+  const href = post.permalink || profileUrl;
+  return (
+    <a
+      href={href}
+      target="_blank"
+      rel="noopener noreferrer"
+      className="group relative aspect-square overflow-hidden bg-slate-100"
+      data-testid="instagram-post-tile"
+    >
+      <img
+        src={post.imageUrl}
+        alt={post.caption || "Post Instagram"}
+        className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-105"
+        loading="lazy"
+        referrerPolicy="no-referrer"
+      />
+      {(post.isVideo || post.isCarousel) && (
+        <span className="absolute top-2 right-2 text-white drop-shadow-md">
+          {post.isCarousel ? (
+            <Layers className="h-4 w-4" strokeWidth={2.5} />
+          ) : (
+            <Play className="h-4 w-4 fill-white" strokeWidth={2.5} />
+          )}
+        </span>
+      )}
+      <div className="absolute inset-0 bg-black/0 group-hover:bg-black/20 transition-colors" aria-hidden />
+    </a>
+  );
+}
+
+function chunkPosts(posts, size = 4) {
+  const out = [];
+  for (let i = 0; i < posts.length; i += size) {
+    out.push(posts.slice(i, i + size));
+  }
+  return out;
+}
+
+function InstagramPostGrid({ posts, profileUrl }) {
+  const scrollerRef = useRef(null);
+  const [canScroll, setCanScroll] = useState(false);
+  const pages = useMemo(() => chunkPosts(posts, 4), [posts]);
+
+  const checkScroll = useCallback(() => {
+    const el = scrollerRef.current;
+    if (!el) return;
+    setCanScroll(el.scrollWidth > el.clientWidth + 8);
+  }, []);
+
+  useEffect(() => {
+    checkScroll();
+    window.addEventListener("resize", checkScroll);
+    return () => window.removeEventListener("resize", checkScroll);
+  }, [posts, checkScroll]);
+
+  const scrollNext = () => {
+    const el = scrollerRef.current;
+    if (!el) return;
+    el.scrollBy({ left: el.clientWidth, behavior: "smooth" });
+  };
+
+  if (!posts.length) {
+    return (
+      <div
+        className="aspect-square rounded-sm bg-slate-50 border border-slate-100 flex items-center justify-center text-sm text-slate-400"
+        data-testid="instagram-grid-empty"
+      >
+        Nessun post disponibile
+      </div>
+    );
+  }
+
+  return (
+    <div className="relative" data-testid="instagram-post-grid">
+      <div
+        ref={scrollerRef}
+        className="flex gap-2 overflow-x-auto snap-x snap-mandatory scrollbar-none"
+        style={{ scrollbarWidth: "none" }}
+      >
+        {pages.map((page, pageIdx) => (
+          <div
+            key={`page-${pageIdx}`}
+            className="grid grid-cols-2 gap-1.5 shrink-0 w-full min-w-full snap-start"
+          >
+            {page.map((post) => (
+              <InstagramPostTile
+                key={post.shortcode || post.permalink || post.imageUrl}
+                post={post}
+                profileUrl={profileUrl}
+              />
+            ))}
+          </div>
+        ))}
+      </div>
+      {canScroll && pages.length > 1 && (
+        <button
+          type="button"
+          onClick={scrollNext}
+          className="absolute top-1/2 -translate-y-1/2 -right-3 z-10 h-9 w-9 rounded-full bg-slate-900/85 text-white shadow-lg flex items-center justify-center hover:bg-slate-900 transition-colors"
+          aria-label="Post successivi"
+          data-testid="instagram-grid-next"
+        >
+          <ChevronRight className="h-5 w-5" />
+        </button>
+      )}
+    </div>
+  );
+}
+
+function InstagramProfileCard({ profile, stats, posts, profileUrl, displayName }) {
+  const handle = profile?.username ? `@${profile.username}` : "";
+  const name = (displayName || profile?.fullName || profile?.username || "Instagram").trim();
+  const statPosts = formatIgCount(stats?.posts);
+  const statFollowers = formatIgCount(stats?.followers);
+  const statFollowing = formatIgCount(stats?.following);
+  const hasStats = statPosts != null || statFollowers != null || statFollowing != null;
+
+  return (
+    <div className="aia-ig-profile-card" data-testid="instagram-profile-card">
+      <div className="flex items-center gap-3 sm:gap-4">
+        <div className="shrink-0">
+          {profile?.profilePicUrl ? (
+            <img
+              src={profile.profilePicUrl}
+              alt=""
+              className="h-16 w-16 sm:h-[72px] sm:w-[72px] rounded-full object-cover ring-2 ring-slate-100"
+              loading="lazy"
+              referrerPolicy="no-referrer"
+            />
+          ) : (
+            <img
+              src={SECTION_LOGO}
+              alt=""
+              className="h-16 w-16 sm:h-[72px] sm:w-[72px] rounded-full object-cover ring-2 ring-slate-100 bg-white p-1"
+              loading="lazy"
+            />
+          )}
+        </div>
+        <div className="min-w-0 flex-1">
+          <div className="flex items-center gap-1.5 min-w-0">
+            <h3 className="font-semibold text-slate-900 text-sm sm:text-base uppercase tracking-wide truncate">
+              {name}
+            </h3>
+            {profile?.isVerified && (
+              <BadgeCheck className="h-4 w-4 text-[#0095f6] shrink-0" aria-label="Verificato" />
+            )}
+          </div>
+          {handle && (
+            <a
+              href={profileUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-xs sm:text-sm text-slate-500 hover:text-slate-700 truncate block mt-0.5"
+            >
+              {handle}
+            </a>
+          )}
+        </div>
+      </div>
+
+      {hasStats && (
+        <div className="flex items-start justify-around mt-4 pt-1 border-t border-slate-100">
+          <InstagramStat value={statPosts} label="Posts" />
+          <InstagramStat value={statFollowers} label="Followers" />
+          <InstagramStat value={statFollowing} label="Following" />
+        </div>
+      )}
+
+      <div className="mt-4">
+        <InstagramFollowButton profileUrl={profileUrl} />
+      </div>
+
+      <div className="mt-4 -mx-0.5">
+        <InstagramPostGrid posts={posts} profileUrl={profileUrl} />
+      </div>
+    </div>
   );
 }
 
@@ -84,7 +275,7 @@ function InstagramOfficialEmbed({ permalink }) {
 
   return (
     <div
-      className="aia-ig-embed w-full overflow-hidden rounded-xl border border-slate-200/80 bg-white shadow-inner"
+      className="aia-ig-embed w-full overflow-hidden rounded-xl border border-slate-200/80 bg-white"
       data-testid="instagram-official-embed"
     >
       <blockquote
@@ -109,179 +300,119 @@ function InstagramOfficialEmbed({ permalink }) {
   );
 }
 
-/** Feed ufficiale del profilo Instagram (iframe /embed). */
-function InstagramProfileEmbed({ profileUrl }) {
-  const src = instagramProfileEmbedSrc(profileUrl);
-  if (!src) return null;
-  return (
-    <div
-      className="aia-ig-profile-embed relative w-full overflow-hidden rounded-xl border border-slate-200/80 bg-white shadow-sm"
-      data-testid="instagram-profile-embed"
-    >
-      <div
-        className="pointer-events-none absolute inset-x-0 bottom-0 h-12 bg-gradient-to-t from-white to-transparent z-[1]"
-        aria-hidden
-      />
-      <iframe
-        title="Instagram AIA Legnano"
-        src={src}
-        className="w-full border-0 relative z-0"
-        style={{ height: 520, maxWidth: "100%" }}
-        loading="lazy"
-        referrerPolicy="strict-origin-when-cross-origin"
-        allow="encrypted-media; clipboard-write"
-      />
-    </div>
-  );
-}
-
-/** Griglia foto dal sito se non c'è profilo né post configurato. */
-function InstagramGalleryFallback({ profileUrl }) {
-  const [images, setImages] = useState([]);
-
-  useEffect(() => {
-    fetchGallery()
-      .then((items) => {
-        const list = Array.isArray(items) ? items : [];
-        setImages(list.slice(0, 6));
-      })
-      .catch(() => setImages([]));
-  }, []);
-
-  if (!images.length) {
-    return (
-      <div
-        className="aspect-[4/5] w-full rounded-xl bg-gradient-to-br from-fuchsia-50 via-rose-50 to-amber-50 border border-rose-100/80 flex items-center justify-center text-center p-8 shadow-inner"
-        data-testid="instagram-empty-fallback"
-      >
-        <div className="space-y-4">
-          <div className="mx-auto w-14 h-14 rounded-2xl bg-gradient-to-br from-fuchsia-500 via-rose-500 to-amber-400 flex items-center justify-center text-white shadow-lg">
-            <Instagram className="h-7 w-7" />
-          </div>
-          <div>
-            <p className="text-navy-800 font-display font-semibold text-lg">Scopri le ultime foto</p>
-            <p className="text-sm text-slate-500 mt-1 max-w-xs mx-auto leading-relaxed">
-              Vita sezionale, eventi, successi e dietro le quinte.
-            </p>
-          </div>
-          {profileUrl ? (
-            <InstagramFollowButton profileUrl={profileUrl} />
-          ) : null}
-        </div>
-      </div>
-    );
-  }
-
-  return (
-    <div
-      className="rounded-xl overflow-hidden border border-slate-200/80 bg-slate-50 shadow-sm"
-      data-testid="instagram-gallery-grid"
-    >
-      <div className="grid grid-cols-3 gap-1 p-1">
-        {images.map((img) => {
-          const src = mediaUrl(img.url || img.path || "");
-          if (!src) return null;
-          return (
-            <a
-              key={img.id || src}
-              href={profileUrl || src}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="group relative aspect-square overflow-hidden rounded-lg bg-slate-200"
-            >
-              <img
-                src={src}
-                alt={img.caption || "Foto sezione"}
-                className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-105"
-                loading="lazy"
-              />
-              <div className="absolute inset-0 bg-navy-900/0 group-hover:bg-navy-900/25 transition-colors flex items-center justify-center opacity-0 group-hover:opacity-100">
-                <Instagram className="h-6 w-6 text-white drop-shadow" />
-              </div>
-            </a>
-          );
-        })}
-      </div>
-    </div>
-  );
+function galleryToPosts(items) {
+  return items
+    .map((img) => {
+      const src = mediaUrl(img.url || img.path || "");
+      if (!src) return null;
+      return {
+        shortcode: img.id,
+        permalink: img.sourceUrl || "",
+        imageUrl: src,
+        caption: img.caption || "",
+        isVideo: false,
+        isCarousel: false,
+      };
+    })
+    .filter(Boolean);
 }
 
 /**
- * Widget Instagram per il blocco eventi home.
- * 1) URL post/reel configurato → embed singolo
- * 2) altrimenti profilo (settings.instagramUrl) → feed ufficiale /embed
- * 3) altrimenti galleria sito
+ * Widget Instagram stile profilo (header + stats + griglia post).
+ * Con URL post configurato → embed singolo sotto header compatto.
  */
 export default function InstagramWidget({ config = {}, profileUrl = "" }) {
   const embedInput = useMemo(() => resolveInstagramEmbedInput(config), [config]);
   const parsed = useMemo(() => parseInstagramPostEmbed(embedInput), [embedInput]);
   const permalink = parsed ? instagramPermalink(parsed) : "";
   const profileUsername = useMemo(() => parseInstagramUsername(profileUrl), [profileUrl]);
-  const title = config.instagramTitle || "Instagram";
-  const subtitle =
-    config.instagramSubtitle || "Foto, aggiornamenti e vita della sezione su Instagram.";
-  const handle = profileUsername ? `@${profileUsername}` : "";
+  const displayName = (config.instagramTitle || "").trim();
+  const resolvedProfileUrl =
+    profileUrl || (profileUsername ? `https://www.instagram.com/${profileUsername}/` : "");
+
+  const [widgetData, setWidgetData] = useState(null);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    setLoading(true);
+    fetchInstagramWidget({ limit: 12 })
+      .then((data) => setWidgetData(data))
+      .catch(() => {
+        if (!profileUsername && !resolvedProfileUrl) {
+          setWidgetData(null);
+          return;
+        }
+        fetchGallery()
+          .then((items) => {
+            const list = Array.isArray(items) ? items.slice(0, 8) : [];
+            setWidgetData({
+              profile: {
+                username: profileUsername || "instagram",
+                fullName: displayName || "Instagram",
+                profilePicUrl: "",
+                isVerified: false,
+                profileUrl: resolvedProfileUrl,
+              },
+              posts: galleryToPosts(list),
+              stats: { posts: list.length || null, followers: null, following: null },
+            });
+          })
+          .catch(() => setWidgetData(null));
+      })
+      .finally(() => setLoading(false));
+  }, [profileUsername, displayName, resolvedProfileUrl]);
 
   let body;
-  if (permalink) {
-    body = <InstagramOfficialEmbed permalink={permalink} />;
-  } else if (profileUsername) {
-    body = <InstagramProfileEmbed profileUrl={profileUrl || profileUsername} />;
+  if (loading && !widgetData) {
+    body = (
+      <div className="py-12 text-center text-sm text-slate-400" data-testid="instagram-loading">
+        Caricamento da Instagram…
+      </div>
+    );
+  } else if (permalink) {
+    body = (
+      <div className="space-y-4">
+        {widgetData && (
+          <InstagramProfileCard
+            profile={widgetData.profile}
+            stats={widgetData.stats}
+            posts={[]}
+            profileUrl={resolvedProfileUrl}
+            displayName={displayName}
+          />
+        )}
+        <InstagramOfficialEmbed permalink={permalink} />
+      </div>
+    );
+  } else if (widgetData) {
+    body = (
+      <InstagramProfileCard
+        profile={widgetData.profile}
+        stats={widgetData.stats}
+        posts={widgetData.posts || []}
+        profileUrl={resolvedProfileUrl}
+        displayName={displayName}
+      />
+    );
   } else {
-    body = <InstagramGalleryFallback profileUrl={profileUrl} />;
+    body = (
+      <div className="py-10 text-center text-sm text-slate-500" data-testid="instagram-empty">
+        Instagram non disponibile al momento.
+        {resolvedProfileUrl && (
+          <div className="mt-4">
+            <InstagramFollowButton profileUrl={resolvedProfileUrl} className="max-w-xs mx-auto" />
+          </div>
+        )}
+      </div>
+    );
   }
 
   return (
     <div
-      className="relative overflow-hidden rounded-2xl border border-slate-200/90 bg-white shadow-ds-md"
+      className="relative overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm"
       data-testid="instagram-widget"
     >
-      <div
-        className="h-1 w-full bg-gradient-to-r from-[#f58529] via-[#dd2a7b] to-[#8134af]"
-        aria-hidden
-      />
-
-      <div className="p-4 sm:p-5">
-        <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4 mb-4">
-          <div className="flex items-start gap-3 min-w-0">
-            <div className="shrink-0 p-2.5 rounded-2xl bg-gradient-to-br from-fuchsia-500 via-rose-500 to-amber-400 text-white shadow-md ring-2 ring-white">
-              <Instagram className="h-5 w-5" />
-            </div>
-            <div className="min-w-0">
-              <div className="font-display font-semibold text-navy-800 text-lg leading-tight">
-                {title}
-              </div>
-              {handle && (
-                <a
-                  href={profileUrl}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="text-sm font-medium text-rose-600 hover:text-rose-700 mt-0.5 inline-block"
-                >
-                  {handle}
-                </a>
-              )}
-              <p className="text-sm text-slate-500 mt-1 leading-snug">{subtitle}</p>
-            </div>
-          </div>
-        </div>
-
-        {body}
-
-        {profileUrl && (
-          <div className="mt-5 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 pt-4 border-t border-slate-100">
-            <InstagramFollowButton profileUrl={profileUrl} username={profileUsername} />
-            <a
-              href={profileUrl}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="text-center sm:text-right text-xs text-slate-500 hover:text-navy-700 transition-colors"
-            >
-              Apri profilo completo
-            </a>
-          </div>
-        )}
-      </div>
+      <div className="p-4 sm:p-5">{body}</div>
     </div>
   );
 }
