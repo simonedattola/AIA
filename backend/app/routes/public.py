@@ -557,6 +557,25 @@ async def list_testimonials():
 
 
 # ---- Forms ----
+# ---- Media / gallery ----
+@router.get("/email-logo.png")
+async def get_email_logo_png():
+    """Logo sezione per email (URL assoluto via PUBLIC_API_URL)."""
+    from fastapi.responses import FileResponse
+
+    from ..mailer import _email_logo_file_path, EMAIL_LOGO_FILENAME
+
+    path = _email_logo_file_path()
+    if not path:
+        raise HTTPException(status_code=404, detail="Logo non disponibile")
+    return FileResponse(
+        path,
+        media_type="image/png",
+        filename=EMAIL_LOGO_FILENAME,
+        headers={"Cache-Control": "public, max-age=86400"},
+    )
+
+
 @router.get("/gallery")
 async def get_gallery():
     from ..gallery import list_public_gallery

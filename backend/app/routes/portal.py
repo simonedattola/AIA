@@ -1075,6 +1075,7 @@ async def portal_gallery_upload(
         render_gallery_upload_staff_email,
         send_email,
     )
+    from ..person_names import format_person_name
 
     rel_path = upload_storage.save_upload(name, file)
     db = get_db()
@@ -1084,7 +1085,7 @@ async def portal_gallery_upload(
         raise HTTPException(status_code=400, detail=str(exc)) from exc
     m = await _get_member(db, auth["memberId"])
     url = resolve_media_url(rel_path)
-    member_name = f"{m.get('firstName', '')} {m.get('lastName', '')}".strip()
+    member_name = format_person_name(m.get("firstName"), m.get("lastName"))
     doc = await save_uploaded_gallery_image(
         db,
         url=url,
@@ -1162,8 +1163,10 @@ async def portal_submit_testimonial(
         send_email,
     )
 
+    from ..person_names import format_person_name
+
     t = Testimonial(
-        name=f"{m.get('firstName', '')} {m.get('lastName', '')}".strip(),
+        name=format_person_name(m.get("firstName"), m.get("lastName")),
         role=(payload.role or m.get("category") or "Associato").strip(),
         quote=quote,
         photoUrl=m.get("photoUrl") or "",

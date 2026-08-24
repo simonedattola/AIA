@@ -15,6 +15,7 @@ from .mailer import (
     notify_email,
     send_email,
 )
+from .person_names import format_person_name
 
 logger = logging.getLogger(__name__)
 
@@ -51,7 +52,7 @@ async def notify_comunicazione_recipients(db, comm: dict) -> int:
     for member in destinatari:
         if not member.get("emailNotifyComunicazioni"):
             continue
-        nome = f"{member.get('firstName', '')} {member.get('lastName', '')}".strip()
+        nome = format_person_name(member.get("firstName"), member.get("lastName"))
         subject = f"Nuova comunicazione: {comm.get('title', 'AIA Legnano')}"
         html = render_comunicazione_email(
             title=comm.get("title", ""),
@@ -76,7 +77,7 @@ async def notify_direct_message(
         return False
     link = f"{PORTAL_BASE_URL}/area-associati/messaggi"
     subject = f"Nuovo messaggio da {sender_name}"
-    nome = f"{member.get('firstName', '')} {member.get('lastName', '')}".strip()
+    nome = format_person_name(member.get("firstName"), member.get("lastName"))
     html = render_message_email(
         member_name=nome,
         sender_name=sender_name,
@@ -108,7 +109,7 @@ async def notify_group_message(
         member = await db.members.find_one({"id": mid}, {"_id": 0})
         if not member or not member.get("emailNotifyMessages"):
             continue
-        nome = f"{member.get('firstName', '')} {member.get('lastName', '')}".strip()
+        nome = format_person_name(member.get("firstName"), member.get("lastName"))
         gname = group_name or group.get("nome") or "Gruppo"
         subject = f"Nuovo messaggio nel gruppo {gname}"
         html = render_message_email(
@@ -159,7 +160,7 @@ async def notify_comunicazione_reply(
             continue
         if not member.get("emailNotifyComunicazioni"):
             continue
-        nome = f"{member.get('firstName', '')} {member.get('lastName', '')}".strip()
+        nome = format_person_name(member.get("firstName"), member.get("lastName"))
         html = render_comunicazione_reply_member_email(
             member_name=nome,
             title=title,
