@@ -126,3 +126,7 @@ def test_category_only_ae_aa():
     assert not can_have_max_category({"role": "AB"})
     assert not can_have_max_category({"role": "OA"})
     assert not can_have_max_category({"role": "AFR"})
+    # Sync AIA senza codice: role testuale + memberRole
+    assert can_have_max_category({"role": "Arbitro", "memberRole": "arbitro"})
+    assert can_have_max_category({"memberRole": "assistente"})
+    assert not can_have_max_category({"role": "Arbitro", "memberRole": "osservatore"})

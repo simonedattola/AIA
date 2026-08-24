@@ -54,7 +54,13 @@ function aiaCodeOf(m) {
 
 export function canHaveMaxCategory(m) {
   const code = aiaCodeOf(m);
-  return code === "AE" || code === "AA";
+  if (code === "AE" || code === "AA") return true;
+  if (code) return false; // AB, AFR, OA, OT, …
+  const mrole = String(m?.memberRole || "").trim().toLowerCase();
+  if (mrole === "arbitro" || mrole === "assistente") return true;
+  if (mrole) return false;
+  const role = String(m?.role || "").trim().toLowerCase();
+  return role === "arbitro" || role === "assistente";
 }
 
 export function defaultPortalPassword(firstName, lastName) {

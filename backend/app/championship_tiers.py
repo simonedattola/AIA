@@ -21,6 +21,7 @@ CHAMPIONSHIP_TIERS: tuple[str, ...] = (
     "Giovanissimi",
 )
 
+# Pattern adulti / etichette classiche (dopo il riconoscimento Under).
 _TIER_PATTERNS: list[tuple[str, re.Pattern]] = [
     ("Serie A", re.compile(r"\bserie\s*a\b", re.I)),
     ("Serie B", re.compile(r"\bserie\s*b\b", re.I)),
@@ -34,6 +35,20 @@ _TIER_PATTERNS: list[tuple[str, re.Pattern]] = [
     ("Juniores", re.compile(r"\bjuniores\b", re.I)),
     ("Allievi", re.compile(r"\ballievi\b", re.I)),
     ("Giovanissimi", re.compile(r"\bgiovanissimi\b", re.I)),
+]
+
+# Under XX (nomenclatura AIA attuale) → fascia storica usata in anagrafica.
+# Ordine: età più alta prima. Controllato PRIMA delle Serie per evitare
+# falsi positivi tipo «Under 17 Serie A-B» → Serie A.
+_YOUTH_AGE_PATTERNS: list[tuple[str, re.Pattern]] = [
+    ("Juniores", re.compile(r"\b(?:under|u)\s*19\b", re.I)),
+    ("Juniores", re.compile(r"\b(?:under|u)\s*18\b", re.I)),
+    ("Allievi", re.compile(r"\b(?:under|u)\s*17\b", re.I)),
+    ("Allievi", re.compile(r"\b(?:under|u)\s*16\b", re.I)),
+    ("Giovanissimi", re.compile(r"\b(?:under|u)\s*15\b", re.I)),
+    ("Giovanissimi", re.compile(r"\b(?:under|u)\s*14\b", re.I)),
+    ("Giovanissimi", re.compile(r"\b(?:under|u)\s*1[0-3]\b", re.I)),
+    ("Giovanissimi", re.compile(r"\b(?:esordienti|pulcini)\b", re.I)),
 ]
 
 
@@ -65,14 +80,26 @@ def is_womens_championship(championship: str | None) -> bool:
     return any(p.search(norm) for p in _WOMENS_CHAMPIONSHIP_PATTERNS)
 
 
+def _detect_youth_tier(norm: str) -> str | None:
+    for label, pattern in _YOUTH_AGE_PATTERNS:
+        if pattern.search(norm):
+            return label
+    return None
+
+
 def detect_championship_tier(championship: str) -> str | None:
-    """Riconosce il livello campionato da testo championship/category (anche sigle)."""
+    """Riconosce il livello campionato da testo championship/category (anche sigle/Under)."""
     from .championship_codes import expand_championship_label
 
     if not (championship or "").strip():
         return None
     expanded = expand_championship_label(championship)
     norm = _normalize_text(expanded)
+
+    youth = _detect_youth_tier(norm)
+    if youth:
+        return youth
+
     for label, pattern in _TIER_PATTERNS:
         if pattern.search(norm):
             return label
@@ -91,7 +118,10 @@ def is_arbitro_designation_role(role: str | None) -> bool:
     r = (role or "").strip().lower()
     if not r or "assistente" in r or "osservatore" in r:
         return False
-    return r == "arbitro"
+    if r in {"arbitro", "ae", "ar", "arbitro effettivo"}:
+        return True
+    # es. "Arbitro di porte", "Arbitro (IV)" — resta ruolo di gara
+    return r.startswith("arbitro")
 
 
 def highest_tier_from_designations(designations: list[dict]) -> str:

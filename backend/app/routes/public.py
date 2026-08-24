@@ -218,6 +218,7 @@ async def list_members(
             {"lastName": {"$regex": q, "$options": "i"}},
         ]
     from ..member_category import refresh_member_category
+    from ..member_roles import can_have_max_category
 
     items = (
         await db.members.find(query, {"_id": 0})
@@ -227,7 +228,7 @@ async def list_members(
     )
     for item in items:
         normalize_member(item)
-        if item.get("memberRole") == "arbitro":
+        if can_have_max_category(item):
             await refresh_member_category(db, item, persist=True)
         resolve_media_fields(item)
         public_member(item)
@@ -295,8 +296,9 @@ async def get_member(slug: str, season: Optional[str] = None):
         enrich_designation(item, slug_by_id, member_by_name)
 
     from ..member_category import refresh_member_category
+    from ..member_roles import can_have_max_category
 
-    if m.get("memberRole") == "arbitro":
+    if can_have_max_category(m):
         await refresh_member_category(db, m, persist=True)
 
     article_fields = {

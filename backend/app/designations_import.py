@@ -729,6 +729,7 @@ async def import_designations_from_file(
         await db.designations.insert_one(doc)
         inserted += 1
 
+    categories_updated = 0
     if not dry_run:
         await db.site_settings.update_one(
             {"id": "site-settings"},
@@ -749,6 +750,10 @@ async def import_designations_from_file(
             },
             upsert=True,
         )
+        if inserted or updated or members_created:
+            from .member_category import refresh_arbitri_categories
+
+            categories_updated = await refresh_arbitri_categories(db)
 
     return {
         "ok": True,
@@ -758,6 +763,7 @@ async def import_designations_from_file(
         "updated": updated,
         "skippedDuplicates": skipped_duplicates,
         "membersCreated": members_created,
+        "categoriesUpdated": categories_updated,
         "unlinked": unlinked,
         "preview": preview,
         "warnings": errors[:50],
