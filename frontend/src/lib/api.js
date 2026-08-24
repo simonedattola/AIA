@@ -99,10 +99,14 @@ export const adminUpdateMember = (id, data) => api.put(`/admin/members/${id}`, d
 export const adminDeleteMember = (id) => api.delete(`/admin/members/${id}`).then((r) => r.data);
 export const adminMembersImportTemplate = () =>
   api.get("/admin/members/import-template", { responseType: "blob" }).then((r) => r.data);
-export const adminImportMembersFile = (file, { dryRun = false } = {}) => {
+export const adminImportMembersFile = (
+  file,
+  { dryRun = false, removeMissing = false } = {}
+) => {
   const fd = new FormData();
   fd.append("file", file);
   fd.append("dry_run", dryRun ? "true" : "false");
+  fd.append("remove_missing", removeMissing ? "true" : "false");
   return api.post("/admin/members/import-file", fd, {
     headers: { "Content-Type": "multipart/form-data" },
     timeout: 120000,

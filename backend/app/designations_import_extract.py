@@ -81,9 +81,9 @@ def _read_html_tables(content: bytes) -> list[pd.DataFrame]:
         raise ValueError("Codifica HTML non supportata.")
     # header=0: usa la riga intestazioni (o MultiIndex se c'è un titolo sopra)
     try:
-        tables = pd.read_html(io.StringIO(text), flavor="bs4")
+        tables = pd.read_html(io.StringIO(text), flavor="lxml")
     except ValueError:
-        tables = pd.read_html(io.StringIO(text), header=None, flavor="bs4")
+        tables = pd.read_html(io.StringIO(text), header=None, flavor="lxml")
     return [_flatten_html_columns(df) for df in tables if not df.empty]
 
 

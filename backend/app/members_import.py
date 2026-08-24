@@ -340,6 +340,11 @@ def _row_from_mapped(
         warnings.append(f"Riga {line}: nome/cognome mancanti — saltata.")
         return None
 
+    # Riga riepilogo tipica degli export AIA «ASSOCIATI TOTALI : N»
+    joined = f"{first} {last}".upper()
+    if "TOTALI" in joined or joined.startswith("ASSOCIATI TOTALI"):
+        return None
+
     role_raw = row.get("memberRole", "")
     category = _cell_str(row.get("category", ""))
     member_role, observer_type, board_title = _normalize_member_role(role_raw, category)
@@ -483,7 +488,10 @@ async def _find_existing_member(db, row: dict) -> Optional[dict]:
             {"_id": 0},
         )
         if found:
-            return found
+            # Evita di unire due omonimi con meccanografici diversi
+            found_mec = (found.get("meccanografico") or "").strip()
+            if not mec or not found_mec or found_mec == mec:
+                return found
 
     fn, ln = row["firstName"], row["lastName"]
     candidates = await db.members.find(
@@ -495,6 +503,10 @@ async def _find_existing_member(db, row: dict) -> Optional[dict]:
     ).to_list(20)
     target = _normalize_name_key(f"{fn} {ln}")
     for cand in candidates:
+        cand_mec = (cand.get("meccanografico") or "").strip()
+        # Due COLOMBO LUCA con matricole diverse restano distinti
+        if mec and cand_mec and mec != cand_mec:
+            continue
         if (
             _normalize_name_key(
                 f"{cand.get('firstName', '')} {cand.get('lastName', '')}"
@@ -525,6 +537,7 @@ async def import_members_from_file(
     filename: str,
     *,
     dry_run: bool = False,
+    remove_missing: bool = False,
 ) -> dict:
     rows, parse_warnings, meta = parse_members_file(content, filename)
     db = get_db()
@@ -534,7 +547,10 @@ async def import_members_from_file(
     inserted = 0
     updated = 0
     skipped_duplicates = 0
+    removed = 0
+    removed_preview: list[dict] = []
     errors: list[str] = list(parse_warnings)
+    kept_ids: set[str] = set()
 
     for row in rows:
         existing = await _find_existing_member(db, row)
@@ -555,6 +571,8 @@ async def import_members_from_file(
         if dry_run:
             if is_update:
                 skipped_duplicates += 1
+                if existing.get("id"):
+                    kept_ids.add(existing["id"])
             continue
 
         if existing:
@@ -565,6 +583,8 @@ async def import_members_from_file(
 
             await ensure_member_portal_credentials(merged)
             updated += 1
+            if existing.get("id"):
+                kept_ids.add(existing["id"])
             continue
 
         slug = await _unique_slug(db, row["firstName"], row["lastName"])
@@ -592,6 +612,51 @@ async def import_members_from_file(
 
         await ensure_member_portal_credentials(doc)
         inserted += 1
+        if doc.get("id"):
+            kept_ids.add(doc["id"])
+
+    if remove_missing:
+        # Anche in dry_run: calcola chi verrebbe rimosso rispetto al file
+        if dry_run:
+            kept_ids = set()
+            for row in rows:
+                existing = await _find_existing_member(db, row)
+                if existing and existing.get("id"):
+                    kept_ids.add(existing["id"])
+
+        all_members = await db.members.find(
+            {},
+            {
+                "_id": 0,
+                "id": 1,
+                "firstName": 1,
+                "lastName": 1,
+                "role": 1,
+                "memberRole": 1,
+                "meccanografico": 1,
+                "slug": 1,
+            },
+        ).to_list(5000)
+        to_remove = [m for m in all_members if m.get("id") and m["id"] not in kept_ids]
+        for m in to_remove:
+            if len(removed_preview) < 30:
+                removed_preview.append(
+                    {
+                        "id": m.get("id"),
+                        "firstName": m.get("firstName") or "",
+                        "lastName": m.get("lastName") or "",
+                        "role": m.get("role") or "",
+                        "memberRole": m.get("memberRole") or "",
+                        "meccanografico": m.get("meccanografico") or "",
+                        "slug": m.get("slug") or "",
+                    }
+                )
+        if dry_run:
+            removed = len(to_remove)
+        else:
+            for m in to_remove:
+                await db.members.delete_one({"id": m["id"]})
+                removed += 1
 
     if not dry_run:
         await db.site_settings.update_one(
@@ -605,6 +670,8 @@ async def import_members_from_file(
                         "rowsParsed": len(rows),
                         "inserted": inserted,
                         "updated": updated,
+                        "removed": removed,
+                        "removeMissing": remove_missing,
                         "warnings": errors[:30],
                     }
                 }
@@ -619,6 +686,9 @@ async def import_members_from_file(
         "inserted": inserted,
         "updated": updated,
         "skippedDuplicates": skipped_duplicates,
+        "removed": removed,
+        "removeMissing": remove_missing,
+        "removedPreview": removed_preview,
         "preview": preview,
         "warnings": errors[:50],
         "filename": filename,
