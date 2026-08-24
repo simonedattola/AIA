@@ -38,6 +38,12 @@ class TestAttRole:
         assert resolve_att_role("AA") == "Assistente 1"
         assert _normalize_role("AA") == "Assistente 1"
 
+    def test_ar_aa1_aa2(self):
+        assert resolve_att_role("AR") == "Arbitro"
+        assert resolve_att_role("AA1") == "Assistente 1"
+        assert resolve_att_role("AA2") == "Assistente 2"
+        assert _normalize_role("AA2") == "Assistente 2"
+
 
 class TestTierFromCodes:
     def test_sec_tier(self):
@@ -82,6 +88,36 @@ class TestFormatBImport:
         assert rows[0]["championship"] == "Prima Categoria"
         assert rows[0]["role"] == "Arbitro"
         assert rows[0]["memberName"] == "Luca Bianchi"
+
+    def test_continuation_rows_same_match(self):
+        # Prima riga = gara completa; righe successive solo Att. + Associato (Cognome Nome)
+        content = (
+            'Data / Ora;Cat.;Gir.;Giorn.;Num. Gara;Sq. Locale;Sq. Ospite;Impianto;Att.;Associato\n'
+            '"21/03/2026\n15:00";GIN;;0;1;INTERNAZIONALE MILANO S.P.A.;JACKSONVILLE FC;MILANO/AFFORI;AA2;LORENZO ALESSIO\n'
+            ";;;;;;;;AR;MENAPACE LORENZO\n"
+            ";;;;;;;;AA1;GIORGI FABRIZIO\n"
+        ).encode("utf-8")
+        rows, warnings, meta = parse_designations_file(content, "designazioni.csv")
+        assert len(rows) == 3
+        assert rows[0]["matchDate"] == "2026-03-21"
+        assert rows[0]["championship"] == "Amichevole LND Giovanissimi Nazionali"
+        assert rows[0]["matchHome"] == "INTERNAZIONALE MILANO S.P.A."
+        assert rows[0]["matchAway"] == "JACKSONVILLE FC"
+        assert rows[0]["role"] == "Assistente 2"
+        assert rows[0]["memberName"] == "LORENZO ALESSIO"
+        assert rows[1]["matchDate"] == "2026-03-21"
+        assert rows[1]["matchHome"] == "INTERNAZIONALE MILANO S.P.A."
+        assert rows[1]["role"] == "Arbitro"
+        assert rows[1]["memberName"] == "MENAPACE LORENZO"
+        assert rows[2]["role"] == "Assistente 1"
+        assert rows[2]["memberName"] == "GIORGI FABRIZIO"
+        assert all(r["matchAway"] == "JACKSONVILLE FC" for r in rows)
+
+    def test_multiline_date_cell(self):
+        from app.designations_import import _parse_date
+
+        assert _parse_date("21/03/2026\n15:00") == "2026-03-21"
+        assert _parse_date("21/03/2026 15:00") == "2026-03-21"
         content = (
             "Att.;Data;Categoria;Giron.;Squadra Locale;Squadra Ospite;Ris.;Voto OA;Voto OT;Stato;Rimb.\n"
             "AE;17/05/2026;SEC;R;Casa FC;Ospite FC;1-0;;;;\n"

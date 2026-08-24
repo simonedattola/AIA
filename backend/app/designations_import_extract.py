@@ -14,7 +14,7 @@ SUPPORTED_EXTENSIONS = (".csv", ".xlsx", ".xls", ".xlsm", ".pdf", ".docx", ".doc
 def _cell_str(value: Any) -> str:
     if value is None or (isinstance(value, float) and pd.isna(value)):
         return ""
-    text = str(value).strip()
+    text = str(value).replace("\r\n", "\n").replace("\r", "\n").strip()
     if text.lower() in ("nan", "none", "nat"):
         return ""
     return text
@@ -38,7 +38,12 @@ def _read_csv_bytes(content: bytes) -> pd.DataFrame:
             text = None
     if text is None:
         raise ValueError("Codifica file non supportata.")
-    sep = ";" if text.count(";") >= text.count(",") else ","
+    # Preferisci il separatore più frequente sulla prima riga non vuota
+    first_line = next((ln for ln in text.splitlines() if ln.strip()), "")
+    counts = {";": first_line.count(";"), ",": first_line.count(","), "\t": first_line.count("\t")}
+    sep = max(counts, key=counts.get)
+    if counts[sep] == 0:
+        sep = ";" if text.count(";") >= text.count(",") else ","
     return pd.read_csv(io.StringIO(text), sep=sep, dtype=str, header=None)
 
 
