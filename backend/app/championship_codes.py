@@ -90,9 +90,10 @@ def expand_championship_label(value: str | None) -> str:
         or len(raw) <= 4
         or raw.upper().startswith(code)
     ):
-        if re.fullmatch(r"[A-Za-z0-9]{2,4}", raw.strip()) or re.sub(
-            r"[^A-Za-z0-9]+", "", raw
-        ).upper() == code:
+        if (
+            re.fullmatch(r"[A-Za-z0-9]{2,4}", raw.strip())
+            or re.sub(r"[^A-Za-z0-9]+", "", raw).upper() == code
+        ):
             return CHAMPIONSHIP_CODES[code]
         rest = raw[len(code) :].lstrip(" -_/·.|")
         label = CHAMPIONSHIP_CODES[code]

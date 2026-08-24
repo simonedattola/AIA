@@ -7,7 +7,7 @@ from typing import Iterable
 
 from .championship_tiers import is_womens_championship
 
-# Punteggio più alto = categoria più alta
+# Punteggio più alto = categoria più alta (Under allineato a championship_tiers)
 _LEVEL_PATTERNS: list[tuple[re.Pattern[str], int]] = [
     (re.compile(r"serie\s*a\b", re.I), 100),
     (re.compile(r"serie\s*b\b", re.I), 90),
@@ -17,7 +17,9 @@ _LEVEL_PATTERNS: list[tuple[re.Pattern[str], int]] = [
     (re.compile(r"prima\s+categoria", re.I), 50),
     (re.compile(r"seconda\s+categoria", re.I), 40),
     (re.compile(r"terza\s+categoria", re.I), 30),
-    (re.compile(r"giovanissimi|allievi|esordienti|pulcini", re.I), 20),
+    (re.compile(r"juniores|(?:under|u)\s*1[89]\b", re.I), 26),
+    (re.compile(r"allievi|(?:under|u)\s*1[67]\b", re.I), 23),
+    (re.compile(r"giovanissimi|(?:under|u)\s*1[0-5]\b|esordienti|pulcini", re.I), 20),
     (re.compile(r"calcio\s+a\s+5|futsal", re.I), 15),
 ]
 
@@ -26,6 +28,13 @@ def championship_level_score(text: str | None) -> int:
     raw = (text or "").strip()
     if not raw:
         return 0
+    # Under / giovanili: non far prevalere «Serie A» dentro «Under 17 Serie A-B»
+    if re.search(r"(?:under|u)\s*1[89]\b|juniores", raw, re.I):
+        return 26
+    if re.search(r"(?:under|u)\s*1[67]\b|allievi", raw, re.I):
+        return 23
+    if re.search(r"(?:under|u)\s*1[0-5]\b|giovanissimi|esordienti|pulcini", raw, re.I):
+        return 20
     best = 5  # testo generico ha punteggio minimo
     for pattern, score in _LEVEL_PATTERNS:
         if pattern.search(raw):

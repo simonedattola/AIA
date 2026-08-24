@@ -49,7 +49,12 @@ def test_enrich_matches_cognome_nome():
         },
     ]
     slug_by_id, member_by_name = build_member_lookups(members)
-    item = {"memberName": "Bianchi Luca", "role": "Arbitro", "matchHome": "A", "matchAway": "B"}
+    item = {
+        "memberName": "Bianchi Luca",
+        "role": "Arbitro",
+        "matchHome": "A",
+        "matchAway": "B",
+    }
     enrich_designation(item, slug_by_id, member_by_name)
     assert item["memberSlug"] == "luca-bianchi"
     assert item["memberId"] == "m1"

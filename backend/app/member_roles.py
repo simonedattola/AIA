@@ -39,7 +39,26 @@ def aia_code_of(doc: dict | None) -> str:
 
 
 def can_have_max_category(doc: dict | None) -> bool:
-    return aia_code_of(doc) in CATEGORY_ELIGIBLE_CODES
+    """
+    Categoria massima: AE/AA, oppure associati con memberRole arbitro/assistente
+    creati dalla sync senza codice AIA (role testuale «Arbitro»/«Assistente»).
+    Esclusi AB, AFR, OA, OT e altri codici non eleggibili.
+    """
+    if not doc:
+        return False
+    code = aia_code_of(doc)
+    if code in CATEGORY_ELIGIBLE_CODES:
+        return True
+    if code:
+        # Altro codice AIA esplicito (AB, AFR, OA, OT, …)
+        return False
+    mrole = (doc.get("memberRole") or "").strip().lower()
+    if mrole in ARBITRI_ROLES:
+        return True
+    if mrole:
+        return False
+    role_label = (doc.get("role") or "").strip().lower()
+    return role_label in {"arbitro", "assistente"}
 
 
 def infer_organigramma_kind(doc: dict) -> str:

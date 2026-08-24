@@ -138,7 +138,9 @@ async def _build_member_lookup(db) -> dict[str, dict]:
             "firstName": m.get("firstName", ""),
             "lastName": m.get("lastName", ""),
         }
-        for key in _name_match_keys(f"{m.get('firstName', '')} {m.get('lastName', '')}"):
+        for key in _name_match_keys(
+            f"{m.get('firstName', '')} {m.get('lastName', '')}"
+        ):
             lookup[key] = info
         mec = (m.get("meccanografico") or "").strip()
         if mec:
@@ -146,7 +148,9 @@ async def _build_member_lookup(db) -> dict[str, dict]:
     return lookup
 
 
-def _lookup_member_info(member_lookup: dict[str, dict], full_name: str) -> Optional[dict]:
+def _lookup_member_info(
+    member_lookup: dict[str, dict], full_name: str
+) -> Optional[dict]:
     for key in _name_match_keys(full_name):
         info = member_lookup.get(key)
         if info:
@@ -197,7 +201,12 @@ async def _resolve_member(
     )
     doc = member.model_dump()
     await db.members.insert_one(doc.copy())
-    info = {"id": member_id, "slug": slug, "firstName": first_name, "lastName": last_name}
+    info = {
+        "id": member_id,
+        "slug": slug,
+        "firstName": first_name,
+        "lastName": last_name,
+    }
     for key in _name_match_keys(f"{first_name} {last_name}"):
         member_lookup[key] = info
     logger.info("Created member %s %s (%s)", first_name, last_name, member_id)

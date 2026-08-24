@@ -179,7 +179,9 @@ async def dashboard(admin=Depends(require_admin)):
         for key in ("title", "bodyHtml", "createdAt", "publishedAt"):
             val = latest_comunicazione.get(key)
             if val is not None and not isinstance(val, (str, int, float)):
-                latest_comunicazione[key] = val.get("msg") if isinstance(val, dict) else ""
+                latest_comunicazione[key] = (
+                    val.get("msg") if isinstance(val, dict) else ""
+                )
 
     return {
         "articles": await db.articles.count_documents({}),
