@@ -184,6 +184,7 @@ Admin: `POST /api/admin/login` → paste token in **Authorize**. Portal: `POST /
 | Doc | Description |
 |-----|-------------|
 | [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md) | System diagram and data flows |
+| [`docs/CUSTOM_DOMAIN.md`](docs/CUSTOM_DOMAIN.md) | DNS Aruba + Vercel + Railway (www.aia-legnano.it) |
 | [`docs/DEPLOYMENT.md`](docs/DEPLOYMENT.md) | Development, staging, production |
 | [`docs/BACKUP.md`](docs/BACKUP.md) | Mongo + uploads backup / DR |
 | [`docs/CONTRIBUTING.md`](docs/CONTRIBUTING.md) | Local workflow and PR guidelines |
@@ -195,10 +196,14 @@ Admin: `POST /api/admin/login` → paste token in **Authorize**. Portal: `POST /
 
 | Surface | URL |
 |---------|-----|
-| Frontend (Vercel) | `https://aia-legnano.vercel.app` _(replace with custom domain when ready)_ |
-| Backend API | _TBD — custom infra; see [`docs/DEPLOYMENT.md`](docs/DEPLOYMENT.md)_ |
+| Frontend (produzione) | `https://www.aia-legnano.it` |
+| Frontend (preview Vercel) | `https://aia-virid.vercel.app` |
+| Backend API (Railway) | `https://aia-production-00a9.up.railway.app` |
+| API custom (opzionale) | `https://api.aia-legnano.it` |
 | Local frontend | `http://localhost:3000` |
 | Local API | `http://localhost:8000` |
+
+Cutover DNS: [`docs/CUSTOM_DOMAIN.md`](docs/CUSTOM_DOMAIN.md)
 
 ## Testing
 

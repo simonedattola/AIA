@@ -4,7 +4,7 @@ Config tipica (Resend + dominio aia-legnano.it verificato):
   RESEND_API_KEY=re_...
   SENDER_EMAIL=noreply@aia-legnano.it
   NOTIFY_EMAIL=legnano@aia-figc.it
-  PORTAL_FRONTEND_URL=https://aia-virid.vercel.app
+  PORTAL_FRONTEND_URL=https://www.aia-legnano.it
 """
 
 import os
@@ -17,7 +17,7 @@ logger = logging.getLogger(__name__)
 
 DEFAULT_SENDER = "noreply@aia-legnano.it"
 DEFAULT_NOTIFY = "legnano@aia-figc.it"
-DEFAULT_PORTAL_URL = "https://aia-virid.vercel.app"
+DEFAULT_PORTAL_URL = "https://www.aia-legnano.it"
 EMAIL_LOGO_PATH = "/brand/logo-aia-legnano-email.png"
 EMAIL_LOGO_PUBLIC_PATH = "/public/email-logo.png"
 EMAIL_LOGO_CID = "aia-legnano-logo"

@@ -4,6 +4,40 @@
   "outputDirectory": "build",
   "framework": null,
   "rewrites": [
-    { "source": "/(.*)", "destination": "/index.html" }
+    {
+      "source": "/api/:path*",
+      "destination": "https://aia-production-00a9.up.railway.app/api/:path*"
+    },
+    {
+      "source": "/docs",
+      "destination": "https://aia-production-00a9.up.railway.app/docs"
+    },
+    {
+      "source": "/docs/:path*",
+      "destination": "https://aia-production-00a9.up.railway.app/docs/:path*"
+    },
+    {
+      "source": "/redoc",
+      "destination": "https://aia-production-00a9.up.railway.app/redoc"
+    },
+    {
+      "source": "/openapi.json",
+      "destination": "https://aia-production-00a9.up.railway.app/openapi.json"
+    },
+    {
+      "source": "/(.*)",
+      "destination": "/index.html"
+    }
+  ],
+  "headers": [
+    {
+      "source": "/(.*)",
+      "headers": [
+        {
+          "key": "Strict-Transport-Security",
+          "value": "max-age=31536000; includeSubDomains; preload"
+        }
+      ]
+    }
   ]
 }

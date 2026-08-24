@@ -79,8 +79,8 @@ Point staging DNS at the host; set env to non-production secrets and a staging M
 ### Frontend — Vercel
 
 - Deployed from the GitHub repo (Vercel project linked to `frontend/` or monorepo root with Root Directory = `frontend`).
-- Env: `REACT_APP_BACKEND_URL` = public API origin (no trailing slash).
-- Example preview domain: `https://aia-legnano.vercel.app` (replace with the real Vercel / custom domain once configured).
+- Env: lascia `REACT_APP_BACKEND_URL` **vuoto** in Production se usi il proxy `/api` in `vercel.json` (consigliato con dominio custom). In alternativa: `REACT_APP_BACKEND_URL` = origine API pubblica (es. `https://api.aia-legnano.it`).
+- Dominio custom: `www.aia-legnano.it` + redirect apex — vedi [`docs/CUSTOM_DOMAIN.md`](CUSTOM_DOMAIN.md).
 
 Build command (CRA): `npm run build` (or `yarn build`). Output: `build/`.
 
@@ -143,9 +143,12 @@ Document the live API base URL here once provisioned (Task 7.2):
 
 | Slot | URL |
 |------|-----|
-| Production API | _TBD — set after Railway/Render/ECS go-live_ |
-| Staging API | _TBD_ |
+| Production frontend | `https://www.aia-legnano.it` (Vercel) |
+| Production API (Railway) | `https://aia-production-00a9.up.railway.app` → custom `https://api.aia-legnano.it` |
+| Staging / preview Vercel | `https://aia-virid.vercel.app` |
 | Local API | `http://localhost:8000` |
+
+Vedi [`docs/CUSTOM_DOMAIN.md`](CUSTOM_DOMAIN.md) per DNS Aruba e cutover.
 
 Update README **Production URLs** when these are known.
 

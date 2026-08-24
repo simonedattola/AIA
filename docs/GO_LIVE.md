@@ -57,7 +57,7 @@ Variabili su Railway (backend):
 | `RESEND_API_KEY` | chiave `re_…` da resend.com (obbligatoria per inviare) |
 | `SENDER_EMAIL` | `noreply@aia-legnano.it` (dominio verificato in Resend) |
 | `NOTIFY_EMAIL` | `legnano@aia-figc.it` |
-| `PORTAL_FRONTEND_URL` | `https://aia-virid.vercel.app` (link nelle mail agli associati) |
+| `PORTAL_FRONTEND_URL` | `https://www.aia-legnano.it` (link nelle mail agli associati) |
 
 Flussi:
 
@@ -70,9 +70,17 @@ Nel pannello Aruba mantieni MX e la casella `legnano@aia-figc.it` (o alias) per 
 
 ### 6) DNS cutover (quando API+frontend sono online)
 
-- `www` / `@` → Vercel
-- `api` (opzionale) → backend
+Guida dettagliata: **[`docs/CUSTOM_DOMAIN.md`](CUSTOM_DOMAIN.md)**.
+
+In sintesi:
+
+- `www` / `@` → **Vercel** (`www.aia-legnano.it`)
+- `api` (opzionale) → **Railway** (`api.aia-legnano.it`)
 - Mantieni mail MX Aruba invariati
+- Su Vercel: `REACT_APP_BACKEND_URL` **vuoto** (proxy `/api` in `frontend/vercel.json`)
+- Su Railway: `PORTAL_FRONTEND_URL=https://www.aia-legnano.it`, `CORS_ORIGINS` con il dominio reale
+
+Verifica post-cutover: `./scripts/verify_go_live.sh https://www.aia-legnano.it`
 
 ### 7) FTP Aruba da questo ambiente cloud
 

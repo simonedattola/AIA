@@ -11,6 +11,14 @@
 - Set `PORTAL_FRONTEND_URL` in production so member emails link to the live portal, not localhost.
 - See `docs/GO_LIVE.md` § Email and `backend/.env.example` for variable names.
 
+### Produzione / dominio www.aia-legnano.it
+
+- Guida cutover: `docs/CUSTOM_DOMAIN.md`
+- Frontend Vercel proxy `/api` → Railway (`frontend/vercel.json`). In Production Vercel lascia `REACT_APP_BACKEND_URL` **vuoto**.
+- Backend Railway attuale: `https://aia-production-00a9.up.railway.app`
+- Dopo DNS: `PORTAL_FRONTEND_URL=https://www.aia-legnano.it`, `CORS_ORIGINS` con dominio reale, `PUBLIC_API_URL=https://api.aia-legnano.it` (opzionale)
+- Smoke test: `./scripts/verify_go_live.sh https://www.aia-legnano.it`
+
 ### Standard commands
 
 - Backend: see `README.md` / `backend/requirements.txt` (`uvicorn` from `backend/`).
