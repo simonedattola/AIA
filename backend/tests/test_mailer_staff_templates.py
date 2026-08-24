@@ -29,7 +29,7 @@ class TestTestimonialStaffEmail:
             }
         )
         assert "Nuova testimonianza da approvare" in html
-        assert "Mario &lt;Rossi&gt;" in html
+        assert "Mario &lt;rossi&gt;" in html
         assert "Arbitro" in html
         assert "orgoglioso &amp; felice" in html
         assert "<script>" not in html
