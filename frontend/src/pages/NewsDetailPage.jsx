@@ -3,6 +3,7 @@ import { Link, useParams } from "react-router-dom";
 import { fetchArticle } from "../lib/api";
 import { formatDateIt } from "../lib/format";
 import { scrollPageToTop } from "../lib/scroll";
+import { useDocumentTitle } from "../components/RouteDocumentTitle";
 import { ArrowLeft, Calendar, User as UserIcon } from "lucide-react";
 import ArticleProse from "../components/ArticleProse";
 import { Button, Card, CardTitle, CtaTitle, Eyebrow, PageTitle, SectionTitle } from "@/design-system";
@@ -66,6 +67,8 @@ export default function NewsDetailPage() {
       el.setAttribute("tabindex", "-1");
     });
   }, [data?.article?.bodyHtml]);
+
+  useDocumentTitle(data?.article?.title || (error ? "Articolo non trovato" : "News"));
 
   if (error) {
     return (
