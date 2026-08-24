@@ -11,6 +11,8 @@ export default function DesignationsTable({
   season,
   onSeasonChange,
   emptyMessage = "Nessuna designazione per questa stagione.",
+  maxVisibleRows = null,
+  preferTableOnMobile = false,
 }) {
   return (
     <>
@@ -35,7 +37,12 @@ export default function DesignationsTable({
       {designations.length === 0 ? (
         <PortalEmptyState icon={SITE_ICONS.designations}>{emptyMessage}</PortalEmptyState>
       ) : (
-        <DesignationsDataTable designations={designations} tableTestId="portal-designations-table" />
+        <DesignationsDataTable
+          designations={designations}
+          tableTestId="portal-designations-table"
+          maxVisibleRows={maxVisibleRows}
+          preferTableOnMobile={preferTableOnMobile}
+        />
       )}
     </>
   );

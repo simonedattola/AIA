@@ -1,7 +1,7 @@
 import { Fragment } from "react";
 import { Link } from "react-router-dom";
 import { CalendarDays } from "lucide-react";
-import { formatDateIt } from "../../lib/format";
+import { formatDateIt, formatPersonName } from "../../lib/format";
 import { asAdminText } from "../../lib/safeText";
 import {
   displayDesignationGara,
@@ -9,7 +9,7 @@ import {
 } from "../../lib/designationsDisplay";
 
 function NominativoLink({ d }) {
-  const label = asAdminText(d.memberName, "—");
+  const label = formatPersonName(null, null, asAdminText(d.memberName, "—"));
   const slug = asAdminText(d.memberSlug).trim();
   if (!slug) {
     return <span className="text-slate-700">{label}</span>;

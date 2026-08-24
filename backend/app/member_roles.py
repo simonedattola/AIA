@@ -248,7 +248,17 @@ def normalize_member(doc: dict) -> dict:
 
 def public_member(doc: dict) -> dict:
     """Campi esposti sul sito pubblico (senza note private né codice meccanografico)."""
+    from .person_names import format_person_name, format_person_name_parts
+
     normalize_member(doc)
+    first, last = format_person_name_parts(doc.get("firstName"), doc.get("lastName"))
+    if first:
+        doc["firstName"] = first
+    if last:
+        doc["lastName"] = last
+    display = format_person_name(first, last)
+    if display:
+        doc["displayName"] = display
     out = {
         k: v
         for k, v in doc.items()

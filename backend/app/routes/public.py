@@ -33,6 +33,7 @@ from ..mailer import (
     render_contact_email,
 )
 from ..staff_email import staff_notify_email
+from ..person_names import format_person_name
 import os
 
 router = APIRouter(prefix="/api/public", tags=["public"])
@@ -183,9 +184,16 @@ async def list_events(upcoming: bool = False, limit: int = 50):
 
 @router.get("/officials")
 async def list_officials():
+    from ..person_names import format_person_name_parts
+
     db = get_db()
     items = await db.officials.find({}, {"_id": 0}).sort("sortOrder", 1).to_list(100)
     for item in items:
+        first, last = format_person_name_parts(item.get("firstName"), item.get("lastName"))
+        if first:
+            item["firstName"] = first
+        if last:
+            item["lastName"] = last
         resolve_media_fields(item)
     return items
 
@@ -588,13 +596,13 @@ async def get_gallery():
 @router.get("/instagram/widget")
 async def get_instagram_widget(limit: int = 12):
     """Profilo + griglia post per widget home (feed Instagram pubblico)."""
-    from ..instagram_widget import get_instagram_widget_data
+    from ..instagram_widget import build_instagram_widget_payload
     from ..instagram_gallery import parse_instagram_username
 
     db = get_db()
     settings = (
-        await db.settings.find_one(
-            {"_id": "site"},
+        await db.site_settings.find_one(
+            {"id": "site-settings"},
             {
                 "_id": 0,
                 "instagramUrl": 1,
@@ -645,7 +653,8 @@ async def submit_lead(payload: LeadCreate, background: BackgroundTasks):
         background.add_task(
             send_email,
             notify,
-            f"Nuova candidatura corso arbitri – {lead.firstName} {lead.lastName}",
+            f"Nuova candidatura corso arbitri – "
+            f"{format_person_name(lead.firstName, lead.lastName)}",
             render_lead_email(doc),
         )
     # confirmation to user
