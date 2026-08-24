@@ -29,8 +29,8 @@ from ..models import (
 from ..mailer import (
     send_email,
     render_lead_email,
+    render_lead_confirmation_email,
     render_contact_email,
-    contact_preference_label,
     notify_email,
 )
 import os
@@ -586,13 +586,10 @@ async def submit_lead(payload: LeadCreate, background: BackgroundTasks):
         send_email,
         lead.email,
         "Grazie! Abbiamo ricevuto la tua candidatura - AIA Legnano",
-        f"""<div style="font-family:Arial,sans-serif;max-width:600px;">
-                        <h2 style="color:#004587;">Ciao {lead.firstName},</h2>
-                        <p>grazie per aver inviato la tua candidatura al <strong>corso arbitri</strong>
-                        della Sezione AIA di Legnano.</p>
-                        <p>Un nostro referente ti contatterà entro pochi giorni tramite {contact_preference_label(lead.contactPreference)}.</p>
-                        <p style="margin-top:24px;color:#64748B;">A presto sui campi,<br/>
-                        <strong>Sezione AIA Legnano</strong></p></div>""",
+        render_lead_confirmation_email(
+            first_name=lead.firstName,
+            contact_preference=lead.contactPreference,
+        ),
     )
     return {"ok": True, "id": lead.id}
 

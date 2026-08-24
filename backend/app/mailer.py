@@ -15,6 +15,8 @@ logger = logging.getLogger(__name__)
 
 DEFAULT_SENDER = "noreply@aia-legnano.it"
 DEFAULT_NOTIFY = "legnano@aia-figc.it"
+DEFAULT_PORTAL_URL = "https://aia-virid.vercel.app"
+EMAIL_LOGO_PATH = "/brand/logo-aia-legnano-email.png"
 
 
 def sender_email() -> str:
@@ -24,6 +26,41 @@ def sender_email() -> str:
 def notify_email() -> str:
     """Casella sezione: contatti, candidature, commenti comunicazioni."""
     return (os.environ.get("NOTIFY_EMAIL") or DEFAULT_NOTIFY).strip()
+
+
+def portal_frontend_url() -> str:
+    return (os.environ.get("PORTAL_FRONTEND_URL") or DEFAULT_PORTAL_URL).rstrip("/")
+
+
+def email_logo_url() -> str:
+    """URL assoluto del logo sezione (servito dal frontend)."""
+    return f"{portal_frontend_url()}{EMAIL_LOGO_PATH}"
+
+
+def wrap_email(inner_html: str) -> str:
+    """Layout comune: logo sezione + contenuto + footer."""
+    logo = email_logo_url()
+    home = portal_frontend_url()
+    return f"""
+    <div style="font-family:Arial,Helvetica,sans-serif;max-width:600px;margin:0 auto;background:#ffffff;">
+      <div style="text-align:center;padding:22px 16px 14px;background:#004587;">
+        <a href="{home}" style="text-decoration:none;">
+          <img src="{logo}" alt="AIA Legnano" width="80" height="80"
+               style="display:inline-block;width:80px;height:80px;border:0;border-radius:10px;background:#ffffff;padding:6px;box-sizing:border-box;" />
+        </a>
+        <div style="color:#D4AF37;font-size:12px;font-weight:bold;letter-spacing:0.08em;margin-top:10px;text-transform:uppercase;">
+          Sezione AIA Legnano
+        </div>
+      </div>
+      <div style="padding:22px 18px 8px;color:#111827;">
+        {inner_html}
+      </div>
+      <div style="padding:14px 18px 22px;border-top:1px solid #E2E8F0;color:#94A3B8;font-size:11px;text-align:center;line-height:1.5;">
+        Associazione Italiana Arbitri — Sezione di Legnano<br/>
+        <a href="{home}" style="color:#004587;text-decoration:none;">{home.replace("https://", "").replace("http://", "")}</a>
+      </div>
+    </div>
+    """
 
 
 async def send_email(
@@ -106,9 +143,8 @@ def contact_preference_label(pref: str) -> str:
 
 def render_lead_email(lead: dict) -> str:
     pref = contact_preference_label(lead.get("contactPreference", "email"))
-    return f"""
-    <div style="font-family:Arial,sans-serif;max-width:600px;margin:0 auto;">
-      <h2 style="color:#004587;border-bottom:3px solid #D4AF37;padding-bottom:8px;">
+    return wrap_email(f"""
+      <h2 style="color:#004587;border-bottom:3px solid #D4AF37;padding-bottom:8px;margin-top:0;">
         Nuova candidatura - Corso Arbitri
       </h2>
       <table cellpadding="8" style="width:100%;border-collapse:collapse;">
@@ -123,14 +159,24 @@ def render_lead_email(lead: dict) -> str:
       <p style="color:#64748B;font-size:12px;margin-top:24px;">
         Inviato dal sito ufficiale AIA Legnano — Sezione Associazione Italiana Arbitri
       </p>
-    </div>
-    """
+        """)
+
+
+def render_lead_confirmation_email(*, first_name: str, contact_preference: str) -> str:
+    pref = contact_preference_label(contact_preference)
+    return wrap_email(f"""
+      <h2 style="color:#004587;margin-top:0;">Ciao {first_name},</h2>
+      <p>grazie per aver inviato la tua candidatura al <strong>corso arbitri</strong>
+      della Sezione AIA di Legnano.</p>
+      <p>Un nostro referente ti contatterà entro pochi giorni tramite {pref}.</p>
+      <p style="margin-top:24px;color:#64748B;">A presto sui campi,<br/>
+      <strong>Sezione AIA Legnano</strong></p>
+        """)
 
 
 def render_contact_email(msg: dict) -> str:
-    return f"""
-    <div style="font-family:Arial,sans-serif;max-width:600px;margin:0 auto;">
-      <h2 style="color:#004587;border-bottom:3px solid #D4AF37;padding-bottom:8px;">
+    return wrap_email(f"""
+      <h2 style="color:#004587;border-bottom:3px solid #D4AF37;padding-bottom:8px;margin-top:0;">
         Nuovo messaggio dal sito
       </h2>
       <p><strong>Nome:</strong> {msg.get('name','')}</p>
@@ -138,8 +184,7 @@ def render_contact_email(msg: dict) -> str:
       <p><strong>Oggetto:</strong> {msg.get('subject','-')}</p>
       <hr/>
       <p style="white-space:pre-line;">{msg.get('body','')}</p>
-    </div>
-    """
+        """)
 
 
 def _format_event_datetime_it(event: dict) -> str:
@@ -187,9 +232,8 @@ def render_event_reminder_email(event: dict, member: dict, lead_hours: int) -> s
         if descrizione
         else ""
     )
-    return f"""
-    <div style="font-family:Arial,sans-serif;max-width:600px;margin:0 auto;">
-      <h2 style="color:#004587;border-bottom:3px solid #D4AF37;padding-bottom:8px;">
+    return wrap_email(f"""
+      <h2 style="color:#004587;border-bottom:3px solid #D4AF37;padding-bottom:8px;margin-top:0;">
         Promemoria evento — AIA Legnano
       </h2>
       <p style="color:#334155;">Ciao {nome},</p>
@@ -204,8 +248,7 @@ def render_event_reminder_email(event: dict, member: dict, lead_hours: int) -> s
       <p style="color:#64748B;font-size:12px;margin-top:24px;">
         Promemoria inviato perché hai attivato le notifiche eventi nel tuo profilo area associati.
       </p>
-    </div>
-    """
+        """)
 
 
 def render_event_created_email(event: dict, member: dict, *, link: str) -> str:
@@ -224,9 +267,8 @@ def render_event_created_email(event: dict, member: dict, *, link: str) -> str:
         if descrizione
         else ""
     )
-    return f"""
-    <div style="font-family:Arial,sans-serif;max-width:600px;margin:0 auto;">
-      <h2 style="color:#004587;border-bottom:3px solid #D4AF37;padding-bottom:8px;">
+    return wrap_email(f"""
+      <h2 style="color:#004587;border-bottom:3px solid #D4AF37;padding-bottom:8px;margin-top:0;">
         Nuovo evento — AIA Legnano
       </h2>
       <p style="color:#334155;">Ciao {nome},</p>
@@ -247,22 +289,25 @@ def render_event_created_email(event: dict, member: dict, *, link: str) -> str:
         Email inviata perché hai attivato le notifiche eventi nel tuo profilo area associati.
         Riceverai anche un promemoria prima dell'appuntamento, se configurato.
       </p>
-    </div>
-    """
+        """)
 
 
 def render_comunicazione_email(
     *, title: str, body_preview: str, member_name: str, link: str
 ) -> str:
-    return f"""
-    <div style="font-family:Arial,sans-serif;max-width:600px;margin:0 auto;">
-      <h2 style="color:#004587;border-bottom:3px solid #D4AF37;padding-bottom:8px;">
+    preview_html = (
+        f'<p style="color:#475569;white-space:pre-line;">{body_preview}</p>'
+        if body_preview
+        else ""
+    )
+    return wrap_email(f"""
+      <h2 style="color:#004587;border-bottom:3px solid #D4AF37;padding-bottom:8px;margin-top:0;">
         Nuova comunicazione — AIA Legnano
       </h2>
       <p style="color:#334155;">Ciao {member_name},</p>
       <p style="color:#334155;">È stata pubblicata una nuova comunicazione riservata agli associati:</p>
       <p style="color:#004587;font-size:18px;font-weight:bold;margin:16px 0;">{title}</p>
-      {f'<p style="color:#475569;white-space:pre-line;">{body_preview}</p>' if body_preview else ''}
+      {preview_html}
       <p style="margin-top:20px;">
         <a href="{link}" style="background:#004587;color:#fff;padding:10px 18px;text-decoration:none;border-radius:6px;display:inline-block;">
           Apri area associati
@@ -271,8 +316,7 @@ def render_comunicazione_email(
       <p style="color:#64748B;font-size:12px;margin-top:24px;">
         Email inviata perché hai attivato le notifiche per le comunicazioni interne.
       </p>
-    </div>
-    """
+        """)
 
 
 def render_message_email(
@@ -283,9 +327,8 @@ def render_message_email(
     link: str,
     context: str,
 ) -> str:
-    return f"""
-    <div style="font-family:Arial,sans-serif;max-width:600px;margin:0 auto;">
-      <h2 style="color:#004587;border-bottom:3px solid #D4AF37;padding-bottom:8px;">
+    return wrap_email(f"""
+      <h2 style="color:#004587;border-bottom:3px solid #D4AF37;padding-bottom:8px;margin-top:0;">
         Nuovo messaggio — AIA Legnano
       </h2>
       <p style="color:#334155;">Ciao {member_name},</p>
@@ -301,8 +344,7 @@ def render_message_email(
       <p style="color:#64748B;font-size:12px;margin-top:24px;">
         Email inviata perché hai attivato le notifiche per i messaggi.
       </p>
-    </div>
-    """
+        """)
 
 
 def render_comunicazione_reply_staff_email(
@@ -312,9 +354,8 @@ def render_comunicazione_reply_staff_email(
     reply_text: str,
     link: str,
 ) -> str:
-    return f"""
-    <div style="font-family:Arial,sans-serif;max-width:600px;margin:0 auto;">
-      <h2 style="color:#004587;border-bottom:3px solid #D4AF37;padding-bottom:8px;">
+    return wrap_email(f"""
+      <h2 style="color:#004587;border-bottom:3px solid #D4AF37;padding-bottom:8px;margin-top:0;">
         Nuovo commento su comunicazione — AIA Legnano
       </h2>
       <p style="color:#334155;">
@@ -327,8 +368,7 @@ def render_comunicazione_reply_staff_email(
           Apri area associati
         </a>
       </p>
-    </div>
-    """
+        """)
 
 
 def render_comunicazione_reply_member_email(
@@ -339,9 +379,8 @@ def render_comunicazione_reply_member_email(
     reply_text: str,
     link: str,
 ) -> str:
-    return f"""
-    <div style="font-family:Arial,sans-serif;max-width:600px;margin:0 auto;">
-      <h2 style="color:#004587;border-bottom:3px solid #D4AF37;padding-bottom:8px;">
+    return wrap_email(f"""
+      <h2 style="color:#004587;border-bottom:3px solid #D4AF37;padding-bottom:8px;margin-top:0;">
         Nuovo commento — AIA Legnano
       </h2>
       <p style="color:#334155;">Ciao {member_name},</p>
@@ -358,5 +397,4 @@ def render_comunicazione_reply_member_email(
       <p style="color:#64748B;font-size:12px;margin-top:24px;">
         Email inviata perché hai attivato le notifiche per le comunicazioni interne.
       </p>
-    </div>
-    """
+        """)
