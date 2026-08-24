@@ -150,7 +150,7 @@ export function buildIcsContent(event) {
 export function icsFilename(event) {
   const title = String(event.titolo || "evento")
     .trim()
-    .replace(/[^\w\-]+/g, "-")
+    .replace(/[^\w-]+/g, "-")
     .replace(/-{2,}/g, "-")
     .replace(/^-|-$/g, "")
     .slice(0, 40) || "evento";
