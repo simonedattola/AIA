@@ -1,12 +1,19 @@
-import { X, MapPin, CalendarDays } from "lucide-react";
+import { X, MapPin, CalendarDays, CalendarPlus, Download } from "lucide-react";
 import { formatEventDateTimeIt } from "../../lib/format";
 import { TYPE_LABEL, TYPE_COLOR } from "../../lib/eventsDisplay";
 import { AttachmentList } from "../AttachmentList";
+import { downloadEventIcs, googleCalendarUrl } from "../../lib/eventCalendarLinks";
 
-export default function EventDetailModal({ event, onClose, showAttachments = false }) {
+export default function EventDetailModal({
+  event,
+  onClose,
+  showAttachments = false,
+  showCalendarActions = true,
+}) {
   if (!event) return null;
 
   const tipoKey = (event.tipo || "").toLowerCase();
+  const gcal = showCalendarActions ? googleCalendarUrl(event) : "";
 
   return (
     <div
@@ -46,7 +53,7 @@ export default function EventDetailModal({ event, onClose, showAttachments = fal
         <div className="px-6 py-5 space-y-4">
           <p className="flex items-center gap-2 text-sm text-slate-600">
             <CalendarDays className="h-4 w-4 text-gold-500 shrink-0" />
-            {formatEventDateTimeIt(event.date, event.orario)}
+            {formatEventDateTimeIt(event.date, event.orario, event.orarioFine)}
           </p>
           {event.luogo && (
             <p className="flex items-center gap-2 text-sm text-slate-600">
@@ -58,6 +65,40 @@ export default function EventDetailModal({ event, onClose, showAttachments = fal
             <p className="text-slate-700 text-sm leading-relaxed whitespace-pre-line">{event.descrizione}</p>
           )}
           {showAttachments && <AttachmentList attachments={event.attachments} />}
+
+          {showCalendarActions && (gcal || event.date) && (
+            <div
+              className="pt-2 border-t border-slate-100 space-y-2"
+              data-testid="event-calendar-actions"
+            >
+              <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">
+                Aggiungi al tuo calendario
+              </p>
+              <div className="flex flex-wrap gap-2">
+                {gcal && (
+                  <a
+                    href={gcal}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="inline-flex items-center gap-2 px-3 py-2 rounded-md bg-navy-700 text-white text-sm font-medium hover:bg-navy-800"
+                    data-testid="event-add-google-calendar"
+                  >
+                    <CalendarPlus className="h-4 w-4" />
+                    Google Calendar
+                  </a>
+                )}
+                <button
+                  type="button"
+                  onClick={() => downloadEventIcs(event)}
+                  className="inline-flex items-center gap-2 px-3 py-2 rounded-md border border-slate-300 text-navy-700 text-sm font-medium hover:border-navy-500 hover:bg-slate-50"
+                  data-testid="event-download-ics"
+                >
+                  <Download className="h-4 w-4" />
+                  Apple / Outlook (.ics)
+                </button>
+              </div>
+            </div>
+          )}
         </div>
       </div>
     </div>

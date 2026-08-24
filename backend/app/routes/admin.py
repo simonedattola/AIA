@@ -521,12 +521,16 @@ async def admin_list_events(admin=Depends(require_admin)):
 @router.post("/events")
 async def admin_create_event(payload: Event, admin=Depends(require_admin)):
     db = get_db()
-    from ..event_reminders import normalize_event_time
+    from ..event_reminders import normalize_event_time, normalize_optional_event_time
     from ..event_categories import ensure_event_type_exists
 
     doc = payload.model_dump()
     doc["orario"] = normalize_event_time(doc.get("orario"))
+    doc["orarioFine"] = normalize_optional_event_time(doc.get("orarioFine"))
     doc["tipo"] = await ensure_event_type_exists(db, doc.get("tipo") or "Riunione")
+    from ..member_roles import normalize_role_groups
+
+    doc["invitedRoleGroups"] = normalize_role_groups(doc.get("invitedRoleGroups"))
     await db.events.insert_one(doc.copy())
     from ..event_reminders import schedule_event_created_notifications
 
@@ -539,7 +543,7 @@ async def admin_update_event(
     event_id: str, payload: Event, admin=Depends(require_admin)
 ):
     db = get_db()
-    from ..event_reminders import normalize_event_time
+    from ..event_reminders import normalize_event_time, normalize_optional_event_time
     from ..event_categories import ensure_event_type_exists
 
     existing = await db.events.find_one(
@@ -551,7 +555,11 @@ async def admin_update_event(
     payload.id = event_id
     doc = payload.model_dump()
     doc["orario"] = normalize_event_time(doc.get("orario"))
+    doc["orarioFine"] = normalize_optional_event_time(doc.get("orarioFine"))
     doc["tipo"] = await ensure_event_type_exists(db, doc.get("tipo") or "Riunione")
+    from ..member_roles import normalize_role_groups
+
+    doc["invitedRoleGroups"] = normalize_role_groups(doc.get("invitedRoleGroups"))
     doc["utilityMaterial"] = existing.get("utilityMaterial") or []
     await db.events.update_one({"id": event_id}, {"$set": doc})
     return doc

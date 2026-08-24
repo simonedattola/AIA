@@ -11,6 +11,7 @@ import ComunicazioneLetturePanel from "../../components/admin/ComunicazioneLettu
 import { formatDateIt } from "../../lib/format";
 import { AttachmentEditor } from "../../components/admin/AttachmentEditor";
 import { MemberMultiSelect } from "../../components/admin/MemberSelect";
+import { RoleGroupPicker, roleGroupsSummary } from "../../components/admin/RoleGroupPicker";
 import { AttachmentList } from "../../components/AttachmentList";
 import { AdminEmptyState, AdminFormModal, AdminPageHeader, adminInputCls } from "../../components/admin/admin-ui";
 import { Button } from "@/design-system";
@@ -18,8 +19,10 @@ import { Button } from "@/design-system";
 const emptyForm = () => ({
   title: "",
   bodyHtml: "",
+  recipientMode: "all",
   allMembers: true,
   memberIds: [],
+  roleGroups: [],
   allowReplies: true,
   attachments: [],
 });
@@ -57,15 +60,59 @@ function ComunicazioneForm({ form, setForm }) {
       </label>
       <label className="flex items-center gap-2">
         <input
-          type="checkbox"
-          checked={form.allMembers}
-          onChange={(e) => setForm({ ...form, allMembers: e.target.checked })}
+          type="radio"
+          name="recipientMode"
+          checked={form.recipientMode === "all"}
+          onChange={() => setForm({
+            ...form,
+            recipientMode: "all",
+            allMembers: true,
+            memberIds: [],
+            roleGroups: [],
+          })}
         />
         <span className="text-sm flex items-center gap-1">
           <Users className="h-4 w-4" /> Tutti gli associati con profilo
         </span>
       </label>
-      {!form.allMembers && (
+      <label className="flex items-center gap-2">
+        <input
+          type="radio"
+          name="recipientMode"
+          checked={form.recipientMode === "roles"}
+          onChange={() => setForm({
+            ...form,
+            recipientMode: "roles",
+            allMembers: false,
+            memberIds: [],
+          })}
+          data-testid="comunicazione-recipient-roles"
+        />
+        <span className="text-sm">Filtra per ruolo / qualifica</span>
+      </label>
+      {form.recipientMode === "roles" && (
+        <RoleGroupPicker
+          value={form.roleGroups}
+          onChange={(roleGroups) => setForm({ ...form, roleGroups })}
+          label="Destinatari per gruppo"
+          hint="AE, AA, AB, AFR, OA, OT, CDS, Collaboratori, ORS"
+        />
+      )}
+      <label className="flex items-center gap-2">
+        <input
+          type="radio"
+          name="recipientMode"
+          checked={form.recipientMode === "manual"}
+          onChange={() => setForm({
+            ...form,
+            recipientMode: "manual",
+            allMembers: false,
+            roleGroups: [],
+          })}
+        />
+        <span className="text-sm">Selezione manuale associati</span>
+      </label>
+      {form.recipientMode === "manual" && (
         <MemberMultiSelect
           value={form.memberIds}
           onChange={(memberIds) => setForm({ ...form, memberIds })}
@@ -107,14 +154,21 @@ export default function AdminComunicazioniPage() {
 
   const submit = async () => {
     if (!form.title.trim() || !form.bodyHtml.trim()) return alert("Titolo e testo obbligatori");
+    if (form.recipientMode === "manual" && !form.memberIds.length) {
+      return alert("Seleziona almeno un destinatario o usa «Tutti» / filtri per ruolo.");
+    }
+    if (form.recipientMode === "roles" && !form.roleGroups.length) {
+      return alert("Seleziona almeno un gruppo ruolo.");
+    }
     setSending(true);
     setMsg("");
     try {
       const res = await adminCreaComunicazione({
         title: form.title,
         bodyHtml: form.bodyHtml,
-        allMembers: form.allMembers,
-        memberIds: form.allMembers ? [] : form.memberIds,
+        allMembers: form.recipientMode === "all",
+        memberIds: form.recipientMode === "manual" ? form.memberIds : [],
+        roleGroups: form.recipientMode === "roles" ? form.roleGroups : [],
         allowReplies: form.allowReplies,
         attachments: form.attachments,
       });
@@ -174,7 +228,10 @@ export default function AdminComunicazioniPage() {
                 <h3 className="font-semibold text-navy-800">{c.title}</h3>
                 <p className="text-xs text-slate-500 mt-1">
                   {formatDateIt(c.createdAt?.slice(0, 10))} ·{" "}
-                  {c.allMembers ? "Tutti" : `${(c.memberIds || []).length} destinatari`} ·{" "}
+                  {c.allMembers
+                    ? "Tutti"
+                    : roleGroupsSummary(c.roleGroups)
+                      || `${(c.memberIds || []).length} destinatari`} ·{" "}
                   {c.letteCount ?? 0}/{c.destinatariCount ?? 0} hanno aperto ·{" "}
                   {c.risposteCount || 0} risposte
                 </p>

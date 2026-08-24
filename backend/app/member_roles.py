@@ -10,6 +10,9 @@ CHI_SIAMO_ROLES = frozenset({"consiglio_direttivo"})
 OBSERVER_TYPES = ("oa", "ot")
 ORGANIGRAMMA_KINDS = ("cds", "collaboratore", "ors")
 AIA_CODES = ("AE", "AA", "AB", "AFR", "OA", "OT")
+ROLE_GROUP_AIA = AIA_CODES
+ROLE_GROUP_ORG = ORGANIGRAMMA_KINDS
+VALID_ROLE_GROUPS = ROLE_GROUP_AIA + ROLE_GROUP_ORG
 AIA_CODE_TO_MEMBER_ROLE = {
     "AE": "arbitro",
     "AA": "assistente",
@@ -308,6 +311,82 @@ def legacy_arbitri_query() -> dict:
 
 def legacy_chi_siamo_query() -> dict:
     return chi_siamo_query()
+
+
+def normalize_role_groups(groups: list[str] | None) -> list[str]:
+    """Filtra e deduplica codici ruolo/gruppo (AE, cds, …)."""
+    out: list[str] = []
+    seen: set[str] = set()
+    for raw in groups or []:
+        g = (raw or "").strip()
+        if not g:
+            continue
+        if g.upper() in ROLE_GROUP_AIA:
+            key = g.upper()
+        elif g.lower() in ROLE_GROUP_ORG:
+            key = g.lower()
+        else:
+            continue
+        if key not in seen:
+            seen.add(key)
+            out.append(key)
+    return out
+
+
+def member_matches_role_group(doc: dict | None, group: str) -> bool:
+    if not doc:
+        return False
+    normalize_member(doc)
+    code = aia_code_of(doc)
+    org = (doc.get("organigrammaKind") or "").strip().lower()
+    g = (group or "").strip()
+    if g.upper() in ROLE_GROUP_AIA:
+        return code == g.upper()
+    if g.lower() in ROLE_GROUP_ORG:
+        return org == g.lower()
+    return False
+
+
+def member_matches_any_role_group(doc: dict | None, groups: list[str] | None) -> bool:
+    normalized = normalize_role_groups(groups)
+    if not normalized:
+        return False
+    return any(member_matches_role_group(doc, g) for g in normalized)
+
+
+def role_groups_member_query(role_groups: list[str] | None) -> dict:
+    """Query MongoDB: associati con profilo che appartengono ad almeno un gruppo."""
+    groups = normalize_role_groups(role_groups)
+    base: dict = {
+        "memberRole": {"$in": list(MEMBER_ROLES)},
+        "slug": {"$exists": True, "$ne": ""},
+    }
+    if not groups:
+        return {**base, "id": {"$exists": False}}
+    or_clauses: list[dict] = []
+    aia_codes = [g for g in groups if g in ROLE_GROUP_AIA]
+    org_kinds = [g for g in groups if g in ROLE_GROUP_ORG]
+    if aia_codes:
+        or_clauses.append({"role": {"$in": aia_codes}})
+    if org_kinds:
+        or_clauses.append({"organigrammaKind": {"$in": org_kinds}})
+    if len(or_clauses) == 1:
+        return {**base, **or_clauses[0]}
+    return {**base, "$or": or_clauses}
+
+
+def comunicazione_visibility_or_clauses(member_id: str, member: dict | None) -> list[dict]:
+    """Clausole $or per comunicazioni visibili a un associato."""
+    clauses: list[dict] = [{"allMembers": True}, {"memberIds": member_id}]
+    if member:
+        normalize_member(member)
+        code = aia_code_of(member)
+        org = (member.get("organigrammaKind") or "").strip().lower()
+        if code:
+            clauses.append({"roleGroups": code})
+        if org:
+            clauses.append({"roleGroups": org})
+    return clauses
 
 
 def member_role_label(

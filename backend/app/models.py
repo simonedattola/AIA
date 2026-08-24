@@ -171,13 +171,17 @@ class Event(BaseModel):
     id: str = Field(default_factory=_id)
     date: str  # YYYY-MM-DD
     orario: str = "09:00"  # HH:MM (fuso Europe/Rome)
+    orarioFine: str = ""  # HH:MM opzionale; vuoto = durata default (2h) in calendario
     titolo: str
     descrizione: str = ""
     luogo: str = ""
     tipo: str = "Riunione"
     invitedMemberIds: List[str] = Field(
         default_factory=list
-    )  # vuoto = tutti gli associati
+    )  # vuoto = tutti (se anche invitedRoleGroups vuoto)
+    invitedRoleGroups: List[str] = Field(
+        default_factory=list
+    )  # AE, AA, … cds, collaboratore, ors; vuoto = nessun filtro ruolo
     portalOnly: bool = False  # True = solo area associati, non sul sito pubblico
     attachments: List[ContentAttachment] = Field(default_factory=list)
     utilityMaterial: List[ContentAttachment] = Field(
@@ -533,6 +537,9 @@ class ComunicazioneInternaCreate(BaseModel):
     testo: str = ""
     allMembers: bool = False
     memberIds: List[str] = Field(default_factory=list)
+    roleGroups: List[str] = Field(
+        default_factory=list
+    )  # AE, AA, … cds, collaboratore, ors
     allowReplies: bool = True
     attachments: List[ContentAttachment] = Field(default_factory=list)
 

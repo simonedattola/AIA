@@ -15,6 +15,10 @@ logger = logging.getLogger(__name__)
 
 DEFAULT_SENDER = "noreply@aia-legnano.it"
 DEFAULT_NOTIFY = "legnano@aia-figc.it"
+DEFAULT_PORTAL_URL = "https://aia-virid.vercel.app"
+EMAIL_LOGO_PATH = "/brand/logo-aia-legnano-email.png"
+EMAIL_LOGO_CID = "aia-legnano-logo"
+EMAIL_LOGO_FILENAME = "logo-aia-legnano-email.png"
 
 
 def sender_email() -> str:
@@ -26,7 +30,88 @@ def notify_email() -> str:
     return (os.environ.get("NOTIFY_EMAIL") or DEFAULT_NOTIFY).strip()
 
 
-async def send_email(to: str, subject: str, html: str) -> bool:
+def portal_frontend_url() -> str:
+    return (os.environ.get("PORTAL_FRONTEND_URL") or DEFAULT_PORTAL_URL).rstrip("/")
+
+
+def email_logo_url() -> str:
+    """URL assoluto del logo sezione (fallback se il client non supporta CID)."""
+    return f"{portal_frontend_url()}{EMAIL_LOGO_PATH}"
+
+
+def _email_logo_file_path():
+    from pathlib import Path
+
+    here = Path(__file__).resolve()
+    candidates = [
+        here.parents[2] / "frontend" / "public" / "brand" / EMAIL_LOGO_FILENAME,
+        here.parents[1] / "static" / EMAIL_LOGO_FILENAME,
+        Path("/workspace/frontend/public/brand") / EMAIL_LOGO_FILENAME,
+    ]
+    for path in candidates:
+        if path.is_file():
+            return path
+    return None
+
+
+def email_logo_bytes() -> bytes | None:
+    path = _email_logo_file_path()
+    if not path:
+        return None
+    try:
+        return path.read_bytes()
+    except OSError:
+        return None
+
+
+def email_logo_attachment() -> dict | None:
+    raw = email_logo_bytes()
+    if not raw:
+        return None
+    return {
+        "filename": EMAIL_LOGO_FILENAME,
+        "content": raw,
+        "content_id": EMAIL_LOGO_CID,
+        "content_type": "image/png",
+    }
+
+
+def wrap_email(inner_html: str) -> str:
+    """Layout comune: logo sezione + contenuto + footer."""
+    logo_src = f"cid:{EMAIL_LOGO_CID}"
+    logo_fallback = email_logo_url()
+    home = portal_frontend_url()
+    return f"""
+    <div style="font-family:Arial,Helvetica,sans-serif;max-width:600px;margin:0 auto;background:#ffffff;">
+      <div style="text-align:center;padding:22px 16px 14px;background:#004587;">
+        <a href="{home}" style="text-decoration:none;">
+          <img src="{logo_src}" alt="AIA Legnano" width="80" height="80"
+               style="display:inline-block;width:80px;height:80px;border:0;border-radius:10px;background:#ffffff;padding:6px;box-sizing:border-box;" />
+        </a>
+        <!-- fallback URL per client che ignorano CID: {logo_fallback} -->
+        <div style="color:#D4AF37;font-size:12px;font-weight:bold;letter-spacing:0.08em;margin-top:10px;text-transform:uppercase;">
+          Sezione AIA Legnano
+        </div>
+      </div>
+      <div style="padding:22px 18px 8px;color:#111827;">
+        {inner_html}
+      </div>
+      <div style="padding:14px 18px 22px;border-top:1px solid #E2E8F0;color:#94A3B8;font-size:11px;text-align:center;line-height:1.5;">
+        Associazione Italiana Arbitri — Sezione di Legnano<br/>
+        <a href="{home}" style="color:#004587;text-decoration:none;">{home.replace("https://", "").replace("http://", "")}</a>
+      </div>
+    </div>
+    """
+
+
+async def send_email(
+    to: str,
+    subject: str,
+    html: str,
+    *,
+    attachments: list[dict] | None = None,
+) -> bool:
+    """Invia email via Resend. attachments: [{filename, content}] con content bytes o str."""
     api_key = os.environ.get("RESEND_API_KEY", "").strip()
     sender = sender_email()
     if not api_key or not to:
@@ -35,15 +120,46 @@ async def send_email(to: str, subject: str, html: str) -> bool:
         )
         return False
     try:
+        import base64
         import resend
 
         resend.api_key = api_key
-        params = {
+        params: dict = {
             "from": sender,
             "to": [to],
             "subject": subject,
             "html": html,
         }
+        merged: list[dict] = []
+        logo = email_logo_attachment()
+        if logo and f"cid:{EMAIL_LOGO_CID}" in (html or ""):
+            merged.append(logo)
+        if attachments:
+            merged.extend(attachments)
+        if merged:
+            packed = []
+            for att in merged:
+                name = (att.get("filename") or "allegato.bin").strip()
+                raw = att.get("content")
+                if raw is None:
+                    continue
+                if isinstance(raw, str):
+                    raw_bytes = raw.encode("utf-8")
+                else:
+                    raw_bytes = bytes(raw)
+                item = {
+                    "filename": name,
+                    "content": base64.b64encode(raw_bytes).decode("ascii"),
+                }
+                cid = (att.get("content_id") or "").strip()
+                if cid:
+                    item["content_id"] = cid
+                ctype = (att.get("content_type") or "").strip()
+                if ctype:
+                    item["content_type"] = ctype
+                packed.append(item)
+            if packed:
+                params["attachments"] = packed
         result = await asyncio.to_thread(resend.Emails.send, params)
         logger.info(
             "[mailer] Email sent id=%s to=%s from=%s", result.get("id"), to, sender
@@ -54,15 +170,33 @@ async def send_email(to: str, subject: str, html: str) -> bool:
         return False
 
 
+def _event_calendar_cta_html(event: dict) -> str:
+    """Pulsanti Google Calendar + nota Apple (.ics allegato)."""
+    from .event_ics import google_calendar_url
+
+    gcal = google_calendar_url(event) or ""
+    buttons = []
+    if gcal:
+        buttons.append(
+            f'<a href="{gcal}" style="background:#004587;color:#fff;padding:10px 18px;'
+            f'text-decoration:none;border-radius:6px;display:inline-block;margin:4px 8px 4px 0;">'
+            f"Aggiungi a Google Calendar</a>"
+        )
+    buttons.append(
+        '<span style="display:inline-block;padding:10px 0;color:#475569;font-size:13px;">'
+        "Su iPhone/Mac: apri l&apos;allegato <strong>.ics</strong> per aggiungerlo a Calendario.</span>"
+    )
+    return f'<p style="margin-top:20px;">{"".join(buttons)}</p>'
+
+
 def contact_preference_label(pref: str) -> str:
     return "telefono" if pref == "phone" else "email"
 
 
 def render_lead_email(lead: dict) -> str:
     pref = contact_preference_label(lead.get("contactPreference", "email"))
-    return f"""
-    <div style="font-family:Arial,sans-serif;max-width:600px;margin:0 auto;">
-      <h2 style="color:#004587;border-bottom:3px solid #D4AF37;padding-bottom:8px;">
+    return wrap_email(f"""
+      <h2 style="color:#004587;border-bottom:3px solid #D4AF37;padding-bottom:8px;margin-top:0;">
         Nuova candidatura - Corso Arbitri
       </h2>
       <table cellpadding="8" style="width:100%;border-collapse:collapse;">
@@ -77,14 +211,24 @@ def render_lead_email(lead: dict) -> str:
       <p style="color:#64748B;font-size:12px;margin-top:24px;">
         Inviato dal sito ufficiale AIA Legnano — Sezione Associazione Italiana Arbitri
       </p>
-    </div>
-    """
+        """)
+
+
+def render_lead_confirmation_email(*, first_name: str, contact_preference: str) -> str:
+    pref = contact_preference_label(contact_preference)
+    return wrap_email(f"""
+      <h2 style="color:#004587;margin-top:0;">Ciao {first_name},</h2>
+      <p>grazie per aver inviato la tua candidatura al <strong>corso arbitri</strong>
+      della Sezione AIA di Legnano.</p>
+      <p>Un nostro referente ti contatterà entro pochi giorni tramite {pref}.</p>
+      <p style="margin-top:24px;color:#64748B;">A presto sui campi,<br/>
+      <strong>Sezione AIA Legnano</strong></p>
+        """)
 
 
 def render_contact_email(msg: dict) -> str:
-    return f"""
-    <div style="font-family:Arial,sans-serif;max-width:600px;margin:0 auto;">
-      <h2 style="color:#004587;border-bottom:3px solid #D4AF37;padding-bottom:8px;">
+    return wrap_email(f"""
+      <h2 style="color:#004587;border-bottom:3px solid #D4AF37;padding-bottom:8px;margin-top:0;">
         Nuovo messaggio dal sito
       </h2>
       <p><strong>Nome:</strong> {msg.get('name','')}</p>
@@ -92,20 +236,25 @@ def render_contact_email(msg: dict) -> str:
       <p><strong>Oggetto:</strong> {msg.get('subject','-')}</p>
       <hr/>
       <p style="white-space:pre-line;">{msg.get('body','')}</p>
-    </div>
-    """
+        """)
 
 
 def _format_event_datetime_it(event: dict) -> str:
-    from .event_reminders import normalize_event_time
+    from .event_reminders import normalize_event_time, normalize_optional_event_time
 
     date = (event.get("date") or "")[:10]
     orario = normalize_event_time(event.get("orario"))
+    orario_fine = normalize_optional_event_time(event.get("orarioFine"))
     if not date:
+        if orario_fine and orario_fine != orario:
+            return f"dalle {orario} alle {orario_fine}"
         return orario
     parts = date.split("-")
     if len(parts) != 3:
-        return f"{date} alle {orario}"
+        base = f"{date} alle {orario}"
+        if orario_fine and orario_fine != orario:
+            return f"{date} dalle {orario} alle {orario_fine}"
+        return base
     y, m, d = int(parts[0]), int(parts[1]), int(parts[2])
     months = (
         "gennaio",
@@ -121,6 +270,8 @@ def _format_event_datetime_it(event: dict) -> str:
         "novembre",
         "dicembre",
     )
+    if orario_fine and orario_fine != orario:
+        return f"{d} {months[m - 1]} {y} dalle {orario} alle {orario_fine}"
     return f"{d} {months[m - 1]} {y} alle {orario}"
 
 
@@ -141,9 +292,8 @@ def render_event_reminder_email(event: dict, member: dict, lead_hours: int) -> s
         if descrizione
         else ""
     )
-    return f"""
-    <div style="font-family:Arial,sans-serif;max-width:600px;margin:0 auto;">
-      <h2 style="color:#004587;border-bottom:3px solid #D4AF37;padding-bottom:8px;">
+    return wrap_email(f"""
+      <h2 style="color:#004587;border-bottom:3px solid #D4AF37;padding-bottom:8px;margin-top:0;">
         Promemoria evento — AIA Legnano
       </h2>
       <p style="color:#334155;">Ciao {nome},</p>
@@ -154,11 +304,11 @@ def render_event_reminder_email(event: dict, member: dict, lead_hours: int) -> s
         {luogo_row}
       </table>
       {desc_block}
+      {_event_calendar_cta_html(event)}
       <p style="color:#64748B;font-size:12px;margin-top:24px;">
         Promemoria inviato perché hai attivato le notifiche eventi nel tuo profilo area associati.
       </p>
-    </div>
-    """
+        """)
 
 
 def render_event_created_email(event: dict, member: dict, *, link: str) -> str:
@@ -177,9 +327,8 @@ def render_event_created_email(event: dict, member: dict, *, link: str) -> str:
         if descrizione
         else ""
     )
-    return f"""
-    <div style="font-family:Arial,sans-serif;max-width:600px;margin:0 auto;">
-      <h2 style="color:#004587;border-bottom:3px solid #D4AF37;padding-bottom:8px;">
+    return wrap_email(f"""
+      <h2 style="color:#004587;border-bottom:3px solid #D4AF37;padding-bottom:8px;margin-top:0;">
         Nuovo evento — AIA Legnano
       </h2>
       <p style="color:#334155;">Ciao {nome},</p>
@@ -190,31 +339,35 @@ def render_event_created_email(event: dict, member: dict, *, link: str) -> str:
         {luogo_row}
       </table>
       {desc_block}
-      <p style="margin-top:20px;">
-        <a href="{link}" style="background:#004587;color:#fff;padding:10px 18px;text-decoration:none;border-radius:6px;display:inline-block;">
-          Apri calendario
+      {_event_calendar_cta_html(event)}
+      <p style="margin-top:16px;">
+        <a href="{link}" style="background:#D4AF37;color:#004587;padding:10px 18px;text-decoration:none;border-radius:6px;display:inline-block;font-weight:bold;">
+          Apri calendario area associati
         </a>
       </p>
       <p style="color:#64748B;font-size:12px;margin-top:24px;">
         Email inviata perché hai attivato le notifiche eventi nel tuo profilo area associati.
         Riceverai anche un promemoria prima dell'appuntamento, se configurato.
       </p>
-    </div>
-    """
+        """)
 
 
 def render_comunicazione_email(
     *, title: str, body_preview: str, member_name: str, link: str
 ) -> str:
-    return f"""
-    <div style="font-family:Arial,sans-serif;max-width:600px;margin:0 auto;">
-      <h2 style="color:#004587;border-bottom:3px solid #D4AF37;padding-bottom:8px;">
+    preview_html = (
+        f'<p style="color:#475569;white-space:pre-line;">{body_preview}</p>'
+        if body_preview
+        else ""
+    )
+    return wrap_email(f"""
+      <h2 style="color:#004587;border-bottom:3px solid #D4AF37;padding-bottom:8px;margin-top:0;">
         Nuova comunicazione — AIA Legnano
       </h2>
       <p style="color:#334155;">Ciao {member_name},</p>
       <p style="color:#334155;">È stata pubblicata una nuova comunicazione riservata agli associati:</p>
       <p style="color:#004587;font-size:18px;font-weight:bold;margin:16px 0;">{title}</p>
-      {f'<p style="color:#475569;white-space:pre-line;">{body_preview}</p>' if body_preview else ''}
+      {preview_html}
       <p style="margin-top:20px;">
         <a href="{link}" style="background:#004587;color:#fff;padding:10px 18px;text-decoration:none;border-radius:6px;display:inline-block;">
           Apri area associati
@@ -223,8 +376,7 @@ def render_comunicazione_email(
       <p style="color:#64748B;font-size:12px;margin-top:24px;">
         Email inviata perché hai attivato le notifiche per le comunicazioni interne.
       </p>
-    </div>
-    """
+        """)
 
 
 def render_message_email(
@@ -235,9 +387,8 @@ def render_message_email(
     link: str,
     context: str,
 ) -> str:
-    return f"""
-    <div style="font-family:Arial,sans-serif;max-width:600px;margin:0 auto;">
-      <h2 style="color:#004587;border-bottom:3px solid #D4AF37;padding-bottom:8px;">
+    return wrap_email(f"""
+      <h2 style="color:#004587;border-bottom:3px solid #D4AF37;padding-bottom:8px;margin-top:0;">
         Nuovo messaggio — AIA Legnano
       </h2>
       <p style="color:#334155;">Ciao {member_name},</p>
@@ -253,8 +404,7 @@ def render_message_email(
       <p style="color:#64748B;font-size:12px;margin-top:24px;">
         Email inviata perché hai attivato le notifiche per i messaggi.
       </p>
-    </div>
-    """
+        """)
 
 
 def render_comunicazione_reply_staff_email(
@@ -264,9 +414,8 @@ def render_comunicazione_reply_staff_email(
     reply_text: str,
     link: str,
 ) -> str:
-    return f"""
-    <div style="font-family:Arial,sans-serif;max-width:600px;margin:0 auto;">
-      <h2 style="color:#004587;border-bottom:3px solid #D4AF37;padding-bottom:8px;">
+    return wrap_email(f"""
+      <h2 style="color:#004587;border-bottom:3px solid #D4AF37;padding-bottom:8px;margin-top:0;">
         Nuovo commento su comunicazione — AIA Legnano
       </h2>
       <p style="color:#334155;">
@@ -279,8 +428,7 @@ def render_comunicazione_reply_staff_email(
           Apri area associati
         </a>
       </p>
-    </div>
-    """
+        """)
 
 
 def render_comunicazione_reply_member_email(
@@ -291,9 +439,8 @@ def render_comunicazione_reply_member_email(
     reply_text: str,
     link: str,
 ) -> str:
-    return f"""
-    <div style="font-family:Arial,sans-serif;max-width:600px;margin:0 auto;">
-      <h2 style="color:#004587;border-bottom:3px solid #D4AF37;padding-bottom:8px;">
+    return wrap_email(f"""
+      <h2 style="color:#004587;border-bottom:3px solid #D4AF37;padding-bottom:8px;margin-top:0;">
         Nuovo commento — AIA Legnano
       </h2>
       <p style="color:#334155;">Ciao {member_name},</p>
@@ -310,5 +457,4 @@ def render_comunicazione_reply_member_email(
       <p style="color:#64748B;font-size:12px;margin-top:24px;">
         Email inviata perché hai attivato le notifiche per le comunicazioni interne.
       </p>
-    </div>
-    """
+        """)

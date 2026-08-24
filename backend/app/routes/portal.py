@@ -54,11 +54,13 @@ from ..portal_member import member_public, is_staff_portal
 from ..media_urls import resolve_media_fields, resolve_attachments
 from ..paths import UPLOAD_DIR
 from .. import storage as upload_storage
-from ..member_roles import MEMBER_ROLES, normalize_member
+from ..member_roles import MEMBER_ROLES, normalize_member, comunicazione_visibility_or_clauses, normalize_role_groups
 from ..comunicazioni_helpers import (
     comunicazione_destinatari,
     comunicazione_letture_map,
     comunicazione_letture_report,
+    comunicazione_has_role_groups,
+    comunicazione_visible_to_member,
 )
 from ..designation_filters import (
     current_season_label,
@@ -299,6 +301,10 @@ async def _portal_events_for_member(
 ) -> list[dict]:
     from ..event_access import member_invited_to_event
 
+    member = await db.members.find_one({"id": mid}, {"_id": 0})
+    if member:
+        normalize_member(member)
+
     parts: list[dict | None] = []
     if current_season:
         parts.append(event_date_in_season_clause())
@@ -309,9 +315,11 @@ async def _portal_events_for_member(
     if limit:
         cursor = cursor.limit(limit * 3)
     events = await cursor.to_list(limit * 3 if limit else 500)
-    return [ev for ev in events if member_invited_to_event(ev, mid)][
-        : limit or len(events)
-    ]
+    return [
+        ev
+        for ev in events
+        if member_invited_to_event(ev, mid, member=member)
+    ][: limit or len(events)]
 
 
 @router.get("/dashboard")
@@ -336,7 +344,7 @@ async def portal_dashboard(auth=Depends(require_member)):
         normalize_member(m)
         next_designation = await find_next_member_designation(db, m)
     comm_q = merge_mongo_queries(
-        {"$or": [{"allMembers": True}, {"memberIds": mid}]},
+        {"$or": comunicazione_visibility_or_clauses(mid, m)},
         iso_datetime_in_season_clause("createdAt"),
     )
     all_comm = await db.comunicazioni_interne.find(comm_q, {"_id": 0, "id": 1}).to_list(
@@ -406,6 +414,39 @@ async def portal_calendario(auth=Depends(require_member)):
     return {"eventi": out, **stats}
 
 
+@router.get("/calendario/{event_id}/ics")
+async def portal_event_ics(event_id: str, auth=Depends(require_member)):
+    """Scarica .ics per aggiungere l'evento a Apple/Outlook/Google."""
+    from fastapi.responses import Response
+
+    from ..event_access import member_invited_to_event
+    from ..event_ics import build_ics, ics_filename
+
+    db = get_db()
+    mid = auth["memberId"]
+    ev = await db.events.find_one({"id": event_id}, {"_id": 0})
+    if not ev:
+        raise HTTPException(status_code=404, detail="Evento non trovato")
+    member = await db.members.find_one({"id": mid}, {"_id": 0})
+    if member:
+        normalize_member(member)
+
+    if not member_invited_to_event(ev, mid, member=member):
+        raise HTTPException(status_code=403, detail="Non sei invitato a questo evento")
+    ics = build_ics(ev)
+    if not ics:
+        raise HTTPException(status_code=400, detail="Data evento non valida")
+    filename = ics_filename(ev)
+    return Response(
+        content=ics,
+        media_type="text/calendar; charset=utf-8",
+        headers={
+            "Content-Disposition": f'attachment; filename="{filename}"',
+            "Cache-Control": "no-store",
+        },
+    )
+
+
 class SelfPresenzaBody(BaseModel):
     stato: str
 
@@ -422,9 +463,12 @@ async def portal_set_presenza(
     if not ev:
         raise HTTPException(status_code=404, detail="Evento non trovato")
     mid = auth["memberId"]
+    member = await db.members.find_one({"id": mid}, {"_id": 0})
+    if member:
+        normalize_member(member)
     from ..event_access import member_invited_to_event
 
-    if not member_invited_to_event(ev, mid):
+    if not member_invited_to_event(ev, mid, member=member):
         raise HTTPException(status_code=403, detail="Non sei invitato a questo evento")
     existing = await db.presenze_evento.find_one(
         {"eventId": event_id, "memberId": mid},
@@ -497,6 +541,9 @@ async def portal_utility(auth=Depends(require_member)):
 
     db = get_db()
     mid = auth["memberId"]
+    member = await db.members.find_one({"id": mid}, {"_id": 0})
+    if member:
+        normalize_member(member)
     today = datetime.now(timezone.utc).strftime("%Y-%m-%d")
     settings = await db.site_settings.find_one(
         {"id": "site-settings"}, {"_id": 0, "utilityPolo": 1}
@@ -519,7 +566,7 @@ async def portal_utility(auth=Depends(require_member)):
 
     event_material = []
     for ev in events:
-        if not member_invited_to_event(ev, mid):
+        if not member_invited_to_event(ev, mid, member=member):
             continue
         material = resolve_attachments(ev.get("utilityMaterial"))
         if not material:
@@ -586,7 +633,12 @@ async def portal_documenti(
 async def _comunicazione_visible_to(db, comm: dict, member_id: str) -> bool:
     if comm.get("allMembers"):
         return True
-    return member_id in (comm.get("memberIds") or [])
+    if member_id in (comm.get("memberIds") or []):
+        return True
+    if not comunicazione_has_role_groups(comm):
+        return False
+    m = await db.members.find_one({"id": member_id}, {"_id": 0})
+    return comunicazione_visible_to_member(comm, member_id, m)
 
 
 async def _comunicazione_letta(db, comm_id: str, member_id: str) -> bool:
@@ -601,8 +653,11 @@ async def _comunicazione_letta(db, comm_id: str, member_id: str) -> bool:
 async def portal_comunicazioni(auth=Depends(require_member)):
     db = get_db()
     mid = auth["memberId"]
+    m = await db.members.find_one({"id": mid}, {"_id": 0})
+    if m:
+        normalize_member(m)
     q = merge_mongo_queries(
-        {"$or": [{"allMembers": True}, {"memberIds": mid}]},
+        {"$or": comunicazione_visibility_or_clauses(mid, m)},
         iso_datetime_in_season_clause("createdAt"),
     )
     items = (
@@ -1124,10 +1179,11 @@ async def admin_presenze_associato(member_id: str, admin=Depends(require_admin))
     from ..event_access import member_invited_to_event
 
     m = await db.members.find_one(
-        {"id": member_id}, {"_id": 0, "id": 1, "firstName": 1, "lastName": 1}
+        {"id": member_id}, {"_id": 0}
     )
     if not m:
         raise HTTPException(status_code=404, detail="Associato non trovato")
+    normalize_member(m)
     events = (
         await db.events.find(
             {},
@@ -1137,13 +1193,14 @@ async def admin_presenze_associato(member_id: str, admin=Depends(require_admin))
                 "titolo": 1,
                 "date": 1,
                 "invitedMemberIds": 1,
+                "invitedRoleGroups": 1,
                 "relatedMemberIds": 1,
             },
         )
         .sort("date", -1)
         .to_list(500)
     )
-    events = [ev for ev in events if member_invited_to_event(ev, member_id)]
+    events = [ev for ev in events if member_invited_to_event(ev, member_id, member=m)]
     pres_rows = await db.presenze_evento.find(
         {"memberId": member_id}, {"_id": 0, "eventId": 1, "stato": 1}
     ).to_list(5000)
@@ -1167,16 +1224,10 @@ async def admin_presenze_evento_detail(event_id: str, admin=Depends(require_admi
     ev = await db.events.find_one({"id": event_id}, {"_id": 0})
     if not ev:
         raise HTTPException(status_code=404, detail="Evento non trovato")
-    from ..event_access import event_invited_member_ids
+    from ..event_access import event_invited_members_query
     from ..member_roles import normalize_member
 
-    invited_ids = event_invited_member_ids(ev)
-    member_q = {
-        "memberRole": {"$in": list(MEMBER_ROLES)},
-        "slug": {"$exists": True, "$ne": ""},
-    }
-    if invited_ids:
-        member_q["id"] = {"$in": invited_ids}
+    member_q = event_invited_members_query(ev)
     members = (
         await db.members.find(member_q, {"_id": 0})
         .sort([("lastName", 1), ("firstName", 1)])
@@ -1254,8 +1305,12 @@ async def admin_crea_comunicazione(
     if not body:
         raise HTTPException(status_code=400, detail="Testo obbligatorio")
     member_ids = list(payload.memberIds or [])
-    if not payload.allMembers and not member_ids:
-        raise HTTPException(status_code=400, detail="Seleziona destinatari o «tutti»")
+    role_groups = normalize_role_groups(payload.roleGroups)
+    if not payload.allMembers and not member_ids and not role_groups:
+        raise HTTPException(
+            status_code=400,
+            detail="Seleziona destinatari, gruppi ruolo o «tutti»",
+        )
     if payload.allMembers:
         members = await db.members.find(
             {
@@ -1263,6 +1318,13 @@ async def admin_crea_comunicazione(
                 "slug": {"$exists": True, "$ne": ""},
             },
             {"_id": 0, "id": 1},
+        ).to_list(2000)
+        member_ids = [m["id"] for m in members]
+    elif role_groups:
+        from ..member_roles import role_groups_member_query
+
+        members = await db.members.find(
+            role_groups_member_query(role_groups), {"_id": 0, "id": 1}
         ).to_list(2000)
         member_ids = [m["id"] for m in members]
     settings = (
@@ -1276,7 +1338,8 @@ async def admin_crea_comunicazione(
         "createdBy": "admin",
         "authorName": settings.get("siteName", "AIA Legnano"),
         "allMembers": bool(payload.allMembers),
-        "memberIds": member_ids if not payload.allMembers else [],
+        "memberIds": member_ids if not payload.allMembers and not role_groups else [],
+        "roleGroups": role_groups,
         "allowReplies": payload.allowReplies,
         "risposte": [],
         "attachments": [a.model_dump() for a in (payload.attachments or [])],
