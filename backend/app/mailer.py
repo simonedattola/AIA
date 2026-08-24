@@ -22,7 +22,7 @@ def sender_email() -> str:
 
 
 def notify_email() -> str:
-    """Casella sezione: contatti, candidature, commenti comunicazioni."""
+    """Casella sezione: contatti, candidature, testimonianze, foto, commenti."""
     return (os.environ.get("NOTIFY_EMAIL") or DEFAULT_NOTIFY).strip()
 
 
@@ -309,6 +309,59 @@ def render_comunicazione_reply_member_email(
       </p>
       <p style="color:#64748B;font-size:12px;margin-top:24px;">
         Email inviata perché hai attivato le notifiche per le comunicazioni interne.
+      </p>
+    </div>
+    """
+
+
+def render_testimonial_staff_email(doc: dict) -> str:
+    import html as html_lib
+
+    name = html_lib.escape((doc.get("name") or "").strip() or "Associato")
+    role = html_lib.escape((doc.get("role") or "").strip() or "—")
+    quote = html_lib.escape((doc.get("quote") or "").strip())
+    return f"""
+    <div style="font-family:Arial,sans-serif;max-width:600px;margin:0 auto;">
+      <h2 style="color:#004587;border-bottom:3px solid #D4AF37;padding-bottom:8px;">
+        Nuova testimonianza da approvare
+      </h2>
+      <table cellpadding="8" style="width:100%;border-collapse:collapse;">
+        <tr><td style="background:#F1F5F9;width:35%;"><strong>Associato</strong></td><td>{name}</td></tr>
+        <tr><td style="background:#F1F5F9;"><strong>Ruolo / categoria</strong></td><td>{role}</td></tr>
+      </table>
+      <p style="color:#475569;background:#F8FAFC;padding:12px;border-radius:8px;white-space:pre-line;margin-top:16px;">{quote}</p>
+      <p style="color:#64748B;font-size:12px;margin-top:24px;">
+        Inviata dall'area associati — in attesa di approvazione in Amministrazione → Testimonianze.
+      </p>
+    </div>
+    """
+
+
+def render_gallery_upload_staff_email(doc: dict) -> str:
+    import html as html_lib
+
+    name = html_lib.escape((doc.get("memberName") or "").strip() or "Associato")
+    caption = html_lib.escape((doc.get("caption") or "").strip() or "—")
+    category = html_lib.escape((doc.get("category") or "").strip() or "—")
+    url = html_lib.escape((doc.get("url") or doc.get("path") or "").strip())
+    link_row = (
+        f'<p style="margin-top:16px;"><a href="{url}">Apri immagine</a></p>'
+        if url.startswith("http")
+        else ""
+    )
+    return f"""
+    <div style="font-family:Arial,sans-serif;max-width:600px;margin:0 auto;">
+      <h2 style="color:#004587;border-bottom:3px solid #D4AF37;padding-bottom:8px;">
+        Nuova foto galleria da approvare
+      </h2>
+      <table cellpadding="8" style="width:100%;border-collapse:collapse;">
+        <tr><td style="background:#F1F5F9;width:35%;"><strong>Associato</strong></td><td>{name}</td></tr>
+        <tr><td style="background:#F1F5F9;"><strong>Categoria</strong></td><td>{category}</td></tr>
+        <tr><td style="background:#F1F5F9;"><strong>Didascalia</strong></td><td>{caption}</td></tr>
+      </table>
+      {link_row}
+      <p style="color:#64748B;font-size:12px;margin-top:24px;">
+        Caricata dall'area associati — in attesa di approvazione in Amministrazione → Galleria.
       </p>
     </div>
     """
