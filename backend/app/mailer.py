@@ -11,12 +11,15 @@ import os
 import asyncio
 import logging
 
+from .person_names import format_person_name
+
 logger = logging.getLogger(__name__)
 
 DEFAULT_SENDER = "noreply@aia-legnano.it"
 DEFAULT_NOTIFY = "legnano@aia-figc.it"
 DEFAULT_PORTAL_URL = "https://aia-virid.vercel.app"
 EMAIL_LOGO_PATH = "/brand/logo-aia-legnano-email.png"
+EMAIL_LOGO_PUBLIC_PATH = "/public/email-logo.png"
 EMAIL_LOGO_CID = "aia-legnano-logo"
 EMAIL_LOGO_FILENAME = "logo-aia-legnano-email.png"
 
@@ -31,11 +34,19 @@ def notify_email() -> str:
 
 
 def portal_frontend_url() -> str:
-    return (os.environ.get("PORTAL_FRONTEND_URL") or DEFAULT_PORTAL_URL).rstrip("/")
+    raw = (os.environ.get("PORTAL_FRONTEND_URL") or DEFAULT_PORTAL_URL).strip().rstrip("/")
+    if not raw or "localhost" in raw or "127.0.0.1" in raw:
+        return DEFAULT_PORTAL_URL
+    return raw
 
 
 def email_logo_url() -> str:
-    """URL assoluto del logo sezione (fallback se il client non supporta CID)."""
+    """URL assoluto HTTPS del logo per tag img nelle email."""
+    from .media_urls import public_api_base
+
+    base = public_api_base()
+    if base.startswith("https://") and "localhost" not in base and "127.0.0.1" not in base:
+        return f"{base}/api{EMAIL_LOGO_PUBLIC_PATH}"
     return f"{portal_frontend_url()}{EMAIL_LOGO_PATH}"
 
 
@@ -44,8 +55,8 @@ def _email_logo_file_path():
 
     here = Path(__file__).resolve()
     candidates = [
-        here.parents[2] / "frontend" / "public" / "brand" / EMAIL_LOGO_FILENAME,
         here.parents[1] / "static" / EMAIL_LOGO_FILENAME,
+        here.parents[2] / "frontend" / "public" / "brand" / EMAIL_LOGO_FILENAME,
         Path("/workspace/frontend/public/brand") / EMAIL_LOGO_FILENAME,
     ]
     for path in candidates:
@@ -65,21 +76,40 @@ def email_logo_bytes() -> bytes | None:
 
 
 def email_logo_attachment() -> dict | None:
+    """Allegato inline CID per client che non caricano immagini remote."""
     raw = email_logo_bytes()
-    if not raw:
-        return None
-    return {
-        "filename": EMAIL_LOGO_FILENAME,
-        "content": raw,
-        "content_id": EMAIL_LOGO_CID,
-        "content_type": "image/png",
-    }
+    if raw:
+        return {
+            "filename": EMAIL_LOGO_FILENAME,
+            "content": raw,
+            "content_id": EMAIL_LOGO_CID,
+            "content_type": "image/png",
+        }
+    remote = email_logo_url()
+    if remote.startswith("https://"):
+        return {
+            "path": remote,
+            "filename": EMAIL_LOGO_FILENAME,
+            "content_id": EMAIL_LOGO_CID,
+            "content_type": "image/png",
+        }
+    return None
+
+
+def _member_display_name(member: dict) -> str:
+    return format_person_name(member.get("firstName"), member.get("lastName"))
+
+
+def email_logo_img_src() -> str:
+    """CID se inviamo allegato inline; altrimenti URL HTTPS."""
+    if email_logo_attachment():
+        return f"cid:{EMAIL_LOGO_CID}"
+    return email_logo_url()
 
 
 def wrap_email(inner_html: str) -> str:
     """Layout comune: logo sezione + contenuto + footer."""
-    logo_src = f"cid:{EMAIL_LOGO_CID}"
-    logo_fallback = email_logo_url()
+    logo_src = email_logo_img_src()
     home = portal_frontend_url()
     return f"""
     <div style="font-family:Arial,Helvetica,sans-serif;max-width:600px;margin:0 auto;background:#ffffff;">
@@ -88,7 +118,6 @@ def wrap_email(inner_html: str) -> str:
           <img src="{logo_src}" alt="AIA Legnano" width="80" height="80"
                style="display:inline-block;width:80px;height:80px;border:0;border-radius:10px;background:#ffffff;padding:6px;box-sizing:border-box;" />
         </a>
-        <!-- fallback URL per client che ignorano CID: {logo_fallback} -->
         <div style="color:#D4AF37;font-size:12px;font-weight:bold;letter-spacing:0.08em;margin-top:10px;text-transform:uppercase;">
           Sezione AIA Legnano
         </div>
@@ -132,7 +161,11 @@ async def send_email(
         }
         merged: list[dict] = []
         logo = email_logo_attachment()
-        if logo and f"cid:{EMAIL_LOGO_CID}" in (html or ""):
+        if logo and (
+            f"cid:{EMAIL_LOGO_CID}" in (html or "")
+            or EMAIL_LOGO_FILENAME in (html or "")
+            or "logo-aia-legnano" in (html or "")
+        ):
             merged.append(logo)
         if attachments:
             merged.extend(attachments)
@@ -140,23 +173,25 @@ async def send_email(
             packed = []
             for att in merged:
                 name = (att.get("filename") or "allegato.bin").strip()
+                remote_path = (att.get("path") or "").strip()
                 raw = att.get("content")
-                if raw is None:
-                    continue
-                if isinstance(raw, str):
-                    raw_bytes = raw.encode("utf-8")
-                else:
-                    raw_bytes = bytes(raw)
-                item = {
-                    "filename": name,
-                    "content": base64.b64encode(raw_bytes).decode("ascii"),
-                }
+                item: dict = {"filename": name}
                 cid = (att.get("content_id") or "").strip()
                 if cid:
                     item["content_id"] = cid
                 ctype = (att.get("content_type") or "").strip()
                 if ctype:
                     item["content_type"] = ctype
+                if remote_path:
+                    item["path"] = remote_path
+                elif raw is not None:
+                    if isinstance(raw, str):
+                        raw_bytes = raw.encode("utf-8")
+                    else:
+                        raw_bytes = bytes(raw)
+                    item["content"] = base64.b64encode(raw_bytes).decode("ascii")
+                else:
+                    continue
                 packed.append(item)
             if packed:
                 params["attachments"] = packed
@@ -200,8 +235,8 @@ def render_lead_email(lead: dict) -> str:
         Nuova candidatura - Corso Arbitri
       </h2>
       <table cellpadding="8" style="width:100%;border-collapse:collapse;">
-        <tr><td style="background:#F1F5F9;width:35%;"><strong>Nome</strong></td><td>{lead.get('firstName','')}</td></tr>
-        <tr><td style="background:#F1F5F9;"><strong>Cognome</strong></td><td>{lead.get('lastName','')}</td></tr>
+        <tr><td style="background:#F1F5F9;width:35%;"><strong>Nome</strong></td><td>{format_person_name(lead.get('firstName',''))}</td></tr>
+        <tr><td style="background:#F1F5F9;"><strong>Cognome</strong></td><td>{format_person_name(lead.get('lastName',''))}</td></tr>
         <tr><td style="background:#F1F5F9;"><strong>Età</strong></td><td>{lead.get('age','-')}</td></tr>
         <tr><td style="background:#F1F5F9;"><strong>Telefono</strong></td><td>{lead.get('phone','-')}</td></tr>
         <tr><td style="background:#F1F5F9;"><strong>Email</strong></td><td>{lead.get('email','-')}</td></tr>
@@ -217,7 +252,7 @@ def render_lead_email(lead: dict) -> str:
 def render_lead_confirmation_email(*, first_name: str, contact_preference: str) -> str:
     pref = contact_preference_label(contact_preference)
     return wrap_email(f"""
-      <h2 style="color:#004587;margin-top:0;">Ciao {first_name},</h2>
+      <h2 style="color:#004587;margin-top:0;">Ciao {format_person_name(full=first_name)},</h2>
       <p>grazie per aver inviato la tua candidatura al <strong>corso arbitri</strong>
       della Sezione AIA di Legnano.</p>
       <p>Un nostro referente ti contatterà entro pochi giorni tramite {pref}.</p>
@@ -278,7 +313,7 @@ def _format_event_datetime_it(event: dict) -> str:
 def render_event_reminder_email(event: dict, member: dict, lead_hours: int) -> str:
     when = _format_event_datetime_it(event)
     lead = "1 ora" if lead_hours == 1 else f"{lead_hours} ore"
-    nome = f"{member.get('firstName', '')} {member.get('lastName', '')}".strip()
+    nome = _member_display_name(member)
     titolo = event.get("titolo", "Evento")
     luogo = event.get("luogo", "")
     descrizione = (event.get("descrizione") or "").strip()
@@ -313,7 +348,7 @@ def render_event_reminder_email(event: dict, member: dict, lead_hours: int) -> s
 
 def render_event_created_email(event: dict, member: dict, *, link: str) -> str:
     when = _format_event_datetime_it(event)
-    nome = f"{member.get('firstName', '')} {member.get('lastName', '')}".strip()
+    nome = _member_display_name(member)
     titolo = event.get("titolo", "Evento")
     luogo = event.get("luogo", "")
     descrizione = (event.get("descrizione") or "").strip()
@@ -364,7 +399,7 @@ def render_comunicazione_email(
       <h2 style="color:#004587;border-bottom:3px solid #D4AF37;padding-bottom:8px;margin-top:0;">
         Nuova comunicazione — AIA Legnano
       </h2>
-      <p style="color:#334155;">Ciao {member_name},</p>
+      <p style="color:#334155;">Ciao {format_person_name(full=member_name)},</p>
       <p style="color:#334155;">È stata pubblicata una nuova comunicazione riservata agli associati:</p>
       <p style="color:#004587;font-size:18px;font-weight:bold;margin:16px 0;">{title}</p>
       {preview_html}
@@ -391,9 +426,9 @@ def render_message_email(
       <h2 style="color:#004587;border-bottom:3px solid #D4AF37;padding-bottom:8px;margin-top:0;">
         Nuovo messaggio — AIA Legnano
       </h2>
-      <p style="color:#334155;">Ciao {member_name},</p>
+      <p style="color:#334155;">Ciao {format_person_name(full=member_name)},</p>
       <p style="color:#334155;">
-        <strong>{sender_name}</strong> ti ha scritto ({context}):
+        <strong>{format_person_name(full=sender_name)}</strong> ti ha scritto ({context}):
       </p>
       <p style="color:#475569;background:#F8FAFC;padding:12px;border-radius:8px;white-space:pre-line;">{preview}</p>
       <p style="margin-top:20px;">
@@ -419,7 +454,7 @@ def render_comunicazione_reply_staff_email(
         Nuovo commento su comunicazione — AIA Legnano
       </h2>
       <p style="color:#334155;">
-        <strong>{author_name}</strong> ha commentato la comunicazione:
+        <strong>{format_person_name(full=author_name)}</strong> ha commentato la comunicazione:
       </p>
       <p style="color:#004587;font-size:18px;font-weight:bold;margin:16px 0;">{title}</p>
       <p style="color:#475569;background:#F8FAFC;padding:12px;border-radius:8px;white-space:pre-line;">{reply_text}</p>
@@ -443,9 +478,9 @@ def render_comunicazione_reply_member_email(
       <h2 style="color:#004587;border-bottom:3px solid #D4AF37;padding-bottom:8px;margin-top:0;">
         Nuovo commento — AIA Legnano
       </h2>
-      <p style="color:#334155;">Ciao {member_name},</p>
+      <p style="color:#334155;">Ciao {format_person_name(full=member_name)},</p>
       <p style="color:#334155;">
-        <strong>{author_name}</strong> ha commentato la comunicazione
+        <strong>{format_person_name(full=author_name)}</strong> ha commentato la comunicazione
         <strong>{title}</strong>:
       </p>
       <p style="color:#475569;background:#F8FAFC;padding:12px;border-radius:8px;white-space:pre-line;">{reply_text}</p>
@@ -463,7 +498,9 @@ def render_comunicazione_reply_member_email(
 def render_testimonial_staff_email(doc: dict) -> str:
     import html as html_lib
 
-    name = html_lib.escape((doc.get("name") or "").strip() or "Associato")
+    name = html_lib.escape(
+        format_person_name(full=(doc.get("name") or "").strip()) or "Associato"
+    )
     role = html_lib.escape((doc.get("role") or "").strip() or "—")
     quote = html_lib.escape((doc.get("quote") or "").strip())
     return wrap_email(f"""
@@ -484,7 +521,9 @@ def render_testimonial_staff_email(doc: dict) -> str:
 def render_gallery_upload_staff_email(doc: dict) -> str:
     import html as html_lib
 
-    name = html_lib.escape((doc.get("memberName") or "").strip() or "Associato")
+    name = html_lib.escape(
+        format_person_name(full=(doc.get("memberName") or "").strip()) or "Associato"
+    )
     caption = html_lib.escape((doc.get("caption") or "").strip() or "—")
     category = html_lib.escape((doc.get("category") or "").strip() or "—")
     url = html_lib.escape((doc.get("url") or doc.get("path") or "").strip())
