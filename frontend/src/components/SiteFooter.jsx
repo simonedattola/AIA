@@ -155,6 +155,19 @@ export default function SiteFooter() {
             </Link>
           </div>
         </div>
+
+        <p className="mt-6 pt-4 border-t border-white/5 text-center text-[10px] sm:text-xs text-slate-500">
+          Sito sviluppato da{" "}
+          <a
+            href="https://www.vexastudio.it"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="text-slate-400 hover:text-gold-400 transition-colors underline-offset-2 hover:underline"
+            data-testid="footer-vexa-studio"
+          >
+            Vexa Studio
+          </a>
+        </p>
       </div>
     </footer>
   );
