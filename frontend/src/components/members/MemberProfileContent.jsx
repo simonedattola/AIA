@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { fetchMember } from "../../lib/api";
 import { normalizeMember, hasDesignations, memberRoleLabel, profileBackPath } from "../../lib/memberRoles";
-import { formatDateIt } from "../../lib/format";
+import { formatDateIt, formatPersonName } from "../../lib/format";
 import MediaImage from "../MediaImage";
 import DesignationsDataTable from "../designations/DesignationsDataTable";
 import { useDocumentTitle } from "../RouteDocumentTitle";
@@ -52,7 +52,7 @@ export default function MemberProfileContent({ memberSlug }) {
   }, [memberSlug, season]);
 
   const memberName = data?.member
-    ? `${data.member.firstName || ""} ${data.member.lastName || ""}`.trim()
+    ? formatPersonName(data.member.firstName, data.member.lastName)
     : "";
   useDocumentTitle(error ? "Profilo non trovato" : memberName || "Arbitro");
 
@@ -76,6 +76,7 @@ export default function MemberProfileContent({ memberSlug }) {
     designations = [], seasonsAvailable = [], activeSeason = "",
   } = data;
   const m = normalizeMember(raw);
+  const displayName = formatPersonName(m.firstName, m.lastName);
   const hasBio = !!(m.bio && m.bio.trim());
   const hasPresidentLongBio = !!(m.isPresident && m.presidentLongBio && m.presidentLongBio.trim());
   const showDesignations = hasDesignations(m.memberRole);
@@ -101,7 +102,7 @@ export default function MemberProfileContent({ memberSlug }) {
             )}
             <div className="flex-1 min-w-0">
               <Eyebrow className="text-gold-400 mb-2">{memberRoleLabel(m)}</Eyebrow>
-              <CtaTitle className="text-white leading-tight">{m.firstName} {m.lastName}</CtaTitle>
+              <CtaTitle className="text-white leading-tight">{displayName}</CtaTitle>
               <div className="flex flex-wrap items-center gap-x-4 gap-y-1 mt-3 text-slate-300 text-sm">
                 {(m.role === "AE" || m.role === "AA") && m.category && (
                   <span className="text-gold-300 font-medium">{m.category}</span>

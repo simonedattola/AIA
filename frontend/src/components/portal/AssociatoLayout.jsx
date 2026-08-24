@@ -1,7 +1,7 @@
 import { NavLink, Outlet, useNavigate, Navigate, Link, useLocation } from "react-router-dom";
 import { useEffect, useState } from "react";
 import { portalMe } from "../../lib/portal-api";
-import { portalNavLinkClass, NavActiveLabel } from "../../lib/navActive";
+import { formatPersonName } from "../../lib/format";
 import { PORTAL_NAV } from "./portalNavItems";
 import { PORTAL_ROUTES as R } from "../../lib/appRoutes";
 import { SECTION_LOGO, SECTION_LOGO_CLASS } from "../../lib/brand";
@@ -83,7 +83,7 @@ export default function AssociatoLayout() {
           </button>
           {member && (
             <div className="text-xs text-slate-400 mt-3 px-3">
-              {member.firstName} {member.lastName}
+              {formatPersonName(member.firstName, member.lastName)}
               {member.category && <span className="block text-gold-300/80">{member.category}</span>}
             </div>
           )}
