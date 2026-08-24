@@ -5,7 +5,8 @@
 ### Email (Resend)
 
 - Delivery is via Resend in `backend/app/mailer.py`. Without `RESEND_API_KEY`, `send_email` no-ops and still returns success paths for forms/portal (data is saved).
-- Staff inbox defaults to `NOTIFY_EMAIL=legnano@aia-figc.it` (contatti, candidature, testimonianze, foto galleria, reply su comunicazioni).
+- Staff inbox defaults to `NOTIFY_EMAIL=legnano@aia-figc.it` (contatti, candidature, testimonianze, foto galleria, reply su comunicazioni). In production, `staff_notify_email()` also reads **Impostazioni sito → Email** from MongoDB when set.
+- Outbound member emails use `SENDER_EMAIL=noreply@aia-legnano.it` with **Reply-To** `legnano@aia-figc.it` (or `REPLY_TO_EMAIL`).
 - Member opt-in flags: `emailNotifyComunicazioni`, `emailNotifyMessages`, `emailNotifyEvents` (+ `emailNotifyEventLeadHours`). UI: Area associati → Profilo.
 - Event invite on create + reminder scheduler: `event_reminders.py` / `event_reminders_scheduler.py` (must be running with the backend process).
 - Set `PORTAL_FRONTEND_URL` in production so member emails link to the live portal, not localhost.

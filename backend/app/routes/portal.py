@@ -1071,10 +1071,10 @@ async def portal_gallery_upload(
     from ..media_urls import resolve_media_url
     from ..gallery import save_uploaded_gallery_image
     from ..mailer import (
-        notify_email,
         render_gallery_upload_staff_email,
         send_email,
     )
+    from ..staff_email import staff_notify_email
     from ..person_names import format_person_name
 
     rel_path = upload_storage.save_upload(name, file)
@@ -1097,7 +1097,7 @@ async def portal_gallery_upload(
         member_name=member_name,
         category=category_resolved,
     )
-    notify = notify_email()
+    notify = await staff_notify_email(db)
     if notify:
         background.add_task(
             send_email,
@@ -1158,10 +1158,10 @@ async def portal_submit_testimonial(
     m = await _get_member(db, auth["memberId"])
     from ..models import Testimonial
     from ..mailer import (
-        notify_email,
         render_testimonial_staff_email,
         send_email,
     )
+    from ..staff_email import staff_notify_email
 
     from ..person_names import format_person_name
 
@@ -1176,7 +1176,7 @@ async def portal_submit_testimonial(
     )
     doc = t.model_dump()
     await db.testimonials.insert_one(doc.copy())
-    notify = notify_email()
+    notify = await staff_notify_email(db)
     if notify:
         background.add_task(
             send_email,
