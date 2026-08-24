@@ -1,6 +1,7 @@
 import { NavLink, Outlet, useNavigate, Navigate, Link, useLocation } from "react-router-dom";
 import { useEffect, useState } from "react";
 import { portalMe } from "../../lib/portal-api";
+import { portalNavLinkClass, NavActiveLabel } from "../../lib/navActive";
 import { formatPersonName } from "../../lib/format";
 import { PORTAL_NAV } from "./portalNavItems";
 import { PORTAL_ROUTES as R } from "../../lib/appRoutes";
