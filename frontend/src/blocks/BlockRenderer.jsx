@@ -640,7 +640,7 @@ function HomeEventCard({ e, onClick }) {
           </div>
         )}
         {!e.tipo && (
-          <Eyebrow as="div" className="text-gold-600 mt-2">{formatEventDateTimeIt(e.date, e.orario)}</Eyebrow>
+          <Eyebrow as="div" className="text-gold-600 mt-2">{formatEventDateTimeIt(e.date, e.orario, e.orarioFine)}</Eyebrow>
         )}
       </div>
     </Card>

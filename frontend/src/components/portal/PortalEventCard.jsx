@@ -64,7 +64,7 @@ function PortalEventCard({ event, saving, onSetStato, onOpen }) {
           <h2 className="font-display text-base sm:text-lg font-bold text-navy-800 leading-snug line-clamp-2">
             {titolo}
           </h2>
-          <p className="mt-1 text-xs text-slate-500">{formatEventDateTimeIt(asAdminText(event.date), asAdminText(event.orario))}</p>
+          <p className="mt-1 text-xs text-slate-500">{formatEventDateTimeIt(asAdminText(event.date), asAdminText(event.orario), asAdminText(event.orarioFine))}</p>
           {luogo && (
             <p className="mt-1 text-xs text-slate-600 flex items-center gap-1 line-clamp-1">
               <MapPin className="h-3.5 w-3.5 shrink-0 text-navy-500" />

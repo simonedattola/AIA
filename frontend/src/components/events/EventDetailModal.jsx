@@ -53,7 +53,7 @@ export default function EventDetailModal({
         <div className="px-6 py-5 space-y-4">
           <p className="flex items-center gap-2 text-sm text-slate-600">
             <CalendarDays className="h-4 w-4 text-gold-500 shrink-0" />
-            {formatEventDateTimeIt(event.date, event.orario)}
+            {formatEventDateTimeIt(event.date, event.orario, event.orarioFine)}
           </p>
           {event.luogo && (
             <p className="flex items-center gap-2 text-sm text-slate-600">

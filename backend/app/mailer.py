@@ -240,15 +240,21 @@ def render_contact_email(msg: dict) -> str:
 
 
 def _format_event_datetime_it(event: dict) -> str:
-    from .event_reminders import normalize_event_time
+    from .event_reminders import normalize_event_time, normalize_optional_event_time
 
     date = (event.get("date") or "")[:10]
     orario = normalize_event_time(event.get("orario"))
+    orario_fine = normalize_optional_event_time(event.get("orarioFine"))
     if not date:
+        if orario_fine and orario_fine != orario:
+            return f"dalle {orario} alle {orario_fine}"
         return orario
     parts = date.split("-")
     if len(parts) != 3:
-        return f"{date} alle {orario}"
+        base = f"{date} alle {orario}"
+        if orario_fine and orario_fine != orario:
+            return f"{date} dalle {orario} alle {orario_fine}"
+        return base
     y, m, d = int(parts[0]), int(parts[1]), int(parts[2])
     months = (
         "gennaio",
@@ -264,6 +270,8 @@ def _format_event_datetime_it(event: dict) -> str:
         "novembre",
         "dicembre",
     )
+    if orario_fine and orario_fine != orario:
+        return f"{d} {months[m - 1]} {y} dalle {orario} alle {orario_fine}"
     return f"{d} {months[m - 1]} {y} alle {orario}"
 
 

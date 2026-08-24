@@ -72,6 +72,14 @@ def event_end_datetime(
     start = _event_start(event)
     if not start:
         return None
+    orario_fine = (event.get("orarioFine") or "").strip()
+    if orario_fine:
+        fine = _normalize_event_time(orario_fine)
+        hour, minute = map(int, fine.split(":"))
+        end = start.replace(hour=hour, minute=minute)
+        if end <= start:
+            end = end + timedelta(days=1)
+        return end
     return start + duration
 
 

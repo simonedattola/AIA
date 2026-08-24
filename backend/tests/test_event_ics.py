@@ -42,6 +42,10 @@ class TestBuildIcs:
     def test_invalid_date(self):
         assert build_ics({**SAMPLE, "date": ""}) is None
 
+    def test_orario_fine(self):
+        ics = build_ics({**SAMPLE, "orarioFine": "20:00"})
+        assert "DTEND;TZID=Europe/Rome:20260915T200000" in ics
+
 
 class TestGoogleUrl:
     def test_template_url(self):

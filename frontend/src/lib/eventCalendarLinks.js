@@ -2,6 +2,35 @@
 
 const DEFAULT_DURATION_MS = 2 * 60 * 60 * 1000;
 
+function normalizeTime(value, fallback = "09:00") {
+  let orario = String(value || fallback).trim();
+  const m = orario.match(/^(\d{1,2}):(\d{2})$/);
+  if (!m) orario = fallback;
+  else {
+    const h = Number(m[1]);
+    const min = Number(m[2]);
+    if (h > 23 || min > 59) orario = fallback;
+    else orario = `${pad(h)}:${pad(min)}`;
+  }
+  return orario;
+}
+
+/** Parse event.date + orario (+ optional orarioFine) as Europe/Rome wall time. */
+export function eventEndDate(event) {
+  const start = eventStartDate(event);
+  if (!start) return null;
+  const fine = String(event?.orarioFine || "").trim();
+  if (!fine) return new Date(start.getTime() + DEFAULT_DURATION_MS);
+  const endTime = normalizeTime(fine, "");
+  if (!endTime) return new Date(start.getTime() + DEFAULT_DURATION_MS);
+  const end = eventStartDate({ ...event, orario: endTime });
+  if (!end) return new Date(start.getTime() + DEFAULT_DURATION_MS);
+  if (end.getTime() <= start.getTime()) {
+    return new Date(end.getTime() + 24 * 60 * 60 * 1000);
+  }
+  return end;
+}
+
 function pad(n) {
   return String(n).padStart(2, "0");
 }
@@ -19,7 +48,6 @@ export function eventStartDate(event) {
     if (h > 23 || min > 59) orario = "09:00";
     else orario = `${pad(h)}:${pad(min)}`;
   }
-  // Treat as Rome local by appending offset is fragile with DST; use Intl-free approach:
   // construct as UTC components labeled Rome via temporal-less method: Date from ISO with explicit offset approximation.
   // Better: format parts and use Date.UTC then adjust with Rome offset at that date.
   const [y, mo, d] = date.split("-").map(Number);
@@ -82,7 +110,7 @@ function icsEscape(text) {
 export function googleCalendarUrl(event) {
   const start = eventStartDate(event);
   if (!start) return "";
-  const end = new Date(start.getTime() + DEFAULT_DURATION_MS);
+  const end = eventEndDate(event) || new Date(start.getTime() + DEFAULT_DURATION_MS);
   const params = new URLSearchParams({
     action: "TEMPLATE",
     text: (event.titolo || "Evento AIA Legnano").trim(),
@@ -97,7 +125,7 @@ export function googleCalendarUrl(event) {
 export function buildIcsContent(event) {
   const start = eventStartDate(event);
   if (!start) return "";
-  const end = new Date(start.getTime() + DEFAULT_DURATION_MS);
+  const end = eventEndDate(event) || new Date(start.getTime() + DEFAULT_DURATION_MS);
   const uid = `aia-legnano-event-${event.id || "evento"}@aia-legnano.it`;
   const stamp = toGoogleUtcStamp(new Date());
   const lines = [

@@ -1,5 +1,6 @@
 import {
   buildIcsContent,
+  eventEndDate,
   eventStartDate,
   googleCalendarUrl,
   icsFilename,
@@ -34,5 +35,14 @@ describe("eventCalendarLinks", () => {
     expect(ics).toContain("SUMMARY:Riunione tecnica");
     expect(ics).toContain("LOCATION:Sede AIA Legnano");
     expect(icsFilename(sample)).toMatch(/\.ics$/);
+  });
+
+  it("uses orarioFine when set", () => {
+    const withEnd = { ...sample, orarioFine: "20:00" };
+    const end = eventEndDate(withEnd);
+    const start = eventStartDate(withEnd);
+    expect(end.getTime()).toBeGreaterThan(start.getTime());
+    const ics = buildIcsContent(withEnd);
+    expect(ics).toContain("T200000");
   });
 });

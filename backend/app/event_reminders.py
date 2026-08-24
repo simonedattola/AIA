@@ -46,6 +46,19 @@ def normalize_event_time(value: str | None) -> str:
     return DEFAULT_EVENT_TIME
 
 
+def normalize_optional_event_time(value: str | None) -> str:
+    if not (value or "").strip():
+        return ""
+    text = (value or "").strip()
+    m = re.fullmatch(r"(\d{1,2}):(\d{2})", text)
+    if not m:
+        return ""
+    hour, minute = int(m.group(1)), int(m.group(2))
+    if 0 <= hour <= 23 and 0 <= minute <= 59:
+        return f"{hour:02d}:{minute:02d}"
+    return ""
+
+
 def event_start_datetime(
     event: dict[str, Any], *, tz: ZoneInfo = ROME
 ) -> datetime | None:
@@ -91,6 +104,8 @@ async def _mark_reminder_sent(
 
 
 async def _invited_members_with_email(db, event: dict[str, Any]) -> list[dict]:
+    from ..member_roles import normalize_member
+
     members = await db.members.find(
         {"email": {"$exists": True, "$ne": ""}},
         {
@@ -99,13 +114,17 @@ async def _invited_members_with_email(db, event: dict[str, Any]) -> list[dict]:
             "firstName": 1,
             "lastName": 1,
             "email": 1,
+            "role": 1,
+            "organigrammaKind": 1,
+            "memberRole": 1,
             "emailNotifyEvents": 1,
             "emailNotifyEventLeadHours": 1,
         },
     ).to_list(2000)
     out: list[dict] = []
     for m in members:
-        if not member_invited_to_event(event, m["id"]):
+        normalize_member(m)
+        if not member_invited_to_event(event, m["id"], member=m):
             continue
         if not m.get("emailNotifyEvents"):
             continue

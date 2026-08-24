@@ -2,7 +2,17 @@
 
 from __future__ import annotations
 
-from .member_roles import MEMBER_ROLES, normalize_member
+from .member_roles import (
+    MEMBER_ROLES,
+    member_matches_any_role_group,
+    normalize_member,
+    normalize_role_groups,
+    role_groups_member_query,
+)
+
+
+def comunicazione_has_role_groups(comm: dict) -> bool:
+    return bool(normalize_role_groups(comm.get("roleGroups")))
 
 
 async def comunicazione_destinatari(db, comm: dict) -> list[dict]:
@@ -12,6 +22,13 @@ async def comunicazione_destinatari(db, comm: dict) -> list[dict]:
             "memberRole": {"$in": list(MEMBER_ROLES)},
             "slug": {"$exists": True, "$ne": ""},
         }
+        members = (
+            await db.members.find(member_q, {"_id": 0})
+            .sort([("lastName", 1), ("firstName", 1)])
+            .to_list(2000)
+        )
+    elif comunicazione_has_role_groups(comm):
+        member_q = role_groups_member_query(comm.get("roleGroups"))
         members = (
             await db.members.find(member_q, {"_id": 0})
             .sort([("lastName", 1), ("firstName", 1)])
@@ -29,6 +46,16 @@ async def comunicazione_destinatari(db, comm: dict) -> list[dict]:
     for m in members:
         normalize_member(m)
     return members
+
+
+def comunicazione_visible_to_member(comm: dict, member_id: str, member: dict | None) -> bool:
+    if comm.get("allMembers"):
+        return True
+    if member_id in (comm.get("memberIds") or []):
+        return True
+    if comunicazione_has_role_groups(comm) and member is not None:
+        return member_matches_any_role_group(member, comm.get("roleGroups"))
+    return False
 
 
 async def comunicazione_letture_map(
