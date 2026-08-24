@@ -66,8 +66,21 @@ def test_chi_siamo_includes_arbitro_with_board_title():
     # Benemeriti restano nella lista arbitri; osservatori hanno query dedicata
     aq = legacy_arbitri_query()
     assert "arbitro" in str(aq)
-    assert osservatori_query() == {"memberRole": "osservatore"}
+    assert osservatori_query()["$or"]
     assert legacy_chi_siamo_query() == q
+
+
+def test_ot_organo_tecnico_with_board_title():
+    doc = {
+        "memberRole": "consiglio_direttivo",
+        "category": "Organo Tecnico",
+        "boardTitle": "Collaboratore — Area tecnica",
+        "firstName": "Mario",
+        "lastName": "Rossi",
+    }
+    normalize_member(doc)
+    assert doc["memberRole"] == "osservatore"
+    assert doc["observerType"] == "ot"
 
 
 def test_normalize_president_not_revisione():

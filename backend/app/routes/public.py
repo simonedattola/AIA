@@ -189,7 +189,9 @@ async def list_officials():
     db = get_db()
     items = await db.officials.find({}, {"_id": 0}).sort("sortOrder", 1).to_list(100)
     for item in items:
-        first, last = format_person_name_parts(item.get("firstName"), item.get("lastName"))
+        first, last = format_person_name_parts(
+            item.get("firstName"), item.get("lastName")
+        )
         if first:
             item["firstName"] = first
         if last:
@@ -208,7 +210,11 @@ async def list_members(
 ):
     """Lista membri. Default: arbitri+assistenti+benemeriti. scope=chi_siamo per organigramma."""
     db = get_db()
-    if memberRole:
+    if memberRole in ("osservatore", "osservatori"):
+        from ..member_roles import osservatori_query
+
+        query = osservatori_query()
+    elif memberRole:
         query = {"memberRole": memberRole}
     elif scope in ("chi_siamo", "organigramma"):
         query = legacy_chi_siamo_query()

@@ -11,7 +11,7 @@ import { AdminLoading } from "../../components/admin/admin-ui";
 export default function AdminLoginPage() {
   const navigate = useNavigate();
   const location = useLocation();
-  const [form, setForm] = useState({ email: "legnano@aia-figc.it", password: "" });
+  const [form, setForm] = useState({ email: "", password: "" });
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
   const [loading, setLoading] = useState(false);
@@ -88,6 +88,8 @@ export default function AdminLoginPage() {
                 data-testid="admin-login-email"
                 required
                 type="email"
+                autoComplete="username"
+                placeholder="es. legnano@aia-figc.it"
                 value={form.email}
                 onChange={(e) => setForm({ ...form, email: e.target.value })}
                 className="w-full pl-10 pr-3 py-2.5 border border-slate-300 rounded-md focus:border-navy-600 focus:ring-2 focus:ring-navy-600/20 focus:outline-none"

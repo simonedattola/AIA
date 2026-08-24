@@ -137,6 +137,13 @@ function inferMemberRole(m) {
   }
   const kind = (m.kind || "").toLowerCase();
   const role = (m.role || "").toLowerCase();
+  const cat = String(m.category || "").toLowerCase();
+  if (/osservatore|organo\s+tecnico/.test(cat)) {
+    return {
+      memberRole: "osservatore",
+      observerType: cat.includes("organo tecnico") ? "ot" : "oa",
+    };
+  }
   if (kind === "oa" || kind === "ot" || kind === "osservatore" || role.includes("osservatore")) {
     return { memberRole: "osservatore", observerType: kind === "ot" ? "ot" : "oa" };
   }
@@ -156,8 +163,8 @@ export function normalizeMember(m) {
   out.organigrammaKind = inferOrganigrammaKind(out);
 
   let role = (out.memberRole || "").trim().toLowerCase();
-  if (code || !VALID_ROLES.has(role)) {
-    const inferred = inferMemberRole(out);
+  const inferred = inferMemberRole(out);
+  if (code || !VALID_ROLES.has(role) || inferred.memberRole === "osservatore") {
     Object.assign(out, inferred);
     role = out.memberRole;
   } else {
@@ -176,6 +183,20 @@ export function normalizeMember(m) {
     out.portalPassword = defaultPortalPassword(out.firstName, out.lastName);
   }
   return out;
+}
+
+export function isObserverMember(m) {
+  if (!m) return false;
+  const code = aiaCodeOf(m);
+  if (code === "OA" || code === "OT") return true;
+  if (m.memberRole === "osservatore") return true;
+  const ot = String(m.observerType || "").toLowerCase();
+  if (ot === "oa" || ot === "ot") return true;
+  const kind = String(m.kind || "").toLowerCase();
+  if (kind === "oa" || kind === "ot" || kind === "osservatore") return true;
+  const cat = String(m.category || "").toLowerCase();
+  if (/osservatore|organo\s+tecnico/.test(cat)) return true;
+  return false;
 }
 
 export function hasDesignations(memberRole) {

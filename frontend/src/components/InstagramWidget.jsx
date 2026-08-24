@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Instagram, BadgeCheck, ChevronRight, Layers, Play } from "lucide-react";
+import { cn } from "@/lib/utils";
 import { fetchGallery, fetchInstagramWidget } from "../lib/api";
 import {
   parseInstagramPostEmbed,
@@ -77,14 +78,17 @@ function InstagramStat({ value, label }) {
   );
 }
 
-function InstagramPostTile({ post, profileUrl }) {
+function InstagramPostTile({ post, profileUrl, fill = false }) {
   const href = post.permalink || profileUrl;
   return (
     <a
       href={href}
       target="_blank"
       rel="noopener noreferrer"
-      className="group relative aspect-square overflow-hidden bg-slate-100"
+      className={cn(
+        "group relative overflow-hidden bg-slate-100",
+        fill ? "h-full min-h-0" : "aspect-square"
+      )}
       data-testid="instagram-post-tile"
     >
       <img
@@ -116,7 +120,7 @@ function chunkPosts(posts, size = 4) {
   return out;
 }
 
-function InstagramPostGrid({ posts, profileUrl }) {
+function InstagramPostGrid({ posts, profileUrl, fill = false }) {
   const scrollerRef = useRef(null);
   const [canScroll, setCanScroll] = useState(false);
   const pages = useMemo(() => chunkPosts(posts, 4), [posts]);
@@ -142,10 +146,26 @@ function InstagramPostGrid({ posts, profileUrl }) {
   if (!posts.length) {
     return (
       <div
-        className="aspect-square rounded-sm bg-slate-50 border border-slate-100 flex items-center justify-center text-sm text-slate-400"
+        className={`aspect-square rounded-sm bg-slate-50 border border-slate-100 flex items-center justify-center text-sm text-slate-400${fill ? " flex-1 min-h-0" : ""}`}
         data-testid="instagram-grid-empty"
       >
         Nessun post disponibile
+      </div>
+    );
+  }
+
+  if (fill) {
+    const tiles = posts.slice(0, 4);
+    return (
+      <div className="flex-1 min-h-0 grid grid-cols-2 gap-1.5" data-testid="instagram-post-grid">
+            {tiles.map((post) => (
+              <InstagramPostTile
+                key={post.shortcode || post.permalink || post.imageUrl}
+                post={post}
+                profileUrl={profileUrl}
+                fill
+              />
+            ))}
       </div>
     );
   }
@@ -187,7 +207,7 @@ function InstagramPostGrid({ posts, profileUrl }) {
   );
 }
 
-function InstagramProfileCard({ profile, stats, posts, profileUrl, displayName }) {
+function InstagramProfileCard({ profile, stats, posts, profileUrl, displayName, fillHeight = false }) {
   const handle = profile?.username ? `@${profile.username}` : "";
   const name = (displayName || profile?.fullName || profile?.username || "Instagram").trim();
   const statPosts = formatIgCount(stats?.posts);
@@ -196,8 +216,11 @@ function InstagramProfileCard({ profile, stats, posts, profileUrl, displayName }
   const hasStats = statPosts != null || statFollowers != null || statFollowing != null;
 
   return (
-    <div className="aia-ig-profile-card" data-testid="instagram-profile-card">
-      <div className="flex items-center gap-3 sm:gap-4">
+    <div
+      className={cn("aia-ig-profile-card", fillHeight && "h-full flex flex-col min-h-0")}
+      data-testid="instagram-profile-card"
+    >
+      <div className={cn("flex items-center gap-3 sm:gap-4", fillHeight && "shrink-0")}>
         <div className="shrink-0">
           {profile?.profilePicUrl ? (
             <img
@@ -238,20 +261,20 @@ function InstagramProfileCard({ profile, stats, posts, profileUrl, displayName }
         </div>
       </div>
 
-      {hasStats && (
-        <div className="flex items-start justify-around mt-4 pt-1 border-t border-slate-100">
+      {hasStats && !fillHeight && (
+        <div className="flex items-start justify-around mt-4 pt-1 border-t border-slate-100 shrink-0">
           <InstagramStat value={statPosts} label="Posts" />
           <InstagramStat value={statFollowers} label="Followers" />
           <InstagramStat value={statFollowing} label="Following" />
         </div>
       )}
 
-      <div className="mt-4">
+      <div className={cn("mt-4 shrink-0", fillHeight && "mt-3")}>
         <InstagramFollowButton profileUrl={profileUrl} />
       </div>
 
-      <div className="mt-4 -mx-0.5">
-        <InstagramPostGrid posts={posts} profileUrl={profileUrl} />
+      <div className={cn("mt-4 -mx-0.5", fillHeight && "mt-3 flex-1 min-h-0 flex flex-col")}>
+        <InstagramPostGrid posts={posts} profileUrl={profileUrl} fill={fillHeight} />
       </div>
     </div>
   );
@@ -321,7 +344,7 @@ function galleryToPosts(items) {
  * Widget Instagram stile profilo (header + stats + griglia post).
  * Con URL post configurato → embed singolo sotto header compatto.
  */
-export default function InstagramWidget({ config = {}, profileUrl = "" }) {
+export default function InstagramWidget({ config = {}, profileUrl = "", fillHeight = false }) {
   const embedInput = useMemo(() => resolveInstagramEmbedInput(config), [config]);
   const parsed = useMemo(() => parseInstagramPostEmbed(embedInput), [embedInput]);
   const permalink = parsed ? instagramPermalink(parsed) : "";
@@ -392,6 +415,7 @@ export default function InstagramWidget({ config = {}, profileUrl = "" }) {
         posts={widgetData.posts || []}
         profileUrl={resolvedProfileUrl}
         displayName={displayName}
+        fillHeight={fillHeight}
       />
     );
   } else {
@@ -409,10 +433,15 @@ export default function InstagramWidget({ config = {}, profileUrl = "" }) {
 
   return (
     <div
-      className="relative overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm"
+      className={cn(
+        "relative overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm",
+        fillHeight && "h-full flex flex-col min-h-0"
+      )}
       data-testid="instagram-widget"
     >
-      <div className="p-4 sm:p-5">{body}</div>
+      <div className={cn("p-4 sm:p-5", fillHeight && "flex-1 flex flex-col min-h-0 p-3 sm:p-4")}>
+        {body}
+      </div>
     </div>
   );
 }

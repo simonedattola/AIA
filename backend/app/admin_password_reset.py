@@ -72,7 +72,9 @@ async def request_admin_password_reset(email: str) -> bool:
     link = _admin_reset_link(raw)
     name = admin.get("name") or "Amministratore"
     subject = "Reimposta password — Pannello AIA Legnano"
-    html = render_admin_password_reset_email(name=name, link=link, ttl_minutes=RESET_TTL_MINUTES)
+    html = render_admin_password_reset_email(
+        name=name, link=link, ttl_minutes=RESET_TTL_MINUTES
+    )
     sent = await send_email(normalized, subject, html)
     if not sent:
         logger.warning("[admin_reset] Email non inviata (Resend non configurato?)")

@@ -133,6 +133,15 @@ def infer_member_role(doc: dict) -> str:
     if code:
         return AIA_CODE_TO_MEMBER_ROLE[code]
 
+    kind = (doc.get("kind") or "").strip().lower()
+    role = (doc.get("role") or "").strip().lower()
+    cat = (doc.get("category") or "").lower()
+
+    if kind in ("oa", "ot") or kind == "osservatore" or "osservatore" in role:
+        return "osservatore"
+    if re.search(r"osservatore|organo\s+tecnico", cat):
+        return "osservatore"
+
     explicit = (doc.get("memberRole") or "").strip().lower()
     if explicit in MEMBER_ROLES:
         return explicit
@@ -149,11 +158,6 @@ def infer_member_role(doc: dict) -> str:
     if explicit in legacy_map:
         return legacy_map[explicit]
 
-    kind = (doc.get("kind") or "").strip().lower()
-    role = (doc.get("role") or "").strip().lower()
-
-    if kind in ("oa", "ot") or kind == "osservatore" or "osservatore" in role:
-        return "osservatore"
     # Codice AIA AA = Assistente Arbitrale
     code_raw = (doc.get("role") or "").strip().upper()
     if code_raw == "AA" or "assistente" in role or kind == "tutor":
@@ -301,8 +305,20 @@ def chi_siamo_query() -> dict:
 
 
 def osservatori_query() -> dict:
-    """Lista pubblica Osservatori (OA/OT)."""
-    return {"memberRole": "osservatore"}
+    """Lista pubblica Osservatori (OA/OT), inclusi dati legacy senza memberRole."""
+    return {
+        "$or": [
+            {"memberRole": "osservatore"},
+            {"role": {"$in": ["OA", "OT", "oa", "ot"]}},
+            {"kind": {"$in": ["oa", "ot", "osservatore"]}},
+            {
+                "category": {
+                    "$regex": r"osservatore|organo\s+tecnico",
+                    "$options": "i",
+                }
+            },
+        ]
+    }
 
 
 def legacy_arbitri_query() -> dict:
@@ -385,7 +401,9 @@ def role_groups_member_query(role_groups: list[str] | None) -> dict:
     return {**base, "$or": or_clauses}
 
 
-def comunicazione_visibility_or_clauses(member_id: str, member: dict | None) -> list[dict]:
+def comunicazione_visibility_or_clauses(
+    member_id: str, member: dict | None
+) -> list[dict]:
     """Clausole $or per comunicazioni visibili a un associato."""
     clauses: list[dict] = [{"allMembers": True}, {"memberIds": member_id}]
     if member:

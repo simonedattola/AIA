@@ -150,6 +150,7 @@ export const BLOCK_TYPES = [
       ctaLabel: "Tutti gli eventi",
       ctaHref: "/eventi",
       showInstagramWidget: true,
+      showCalendar: false,
       showPresidentCard: false,
       instagramTitle: "AIA Legnano",
       instagramSubtitle: "Foto, aggiornamenti e vita della sezione su Instagram.",

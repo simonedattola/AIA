@@ -7,10 +7,8 @@ import { ADMIN_ROUTES as R } from "../../lib/appRoutes";
 import { Mail, ArrowLeft } from "lucide-react";
 import { Button } from "@/design-system";
 
-const DEFAULT_SECTION_EMAIL = "legnano@aia-figc.it";
-
 export default function AdminForgotPasswordPage() {
-  const [email, setEmail] = useState(DEFAULT_SECTION_EMAIL);
+  const [email, setEmail] = useState("");
   const [error, setError] = useState("");
   const [done, setDone] = useState(false);
   const [loading, setLoading] = useState(false);
@@ -65,6 +63,8 @@ export default function AdminForgotPasswordPage() {
                 <input
                   required
                   type="email"
+                  autoComplete="username"
+                  placeholder="es. legnano@aia-figc.it"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
                   className="w-full pl-10 pr-3 py-2.5 border border-slate-300 rounded-md focus:border-navy-600 focus:ring-2 focus:ring-navy-600/20 focus:outline-none"

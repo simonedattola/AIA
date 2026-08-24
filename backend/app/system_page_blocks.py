@@ -135,12 +135,13 @@ def default_blocks_for_slug(slug: str, page: dict | None = None) -> list[dict]:
                 {
                     "eyebrow": "Calendario sezionale",
                     "title": "Prossimi eventi",
-                    "limit": 50,
+                    "limit": 3,
                     "upcomingOnly": True,
                     "ctaLabel": "",
                     "ctaHref": "/eventi",
                     "showInstagramWidget": False,
                     "showPresidentCard": False,
+                    "showCalendar": True,
                 },
             ),
         ]

@@ -453,6 +453,16 @@ export function EventsListEditor({ config, onChange }) {
           Mostra widget Instagram a fianco degli eventi
         </label>
       </Field>
+      <Field label="Calendario mensile">
+        <label className="inline-flex items-center gap-2 text-sm text-slate-700">
+          <input
+            type="checkbox"
+            checked={c.showCalendar === true}
+            onChange={(e) => setCfg(c, "showCalendar", e.target.checked, onChange)}
+          />
+          Mostra calendario a fianco dell&apos;elenco eventi (desktop)
+        </label>
+      </Field>
       <Field
         label="URL post Instagram (opzionale)"
         hint="Se vuoto, il widget mostra il feed ufficiale del profilo (Impostazioni → URL Instagram). Altrimenti incolla un post/reel: https://www.instagram.com/p/…"

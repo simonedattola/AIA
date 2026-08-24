@@ -53,7 +53,11 @@ def reply_to_email() -> str:
 
 
 def portal_frontend_url() -> str:
-    raw = (os.environ.get("PORTAL_FRONTEND_URL") or DEFAULT_PORTAL_URL).strip().rstrip("/")
+    raw = (
+        (os.environ.get("PORTAL_FRONTEND_URL") or DEFAULT_PORTAL_URL)
+        .strip()
+        .rstrip("/")
+    )
     if not raw or "localhost" in raw or "127.0.0.1" in raw:
         return DEFAULT_PORTAL_URL
     return raw
@@ -64,7 +68,11 @@ def email_logo_url() -> str:
     from .media_urls import public_api_base
 
     base = public_api_base()
-    if base.startswith("https://") and "localhost" not in base and "127.0.0.1" not in base:
+    if (
+        base.startswith("https://")
+        and "localhost" not in base
+        and "127.0.0.1" not in base
+    ):
         return f"{base}/api{EMAIL_LOGO_PUBLIC_PATH}"
     return f"{portal_frontend_url()}{EMAIL_LOGO_PATH}"
 
@@ -596,4 +604,3 @@ def render_admin_password_reset_email(*, name: str, link: str, ttl_minutes: int)
       </p>
       <p style="color:#94A3B8;font-size:12px;word-break:break-all;">{safe_link}</p>
         """)
-

@@ -16,9 +16,11 @@ def _title_word(word: str) -> str:
     if "'" in w:
         parts = w.split("'")
         return "'".join(
-            (parts[0][:1].upper() + parts[0][1:].lower()) if parts[0] else ""
-            if i == 0
-            else _title_word(p)
+            (
+                (parts[0][:1].upper() + parts[0][1:].lower())
+                if parts[0]
+                else "" if i == 0 else _title_word(p)
+            )
             for i, p in enumerate(parts)
         )
     return w[0].upper() + w[1:].lower()

@@ -33,7 +33,7 @@ def test_email_logo_url_prefers_public_api(monkeypatch):
 
 def test_portal_frontend_url_ignores_localhost(monkeypatch):
     monkeypatch.setenv("PORTAL_FRONTEND_URL", "http://localhost:3000")
-    assert portal_frontend_url() == "https://aia-virid.vercel.app"
+    assert portal_frontend_url() == "https://www.aia-legnano.it"
 
 
 def test_wrap_email_uses_https_or_cid_logo(monkeypatch):

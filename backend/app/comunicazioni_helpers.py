@@ -48,7 +48,9 @@ async def comunicazione_destinatari(db, comm: dict) -> list[dict]:
     return members
 
 
-def comunicazione_visible_to_member(comm: dict, member_id: str, member: dict | None) -> bool:
+def comunicazione_visible_to_member(
+    comm: dict, member_id: str, member: dict | None
+) -> bool:
     if comm.get("allMembers"):
         return True
     if member_id in (comm.get("memberIds") or []):
