@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { useSearchParams } from "react-router-dom";
 import {
   adminGallery,
@@ -21,6 +21,8 @@ import {
   AdminPageHeader,
   AdminEmptyState,
   AdminFormModal,
+  AdminTableWrap,
+  AdminFilterTabs,
 } from "../../components/admin/admin-ui";
 import { Button } from "@/design-system";
 
@@ -31,7 +33,7 @@ const cardInputCls =
   "w-full px-2 py-1.5 border border-slate-300 rounded-md focus:border-navy-600 focus:ring-2 focus:ring-navy-600/20 focus:outline-none text-xs";
 
 const STATUS_LABEL = {
-  approved: "Pubblicata",
+  approved: "Approvata",
   pending: "In attesa",
   rejected: "Rifiutata",
 };
@@ -53,7 +55,7 @@ function GalleryCategorySelect({ value, onChange, categories, className, emptyLa
 export default function AdminGalleryPage() {
   const [searchParams, setSearchParams] = useSearchParams();
   const [adding, setAdding] = useState(false);
-  const [carouselTab, setCarouselTab] = useState("approved");
+  const [filter, setFilter] = useState("all");
 
   const [carouselItems, setCarouselItems] = useState([]);
   const [carouselUploading, setCarouselUploading] = useState(false);
@@ -65,16 +67,30 @@ export default function AdminGalleryPage() {
   const [categories, setCategories] = useState([]);
   const [newCategory, setNewCategory] = useState("");
   const [addingCategory, setAddingCategory] = useState(false);
+
   const loadCarousel = useCallback(() => {
-    const status = carouselTab === "pending" ? "pending" : carouselTab === "rejected" ? "rejected" : "approved";
-    adminGallery({ status })
+    adminGallery()
       .then((data) => setCarouselItems(asAdminList(data)))
       .catch(() => setCarouselItems([]));
-  }, [carouselTab]);
+  }, []);
 
   useEffect(() => {
     loadCarousel();
   }, [loadCarousel]);
+
+  const pendingCount = useMemo(
+    () => carouselItems.filter((img) => img.status === "pending").length,
+    [carouselItems]
+  );
+  const approvedCount = useMemo(
+    () => carouselItems.filter((img) => img.status === "approved").length,
+    [carouselItems]
+  );
+  const filteredItems = useMemo(() => {
+    if (filter === "pending") return carouselItems.filter((img) => img.status === "pending");
+    if (filter === "approved") return carouselItems.filter((img) => img.status === "approved");
+    return carouselItems;
+  }, [carouselItems, filter]);
 
   const loadCategories = useCallback(() => {
     adminArticleCategories().then(setCategories).catch(() => setCategories([]));
@@ -237,13 +253,11 @@ export default function AdminGalleryPage() {
   const cardAspectClass = (aspect) =>
     aspect === "9:16" ? "aspect-[9/16] max-h-64 mx-auto w-auto" : "aspect-[16/9]";
 
-  const pendingCount = carouselTab === "pending" ? carouselItems.length : null;
-
   return (
     <div data-testid="admin-gallery">
       <AdminPageHeader
         title="Galleria"
-        description="Foto per il carosello in home. Tagga gli associati che le vedranno in area riservata. Al caricamento ritaglia in 16:9 o 9:16."
+        description="Foto per il carosello in home e proposte dagli associati. Quelle in attesa di approvazione sono evidenziate. Al caricamento ritaglia in 16:9 o 9:16."
       >
         <Button
           type="button"
@@ -346,38 +360,36 @@ export default function AdminGalleryPage() {
         </AdminFormModal>
       )}
 
-      <div className="flex flex-wrap gap-2 mb-6">
-        {[
-          { id: "approved", label: "Pubblicate" },
-          { id: "pending", label: "In attesa" },
-          { id: "rejected", label: "Rifiutate" },
-        ].map((t) => (
-          <button
-            key={t.id}
-            type="button"
-            onClick={() => setCarouselTab(t.id)}
-            className={`px-4 py-2 rounded-full text-sm font-medium border transition-colors ${
-              carouselTab === t.id
-                ? "bg-navy-700 text-white border-navy-700"
-                : "bg-white text-slate-600 border-slate-300 hover:border-navy-400"
-            }`}
-          >
-            {t.label}
-            {t.id === "pending" && pendingCount != null && pendingCount > 0 && (
-              <span className="ml-1.5 bg-gold-400 text-navy-900 px-1.5 py-0.5 rounded-full text-xs">{pendingCount}</span>
-            )}
-          </button>
-        ))}
-      </div>
+      <AdminTableWrap>
+        <div className="p-4 border-b border-slate-200">
+          <AdminFilterTabs
+            active={filter}
+            onChange={setFilter}
+            tabs={[
+              { id: "all", label: "Tutte", count: carouselItems.length },
+              { id: "pending", label: "In attesa di approvazione", count: pendingCount },
+              { id: "approved", label: "Approvate", count: approvedCount },
+            ]}
+          />
+        </div>
 
-      {carouselItems.length === 0 ? (
-        <AdminEmptyState icon={ImagePlus} title="Nessuna immagine.">
-          Carica foto per il carosello home e tagga gli associati che le vedranno in area riservata.
+        <div className="p-4">
+      {filteredItems.length === 0 ? (
+        <AdminEmptyState icon={ImagePlus} title="Nessuna immagine in questa vista.">
+          {filter === "pending"
+            ? "Nessuna foto in attesa di approvazione."
+            : "Carica foto per il carosello home e tagga gli associati che le vedranno in area riservata."}
         </AdminEmptyState>
       ) : (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 min-w-0">
-          {carouselItems.map((img) => (
-            <div key={img.id} className="bg-white rounded-md border border-slate-200 overflow-hidden text-sm min-w-0">
+          {filteredItems.map((img) => (
+            <div
+              key={img.id}
+              className={`bg-white rounded-md border overflow-hidden text-sm min-w-0 ${
+                img.status === "pending" ? "border-gold-300 bg-gold-50/30" : "border-slate-200"
+              }`}
+              data-testid={`gallery-item-${img.id}`}
+            >
               <div className={`bg-slate-100 ${cardAspectClass(img.aspect)}`}>
                 <MediaImage src={img.url} alt="" className="w-full h-full object-cover" />
               </div>
@@ -467,12 +479,14 @@ export default function AdminGalleryPage() {
         </div>
       )}
 
-      {carouselTab === "pending" && carouselItems.length > 0 && (
+      {filter === "pending" && filteredItems.length > 0 && (
         <p className="mt-6 text-sm text-slate-500 flex items-center gap-2">
           <Clock className="h-4 w-4" />
           Le proposte approvate compaiono nel carosello in home.
         </p>
       )}
+        </div>
+      </AdminTableWrap>
 
       {cropSession && (
         <GalleryCropModal
