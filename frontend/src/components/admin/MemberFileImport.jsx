@@ -14,6 +14,13 @@ function formatImportResult(res) {
   ];
   if (!res.dryRun && res.updated) parts.push(`${res.updated} già presenti (aggiornati)`);
   if (res.skippedDuplicates) parts.push(`${res.skippedDuplicates} già in anagrafica`);
+  if (res.removeMissing && res.removed) {
+    parts.push(
+      res.dryRun
+        ? `${res.removed} da eliminare (assenti dal file)`
+        : `${res.removed} eliminati (assenti dal file)`
+    );
+  }
   if (res.fileType) parts.push(`file ${res.fileType}`);
   return `${parts.join(" · ")}.`;
 }
@@ -24,6 +31,7 @@ export default function MemberFileImport({ onImported }) {
   const [file, setFile] = useState(null);
   const [preview, setPreview] = useState(null);
   const [importing, setImporting] = useState(false);
+  const [removeMissing, setRemoveMissing] = useState(false);
   const [msg, setMsg] = useState("");
   const [error, setError] = useState("");
 
@@ -32,6 +40,7 @@ export default function MemberFileImport({ onImported }) {
     setPreview(null);
     setMsg("");
     setError("");
+    setRemoveMissing(false);
     if (inputRef.current) inputRef.current.value = "";
   };
 
@@ -60,15 +69,15 @@ export default function MemberFileImport({ onImported }) {
     setError("");
     setMsg("");
     try {
-      const res = await adminImportMembersFile(file, { dryRun });
+      const res = await adminImportMembersFile(file, { dryRun, removeMissing });
       if (dryRun) {
         setPreview(res);
         setMsg(formatImportResult(res));
       } else {
         setMsg(formatImportResult(res));
-        setPreview(null);
+        setPreview(res.removeMissing ? res : null);
         onImported?.(res);
-        setTimeout(close, 1500);
+        setTimeout(close, 1800);
       }
     } catch (e) {
       setError(e?.response?.data?.detail || "Import fallito.");
@@ -135,6 +144,21 @@ export default function MemberFileImport({ onImported }) {
               />
             </label>
 
+            <label className="flex items-start gap-2 rounded-lg border border-amber-200 bg-amber-50 p-3 text-xs text-amber-950">
+              <input
+                type="checkbox"
+                className="mt-0.5"
+                checked={removeMissing}
+                onChange={(e) => setRemoveMissing(e.target.checked)}
+                data-testid="members-import-remove-missing"
+              />
+              <span>
+                <strong>Elimina chi non è nel file.</strong> Dopo l&apos;import, rimuove
+                dall&apos;anagrafica gli associati assenti da questo elenco (usa l&apos;anteprima
+                prima di confermare).
+              </span>
+            </label>
+
             {error && (
               <p className="flex items-start gap-2 text-red-600" data-testid="members-import-error">
                 <AlertCircle className="h-4 w-4 shrink-0 mt-0.5" /> {error}
@@ -189,6 +213,23 @@ export default function MemberFileImport({ onImported }) {
               </div>
             )}
 
+            {preview?.removedPreview?.length > 0 && (
+              <div className="border border-red-200 rounded-lg overflow-hidden">
+                <p className="px-2 py-2 text-xs font-semibold uppercase tracking-wide bg-red-50 text-red-800">
+                  Da eliminare ({preview.removed})
+                </p>
+                <ul className="max-h-40 overflow-y-auto text-xs divide-y divide-red-100">
+                  {preview.removedPreview.map((row) => (
+                    <li key={row.id || row.slug} className="px-2 py-1.5 text-red-900">
+                      {row.lastName} {row.firstName}
+                      {row.meccanografico ? ` · ${row.meccanografico}` : ""}
+                      {row.role ? ` · ${row.role}` : ""}
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            )}
+
             {preview?.warnings?.length > 0 && (
               <div className="rounded-lg border border-amber-200 bg-amber-50 p-3 text-xs text-amber-900 max-h-32 overflow-y-auto">
                 {preview.warnings.map((w, i) => (
@@ -219,7 +260,7 @@ export default function MemberFileImport({ onImported }) {
                 data-testid="members-import-confirm"
               >
                 {importing ? <Loader2 className="h-4 w-4 animate-spin" /> : <Upload className="h-4 w-4" />}
-                Importa
+                {removeMissing ? "Importa e elimina assenti" : "Importa"}
               </Button>
             </div>
           </div>

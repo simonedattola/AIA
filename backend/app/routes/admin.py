@@ -746,9 +746,13 @@ async def admin_members_import_template(admin=Depends(require_admin)):
 async def admin_import_members_file(
     file: UploadFile = File(...),
     dry_run: bool = Form(False),
+    remove_missing: bool = Form(False),
     admin=Depends(require_admin),
 ):
-    """Importa anagrafica da CSV, Excel, PDF o Word (.docx)."""
+    """Importa anagrafica da CSV, Excel, PDF o Word (.docx).
+
+    Con ``remove_missing=true`` elimina gli associati in DB assenti dal file.
+    """
     filename = file.filename or "anagrafica.csv"
     lower = filename.lower()
     if not lower.endswith(SUPPORTED_EXTENSIONS):
@@ -760,7 +764,12 @@ async def admin_import_members_file(
     if not content:
         raise HTTPException(400, "File vuoto.")
     try:
-        return await import_members_from_file(content, filename, dry_run=dry_run)
+        return await import_members_from_file(
+            content,
+            filename,
+            dry_run=dry_run,
+            remove_missing=remove_missing,
+        )
     except ValueError as exc:
         raise HTTPException(400, str(exc)) from exc
     except Exception as exc:
