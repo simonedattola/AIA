@@ -17,6 +17,8 @@ DEFAULT_SENDER = "noreply@aia-legnano.it"
 DEFAULT_NOTIFY = "legnano@aia-figc.it"
 DEFAULT_PORTAL_URL = "https://aia-virid.vercel.app"
 EMAIL_LOGO_PATH = "/brand/logo-aia-legnano-email.png"
+EMAIL_LOGO_CID = "aia-legnano-logo"
+EMAIL_LOGO_FILENAME = "logo-aia-legnano-email.png"
 
 
 def sender_email() -> str:
@@ -33,21 +35,60 @@ def portal_frontend_url() -> str:
 
 
 def email_logo_url() -> str:
-    """URL assoluto del logo sezione (servito dal frontend)."""
+    """URL assoluto del logo sezione (fallback se il client non supporta CID)."""
     return f"{portal_frontend_url()}{EMAIL_LOGO_PATH}"
+
+
+def _email_logo_file_path():
+    from pathlib import Path
+
+    here = Path(__file__).resolve()
+    candidates = [
+        here.parents[2] / "frontend" / "public" / "brand" / EMAIL_LOGO_FILENAME,
+        here.parents[1] / "static" / EMAIL_LOGO_FILENAME,
+        Path("/workspace/frontend/public/brand") / EMAIL_LOGO_FILENAME,
+    ]
+    for path in candidates:
+        if path.is_file():
+            return path
+    return None
+
+
+def email_logo_bytes() -> bytes | None:
+    path = _email_logo_file_path()
+    if not path:
+        return None
+    try:
+        return path.read_bytes()
+    except OSError:
+        return None
+
+
+def email_logo_attachment() -> dict | None:
+    raw = email_logo_bytes()
+    if not raw:
+        return None
+    return {
+        "filename": EMAIL_LOGO_FILENAME,
+        "content": raw,
+        "content_id": EMAIL_LOGO_CID,
+        "content_type": "image/png",
+    }
 
 
 def wrap_email(inner_html: str) -> str:
     """Layout comune: logo sezione + contenuto + footer."""
-    logo = email_logo_url()
+    logo_src = f"cid:{EMAIL_LOGO_CID}"
+    logo_fallback = email_logo_url()
     home = portal_frontend_url()
     return f"""
     <div style="font-family:Arial,Helvetica,sans-serif;max-width:600px;margin:0 auto;background:#ffffff;">
       <div style="text-align:center;padding:22px 16px 14px;background:#004587;">
         <a href="{home}" style="text-decoration:none;">
-          <img src="{logo}" alt="AIA Legnano" width="80" height="80"
+          <img src="{logo_src}" alt="AIA Legnano" width="80" height="80"
                style="display:inline-block;width:80px;height:80px;border:0;border-radius:10px;background:#ffffff;padding:6px;box-sizing:border-box;" />
         </a>
+        <!-- fallback URL per client che ignorano CID: {logo_fallback} -->
         <div style="color:#D4AF37;font-size:12px;font-weight:bold;letter-spacing:0.08em;margin-top:10px;text-transform:uppercase;">
           Sezione AIA Legnano
         </div>
@@ -89,9 +130,15 @@ async def send_email(
             "subject": subject,
             "html": html,
         }
+        merged: list[dict] = []
+        logo = email_logo_attachment()
+        if logo and f"cid:{EMAIL_LOGO_CID}" in (html or ""):
+            merged.append(logo)
         if attachments:
+            merged.extend(attachments)
+        if merged:
             packed = []
-            for att in attachments:
+            for att in merged:
                 name = (att.get("filename") or "allegato.bin").strip()
                 raw = att.get("content")
                 if raw is None:
@@ -100,12 +147,17 @@ async def send_email(
                     raw_bytes = raw.encode("utf-8")
                 else:
                     raw_bytes = bytes(raw)
-                packed.append(
-                    {
-                        "filename": name,
-                        "content": base64.b64encode(raw_bytes).decode("ascii"),
-                    }
-                )
+                item = {
+                    "filename": name,
+                    "content": base64.b64encode(raw_bytes).decode("ascii"),
+                }
+                cid = (att.get("content_id") or "").strip()
+                if cid:
+                    item["content_id"] = cid
+                ctype = (att.get("content_type") or "").strip()
+                if ctype:
+                    item["content_type"] = ctype
+                packed.append(item)
             if packed:
                 params["attachments"] = packed
         result = await asyncio.to_thread(resend.Emails.send, params)
