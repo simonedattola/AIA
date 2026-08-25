@@ -101,6 +101,30 @@ async def purge_demo_members() -> int:
     return res.deleted_count
 
 
+async def ensure_purge_designations_2022_23() -> int:
+    """Elimina tutte le designazioni della stagione calcistica 2022-23 (una sola volta)."""
+    flag = "purge_designations_2022_23"
+    if await _seed_flag(flag):
+        return 0
+    from .designation_filters import match_date_in_season_clause, parse_season
+
+    if not parse_season("2022-23"):
+        return 0
+    db = get_db()
+    clause = match_date_in_season_clause("2022-23") or {}
+    if not clause:
+        return 0
+    before = await db.designations.count_documents(clause)
+    res = await db.designations.delete_many(clause)
+    await _set_seed_flag(flag)
+    logger.info(
+        "Designazioni 2022-23: eliminate %s (trovate %s)",
+        res.deleted_count,
+        before,
+    )
+    return int(res.deleted_count)
+
+
 def _now():
     return datetime.now(timezone.utc).isoformat()
 
@@ -1861,6 +1885,9 @@ async def run_all():
     await seed_settings()
     await purge_demo_members()
     await ensure_legacy_seed_flags()
+    n_purge = await ensure_purge_designations_2022_23()
+    if n_purge:
+        logger.info("Purgate %s designazioni stagione 2022-23", n_purge)
     await seed_pages()
     await ensure_all_system_pages()
     await ensure_osservatori_page()

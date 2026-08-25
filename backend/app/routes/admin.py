@@ -960,6 +960,30 @@ async def admin_update_designation(
     return doc
 
 
+@router.delete("/designations/season/{season}")
+async def admin_delete_designations_season(season: str, admin=Depends(require_admin)):
+    """Elimina tutte le designazioni di una stagione calcistica (es. 2022-23)."""
+    from ..designation_filters import match_date_in_season_clause, parse_season
+
+    label = (season or "").strip()
+    if not parse_season(label):
+        raise HTTPException(
+            400, "Stagione non valida (atteso formato YYYY-YY, es. 2022-23)"
+        )
+    clause = match_date_in_season_clause(label)
+    if not clause:
+        raise HTTPException(400, "Stagione non valida")
+    db = get_db()
+    before = await db.designations.count_documents(clause)
+    res = await db.designations.delete_many(clause)
+    return {
+        "ok": True,
+        "season": label,
+        "matched": before,
+        "deleted": res.deleted_count,
+    }
+
+
 @router.delete("/designations/{des_id}")
 async def admin_delete_designation(des_id: str, admin=Depends(require_admin)):
     db = get_db()
