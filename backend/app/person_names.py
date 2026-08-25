@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+_APOSTROPHES = ("'", "\u2019", "\u2018", "`")
+
 
 def _title_word(word: str) -> str:
     w = (word or "").strip()
@@ -13,16 +15,12 @@ def _title_word(word: str) -> str:
         return w.upper()
     if "-" in w:
         return "-".join(_title_word(part) for part in w.split("-"))
-    if "'" in w:
-        parts = w.split("'")
-        return "'".join(
-            (
-                (parts[0][:1].upper() + parts[0][1:].lower())
-                if parts[0]
-                else "" if i == 0 else _title_word(p)
-            )
-            for i, p in enumerate(parts)
-        )
+    for mark in _APOSTROPHES:
+        if mark in w:
+            # Normalizza a apostrofo ASCII; title-case ogni segmento.
+            # Es. D'AZZEO → D'Azzeo, DELL'ACQUA → Dell'Acqua, IANNO' → Ianno'
+            parts = w.replace(mark, "'").split("'")
+            return "'".join(_title_word(p) if p else "" for p in parts)
     return w[0].upper() + w[1:].lower()
 
 
