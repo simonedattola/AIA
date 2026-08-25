@@ -1,8 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { Instagram, ExternalLink, Layers, Play } from "lucide-react";
 import { Button, CardTitle, Eyebrow } from "@/design-system";
-import { fetchGallery, fetchInstagramWidget } from "../lib/api";
-import { mediaUrl } from "../lib/media";
+import { fetchInstagramWidget } from "../lib/api";
 import { parseInstagramUsername } from "../lib/instagram-embed";
 
 const POSTS_VISIBLE = 9; // griglia 3×3
@@ -13,23 +12,6 @@ function parseInstagramHandle(url) {
   if (trimmed.startsWith("@")) return trimmed.slice(1).split("/")[0] || null;
   const m = trimmed.match(/instagram\.com\/([^/?#]+)/i);
   return m ? m[1].replace(/^@/, "") : null;
-}
-
-function galleryToPosts(items) {
-  return items
-    .map((img) => {
-      const src = mediaUrl(img.url || img.path || "");
-      if (!src) return null;
-      return {
-        shortcode: img.id,
-        permalink: img.sourceUrl || "",
-        imageUrl: src,
-        caption: img.caption || "",
-        isVideo: false,
-        isCarousel: false,
-      };
-    })
-    .filter(Boolean);
 }
 
 function PostTile({ post, profileUrl }) {
@@ -84,29 +66,16 @@ export default function InstagramSidebarWidget({
   useEffect(() => {
     let cancelled = false;
     setLoading(true);
+    // Solo post Instagram reali dall'API widget (mai galleria sito).
     fetchInstagramWidget({ limit: POSTS_VISIBLE })
       .then((data) => {
         if (cancelled) return;
         const list = Array.isArray(data?.posts) ? data.posts : [];
-        if (list.length) {
-          setPosts(list.slice(0, POSTS_VISIBLE));
-          return;
-        }
-        return fetchGallery().then((items) => {
-          if (cancelled) return;
-          setPosts(galleryToPosts(Array.isArray(items) ? items : []).slice(0, POSTS_VISIBLE));
-        });
+        setPosts(list.slice(0, POSTS_VISIBLE));
       })
-      .catch(() =>
-        fetchGallery()
-          .then((items) => {
-            if (cancelled) return;
-            setPosts(galleryToPosts(Array.isArray(items) ? items : []).slice(0, POSTS_VISIBLE));
-          })
-          .catch(() => {
-            if (!cancelled) setPosts([]);
-          })
-      )
+      .catch(() => {
+        if (!cancelled) setPosts([]);
+      })
       .finally(() => {
         if (!cancelled) setLoading(false);
       });

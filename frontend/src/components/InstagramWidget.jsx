@@ -1,14 +1,13 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Instagram, BadgeCheck, ChevronRight, Layers, Play } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { fetchGallery, fetchInstagramWidget } from "../lib/api";
+import { fetchInstagramWidget } from "../lib/api";
 import {
   parseInstagramPostEmbed,
   parseInstagramUsername,
   instagramPermalink,
   resolveInstagramEmbedInput,
 } from "../lib/instagram-embed";
-import { mediaUrl } from "../lib/media";
 import { SECTION_LOGO } from "../lib/brand";
 import { formatIgCount } from "./instagram-widget-utils";
 
@@ -323,26 +322,10 @@ function InstagramOfficialEmbed({ permalink }) {
   );
 }
 
-function galleryToPosts(items) {
-  return items
-    .map((img) => {
-      const src = mediaUrl(img.url || img.path || "");
-      if (!src) return null;
-      return {
-        shortcode: img.id,
-        permalink: img.sourceUrl || "",
-        imageUrl: src,
-        caption: img.caption || "",
-        isVideo: false,
-        isCarousel: false,
-      };
-    })
-    .filter(Boolean);
-}
-
 /**
  * Widget Instagram stile profilo (header + stats + griglia post).
  * Con URL post configurato → embed singolo sotto header compatto.
+ * Solo post Instagram reali (niente fallback sulle foto del sito).
  */
 export default function InstagramWidget({ config = {}, profileUrl = "", fillHeight = false }) {
   const embedInput = useMemo(() => resolveInstagramEmbedInput(config), [config]);
@@ -360,30 +343,9 @@ export default function InstagramWidget({ config = {}, profileUrl = "", fillHeig
     setLoading(true);
     fetchInstagramWidget({ limit: 12 })
       .then((data) => setWidgetData(data))
-      .catch(() => {
-        if (!profileUsername && !resolvedProfileUrl) {
-          setWidgetData(null);
-          return;
-        }
-        fetchGallery()
-          .then((items) => {
-            const list = Array.isArray(items) ? items.slice(0, 8) : [];
-            setWidgetData({
-              profile: {
-                username: profileUsername || "instagram",
-                fullName: displayName || "Instagram",
-                profilePicUrl: "",
-                isVerified: false,
-                profileUrl: resolvedProfileUrl,
-              },
-              posts: galleryToPosts(list),
-              stats: { posts: list.length || null, followers: null, following: null },
-            });
-          })
-          .catch(() => setWidgetData(null));
-      })
+      .catch(() => setWidgetData(null))
       .finally(() => setLoading(false));
-  }, [profileUsername, displayName, resolvedProfileUrl]);
+  }, []);
 
   let body;
   if (loading && !widgetData) {
