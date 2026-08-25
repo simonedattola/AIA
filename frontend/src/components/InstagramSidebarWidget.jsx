@@ -1,11 +1,11 @@
 import { useEffect, useMemo, useState } from "react";
 import { Instagram, ExternalLink, Layers, Play } from "lucide-react";
-import { Button } from "@/design-system";
+import { Button, CardTitle, Eyebrow } from "@/design-system";
 import { fetchGallery, fetchInstagramWidget } from "../lib/api";
 import { mediaUrl } from "../lib/media";
 import { parseInstagramUsername } from "../lib/instagram-embed";
 
-const POSTS_VISIBLE = 6; // 3 righe × 2 colonne
+const POSTS_VISIBLE = 9; // griglia 3×3
 
 function parseInstagramHandle(url) {
   if (!url || typeof url !== "string") return null;
@@ -50,11 +50,11 @@ function PostTile({ post, profileUrl }) {
         referrerPolicy="no-referrer"
       />
       {(post.isVideo || post.isCarousel) && (
-        <span className="absolute top-1.5 right-1.5 text-white drop-shadow-md">
+        <span className="absolute top-1 right-1 text-white drop-shadow-md">
           {post.isCarousel ? (
-            <Layers className="h-3.5 w-3.5" strokeWidth={2.5} />
+            <Layers className="h-3 w-3" strokeWidth={2.5} />
           ) : (
-            <Play className="h-3.5 w-3.5 fill-white" strokeWidth={2.5} />
+            <Play className="h-3 w-3 fill-white" strokeWidth={2.5} />
           )}
         </span>
       )}
@@ -64,15 +64,19 @@ function PostTile({ post, profileUrl }) {
 }
 
 /**
- * Widget Instagram home: solo griglia post + CTA (niente header colorato né barra profilo).
+ * Widget Instagram home: header gradiente + griglia 3×3 compatta + CTA.
+ * Nessuna barra profilo Instagram (avatar / follower / stats).
  */
 export default function InstagramSidebarWidget({
   profileUrl = "",
+  title = "AIA Legnano",
+  subtitle = "Foto, aggiornamenti e vita della sezione su Instagram.",
   className = "",
 }) {
   const handle =
     parseInstagramHandle(profileUrl) || parseInstagramUsername(profileUrl) || "aia_legnano";
   const href = profileUrl || (handle ? `https://www.instagram.com/${handle}/` : null);
+  const displayHandle = handle ? `@${handle}` : null;
 
   const [posts, setPosts] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -115,24 +119,50 @@ export default function InstagramSidebarWidget({
 
   return (
     <div
-      className={`bg-white rounded-lg shadow-sm border border-slate-200 overflow-hidden flex flex-col ${className}`.trim()}
+      className={`bg-white rounded-lg shadow-sm border border-slate-200 overflow-hidden flex flex-col max-w-md w-full ml-auto ${className}`.trim()}
       data-testid="instagram-profile-widget"
     >
+      <div className="px-3.5 py-3 bg-gradient-to-br from-[#833AB4] via-[#E1306C] to-[#F77737] text-white shrink-0">
+        <div className="flex items-center gap-2.5">
+          <div className="h-9 w-9 rounded-full bg-white/20 flex items-center justify-center backdrop-blur-sm shrink-0">
+            <Instagram className="h-4 w-4" aria-hidden />
+          </div>
+          <div className="min-w-0">
+            <Eyebrow className="text-[9px] tracking-[0.2em] text-white/90">Instagram</Eyebrow>
+            <CardTitle as="h3" className="text-base leading-tight truncate text-white">
+              {title || "AIA Legnano"}
+            </CardTitle>
+            {displayHandle && <p className="text-xs text-white/90 truncate">{displayHandle}</p>}
+          </div>
+        </div>
+        {subtitle && (
+          <p className="text-xs text-white/90 mt-2 leading-snug line-clamp-2">{subtitle}</p>
+        )}
+      </div>
+
       {loading && tiles.length === 0 ? (
-        <div className="aspect-[2/3] flex items-center justify-center text-sm text-slate-400" data-testid="instagram-sidebar-loading">
+        <div
+          className="aspect-square flex items-center justify-center text-sm text-slate-400"
+          data-testid="instagram-sidebar-loading"
+        >
           Caricamento…
         </div>
       ) : tiles.length === 0 ? (
-        <div className="p-6 text-sm text-slate-600" data-testid="instagram-sidebar-empty">
+        <div className="p-4 text-sm text-slate-600" data-testid="instagram-sidebar-empty">
           Nessun post Instagram disponibile.
           {href && (
-            <a href={href} target="_blank" rel="noopener noreferrer" className="block mt-3 text-navy-700 font-medium">
+            <a
+              href={href}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="block mt-2 text-navy-700 font-medium"
+            >
               Apri profilo Instagram
             </a>
           )}
         </div>
       ) : (
-        <div className="grid grid-cols-2 gap-0.5 bg-white" data-testid="instagram-sidebar-grid">
+        <div className="grid grid-cols-3 gap-0.5 bg-white" data-testid="instagram-sidebar-grid">
           {tiles.map((post) => (
             <PostTile
               key={post.shortcode || post.permalink || post.imageUrl}
@@ -144,18 +174,18 @@ export default function InstagramSidebarWidget({
       )}
 
       {href && (
-        <div className="shrink-0 border-t border-slate-200 p-3 bg-white">
+        <div className="shrink-0 border-t border-slate-200 px-2.5 py-2 bg-white">
           <Button
             href={href}
             target="_blank"
             rel="noopener noreferrer"
             variant="primary"
             size="sm"
-            className="w-full"
+            className="w-full text-xs py-2"
             data-testid="instagram-profile-follow"
           >
-            <Instagram className="h-4 w-4" />
-            Seguici su Instagram <ExternalLink className="h-4 w-4" />
+            <Instagram className="h-3.5 w-3.5" />
+            Seguici su Instagram <ExternalLink className="h-3.5 w-3.5" />
           </Button>
         </div>
       )}
