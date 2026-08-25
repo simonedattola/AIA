@@ -27,6 +27,7 @@ from .designations_import_extract import (
     _cell_str,
 )
 from .member_roles import is_observer_designation_role
+from .person_names import format_person_name
 from .scrapers.aia_lombardia import ROLE_MAP, _clean_text
 
 SOURCE = "file-import"
@@ -560,6 +561,14 @@ def parse_designations_file(
     return rows, warnings, meta
 
 
+def _canonical_member_display_name(
+    first: str = "", last: str = "", *, fallback: str = ""
+) -> str:
+    """Nome da salvare su designazione: mai TUTTO MAIUSCOLO dal file."""
+    joined = f"{(first or '').strip()} {(last or '').strip()}".strip()
+    return format_person_name(full=joined or fallback or "")
+
+
 async def _resolve_member_for_import(
     db,
     full_name: str,
@@ -575,22 +584,24 @@ async def _resolve_member_for_import(
         key = f"mec:{mec.lower()}"
         if key in member_lookup:
             info = member_lookup[key]
-            canonical = (
-                f"{info.get('firstName', '')} {info.get('lastName', '')}".strip()
-                or full_name
+            canonical = _canonical_member_display_name(
+                info.get("firstName", ""),
+                info.get("lastName", ""),
+                fallback=full_name,
             )
             return info["id"], info.get("slug", ""), False, canonical
 
     existing = _lookup_member_info(member_lookup, full_name)
     if existing:
-        canonical = (
-            f"{existing.get('firstName', '')} {existing.get('lastName', '')}".strip()
-            or full_name
+        canonical = _canonical_member_display_name(
+            existing.get("firstName", ""),
+            existing.get("lastName", ""),
+            fallback=full_name,
         )
         return existing["id"], existing.get("slug", ""), False, canonical
 
     if not allow_create:
-        return None, "", False, full_name
+        return None, "", False, format_person_name(full=full_name)
 
     # Export Associato = Cognome Nome: in creazione usa quell'ordine
     member_id, member_slug, created = await _resolve_member(
@@ -602,12 +613,13 @@ async def _resolve_member_for_import(
     )
     if created:
         info = _lookup_member_info(member_lookup, full_name) or {}
-        canonical = (
-            f"{info.get('firstName', '')} {info.get('lastName', '')}".strip()
-            or full_name
+        canonical = _canonical_member_display_name(
+            info.get("firstName", ""),
+            info.get("lastName", ""),
+            fallback=full_name,
         )
         return member_id, member_slug, True, canonical
-    return member_id, member_slug, False, full_name
+    return member_id, member_slug, False, format_person_name(full=full_name)
 
 
 async def _find_existing_by_match_key(db, doc_fields: dict) -> Optional[dict]:
@@ -670,7 +682,10 @@ async def import_designations_from_file(
         if not linked and not would_create:
             unlinked += 1
 
-        display_name = canonical_name if linked or created else row["memberName"]
+        # Sempre title-case: i file AIA esportano spesso NOMI IN MAIUSCOLO.
+        display_name = format_person_name(
+            full=(canonical_name if linked or created else row["memberName"])
+        )
 
         doc_fields = {
             "matchDate": _to_iso_datetime(row["matchDate"]),

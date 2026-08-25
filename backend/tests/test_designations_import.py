@@ -123,3 +123,88 @@ class TestParseDesignationsFile:
         rows, warnings, _ = parse_designations_file(content, "dup.csv")
         assert len(rows) == 1
         assert any("duplicate" in w.lower() for w in warnings)
+
+
+class TestTitleCaseOnImport:
+    def test_canonical_display_name_from_all_caps(self):
+        from app.designations_import import _canonical_member_display_name
+
+        assert _canonical_member_display_name("MARIO", "ROSSI") == "Mario Rossi"
+        assert (
+            _canonical_member_display_name(fallback="MENAPACE LORENZO")
+            == "Menapace Lorenzo"
+        )
+        assert (
+            _canonical_member_display_name(fallback="NICOLO' D'AZZEO")
+            == "Nicolo' D'Azzeo"
+        )
+
+    @pytest.mark.asyncio
+    async def test_file_import_saves_title_case_not_all_caps(self):
+        """Dry-run preview + write path: nomi file MAIUSCOLI → title case."""
+        from app.db import get_db
+        from app.designations_import import import_designations_from_file
+        from app.models import _id
+        from app.person_names import format_person_name_parts
+
+        preview_csv = (
+            "data;gara;ruolo;nominativo\n"
+            "2026-05-16;Legnano - Castellanza;Arbitro;MENAPACE LORENZO\n"
+            "2026-05-16;Legnano - Castellanza;Assistente 1;GIORGI FABRIZIO\n"
+        ).encode("utf-8")
+        preview = await import_designations_from_file(
+            preview_csv, "caps.csv", dry_run=True
+        )
+        names = [p["memberName"] for p in preview["preview"]]
+        assert len(names) == 2
+        assert all(n != n.upper() for n in names if n)
+
+        unique = _id()[:10].upper()
+        last_raw = f"ZZIMPORT{unique}"
+        first_raw = "LORENZO"
+        full_caps = f"{last_raw} {first_raw}"
+        content = (
+            "data;gara;ruolo;nominativo\n"
+            f"2099-01-15;Casa Zzimp - Ospite Zzimp;Arbitro;{full_caps}\n"
+        ).encode("utf-8")
+        result = await import_designations_from_file(
+            content, "create-caps.csv", dry_run=False
+        )
+        assert (
+            result["inserted"] >= 1
+            or result["updated"] >= 1
+            or result.get("membersCreated", 0) >= 1
+        )
+        db = get_db()
+        des = await db.designations.find_one(
+            {
+                "memberName": {"$regex": last_raw, "$options": "i"},
+                "matchDate": {"$regex": "^2099-01-15"},
+            },
+            {"_id": 0, "memberName": 1, "memberId": 1},
+        )
+        assert des is not None
+        expect_first, expect_last = format_person_name_parts("Lorenzo", last_raw)
+        assert des["memberName"] == f"{expect_first} {expect_last}"
+        assert des["memberName"] != full_caps
+        mid = des.get("memberId")
+        try:
+            if mid:
+                m = await db.members.find_one(
+                    {"id": mid}, {"_id": 0, "firstName": 1, "lastName": 1}
+                )
+                assert m is not None
+                assert m["firstName"] == expect_first
+                assert m["lastName"] == expect_last
+                assert m["firstName"] != first_raw
+        finally:
+            if mid:
+                await db.designations.delete_many({"memberId": mid})
+                await db.members.delete_one({"id": mid})
+            else:
+                await db.designations.delete_many(
+                    {
+                        "matchDate": {"$regex": "^2099-01-15"},
+                        "matchLabel": "Casa Zzimp - Ospite Zzimp",
+                    }
+                )

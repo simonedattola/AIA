@@ -184,6 +184,12 @@ async def _resolve_member(
         logger.warning("Cannot create member from name: %r", full_name)
         return None, "", False
 
+    from .person_names import format_person_name_parts
+    from .member_roles import normalize_member
+
+    # Export AIA / file spesso in TUTTO MAIUSCOLO: salva in title case.
+    first_name, last_name = format_person_name_parts(first_name, last_name)
+
     slug = await _unique_slug(db, first_name, last_name)
     member_id = _id()
     is_assistant = "assistente" in (designation_role or "").lower()
@@ -200,6 +206,9 @@ async def _resolve_member(
         notes="Creato automaticamente da sync designazioni AIA FIGC",
     )
     doc = member.model_dump()
+    normalize_member(doc)
+    first_name = doc.get("firstName") or first_name
+    last_name = doc.get("lastName") or last_name
     await db.members.insert_one(doc.copy())
     info = {
         "id": member_id,
@@ -486,6 +495,17 @@ async def sync_from_aia_lombardia(
         if created:
             members_created += 1
 
+        from .person_names import format_person_name
+
+        display_name = format_person_name(full=row.member_name)
+        if member_id:
+            info = _lookup_member_info(member_lookup, row.member_name) or {}
+            linked_name = (
+                f"{info.get('firstName', '')} {info.get('lastName', '')}".strip()
+            )
+            if linked_name:
+                display_name = format_person_name(full=linked_name)
+
         scraped_ids.add(row.external_id)
         doc_fields = {
             "matchDate": _to_iso_datetime(row.match_date),
@@ -497,7 +517,7 @@ async def sync_from_aia_lombardia(
             "matchLabel": row.match_label,
             "category": row.championship,
             "role": row.role,
-            "memberName": row.member_name,
+            "memberName": display_name,
             "memberId": member_id,
             "memberSlug": member_slug or "",
             "status": "published",
