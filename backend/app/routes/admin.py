@@ -1662,6 +1662,94 @@ async def admin_import_instagram_batch(
     return await import_instagram_batch(db, payload, username=username)
 
 
+@router.post("/instagram/widget-cache")
+async def admin_upsert_instagram_widget_cache(
+    payload: dict, admin=Depends(require_admin)
+):
+    """Salva/aggiorna la cache del widget Instagram (ultimi post).
+
+    Body: { username?, profile?, posts: [{ shortcode, permalink?, imageUrl?, caption?, ... }] }
+    Utile quando il feed live da Railway è bloccato (401) ma i post sono noti.
+    """
+    from ..instagram_gallery import parse_instagram_username
+    from ..instagram_widget import save_widget_cache, stable_instagram_media_url
+
+    db = get_db()
+    posts_in = payload.get("posts") or []
+    if not isinstance(posts_in, list) or not posts_in:
+        raise HTTPException(400, "posts obbligatorio (lista non vuota)")
+
+    settings = (
+        await db.site_settings.find_one(
+            {"id": "site-settings"}, {"_id": 0, "instagramUrl": 1}
+        )
+        or {}
+    )
+    username = parse_instagram_username(
+        payload.get("username") or settings.get("instagramUrl") or "aia_legnano"
+    )
+    posts = []
+    for raw in posts_in[:24]:
+        if not isinstance(raw, dict):
+            continue
+        code = (raw.get("shortcode") or "").strip()
+        if not code and raw.get("permalink"):
+            from ..instagram_gallery import instagram_shortcode_from_url
+
+            code = instagram_shortcode_from_url(raw.get("permalink") or "")
+        if not code:
+            continue
+        posts.append(
+            {
+                "shortcode": code,
+                "permalink": raw.get("permalink")
+                or f"https://www.instagram.com/p/{code}/",
+                "imageUrl": raw.get("imageUrl") or stable_instagram_media_url(code),
+                "caption": (raw.get("caption") or "")[:120],
+                "isVideo": bool(raw.get("isVideo")),
+                "isCarousel": bool(raw.get("isCarousel")),
+            }
+        )
+    if not posts:
+        raise HTTPException(400, "Nessun post valido (serve shortcode)")
+
+    profile = payload.get("profile") or {
+        "username": username,
+        "fullName": username.replace("_", " ").title(),
+        "profilePicUrl": "",
+        "isVerified": False,
+        "profileUrl": f"https://www.instagram.com/{username}/",
+    }
+    await save_widget_cache(db, username, {"profile": profile, "posts": posts})
+    return {"ok": True, "cached": len(posts), "username": username}
+
+
+@router.post("/instagram/widget-cache/refresh")
+async def admin_refresh_instagram_widget_cache(admin=Depends(require_admin)):
+    """Prova a ricaricare il feed Instagram live e aggiorna la cache Mongo."""
+    from ..instagram_gallery import parse_instagram_username
+    from ..instagram_widget import (
+        fetch_instagram_widget_sync,
+        save_widget_cache,
+    )
+    import asyncio
+
+    db = get_db()
+    settings = (
+        await db.site_settings.find_one(
+            {"id": "site-settings"}, {"_id": 0, "instagramUrl": 1}
+        )
+        or {}
+    )
+    username = parse_instagram_username(settings.get("instagramUrl") or "aia_legnano")
+    try:
+        data = await asyncio.to_thread(fetch_instagram_widget_sync, username, limit=12)
+    except Exception as exc:
+        raise HTTPException(502, f"Feed Instagram non disponibile: {exc}") from exc
+    await save_widget_cache(db, username, data)
+    return {"ok": True, "cached": len(data.get("posts") or []), "username": username}
+
+
 @router.post("/gallery/upload")
 async def admin_upload_gallery_image(
     file: UploadFile = File(...),

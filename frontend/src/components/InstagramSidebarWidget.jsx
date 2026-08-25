@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { Instagram, ExternalLink, Layers, Play } from "lucide-react";
 import { Button, CardTitle, Eyebrow } from "@/design-system";
-import { fetchGallery, fetchInstagramWidget } from "../lib/api";
+import { fetchInstagramWidget } from "../lib/api";
 import { mediaUrl } from "../lib/media";
 import { parseInstagramUsername } from "../lib/instagram-embed";
 
@@ -15,23 +15,6 @@ function parseInstagramHandle(url) {
   return m ? m[1].replace(/^@/, "") : null;
 }
 
-function galleryToPosts(items) {
-  return items
-    .map((img) => {
-      const src = mediaUrl(img.url || img.path || "");
-      if (!src) return null;
-      return {
-        shortcode: img.id,
-        permalink: img.sourceUrl || "",
-        imageUrl: src,
-        caption: img.caption || "",
-        isVideo: false,
-        isCarousel: false,
-      };
-    })
-    .filter(Boolean);
-}
-
 function PostTile({ post, profileUrl }) {
   const href = post.permalink || profileUrl;
   return (
@@ -43,7 +26,7 @@ function PostTile({ post, profileUrl }) {
       data-testid="instagram-sidebar-post"
     >
       <img
-        src={post.imageUrl}
+        src={mediaUrl(post.imageUrl)}
         alt={post.caption || "Post Instagram"}
         className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-105"
         loading="lazy"
@@ -84,29 +67,16 @@ export default function InstagramSidebarWidget({
   useEffect(() => {
     let cancelled = false;
     setLoading(true);
+    // Solo post Instagram reali dall'API widget (mai galleria sito).
     fetchInstagramWidget({ limit: POSTS_VISIBLE })
       .then((data) => {
         if (cancelled) return;
         const list = Array.isArray(data?.posts) ? data.posts : [];
-        if (list.length) {
-          setPosts(list.slice(0, POSTS_VISIBLE));
-          return;
-        }
-        return fetchGallery().then((items) => {
-          if (cancelled) return;
-          setPosts(galleryToPosts(Array.isArray(items) ? items : []).slice(0, POSTS_VISIBLE));
-        });
+        setPosts(list.slice(0, POSTS_VISIBLE));
       })
-      .catch(() =>
-        fetchGallery()
-          .then((items) => {
-            if (cancelled) return;
-            setPosts(galleryToPosts(Array.isArray(items) ? items : []).slice(0, POSTS_VISIBLE));
-          })
-          .catch(() => {
-            if (!cancelled) setPosts([]);
-          })
-      )
+      .catch(() => {
+        if (!cancelled) setPosts([]);
+      })
       .finally(() => {
         if (!cancelled) setLoading(false);
       });

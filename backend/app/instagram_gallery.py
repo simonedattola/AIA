@@ -103,12 +103,16 @@ def is_unsuitable_for_gallery(
     return False
 
 
+_IG_MOBILE_UA = (
+    "Instagram 192.0.0.37.107 Android "
+    "(33/13; 420dpi; 1080x2400; Google/google; Pixel 7; panther; panther; en_US; 458229257)"
+)
+
+
 def _ig_headers(session_id: str = "") -> dict[str, str]:
+    # UA mobile: più affidabile da IP datacenter (meno 401 rispetto al browser).
     headers = {
-        "User-Agent": (
-            "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 "
-            "(KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36"
-        ),
+        "User-Agent": _IG_MOBILE_UA,
         "X-IG-App-ID": IG_APP_ID,
         "X-Requested-With": "XMLHttpRequest",
         "Accept": "*/*",
@@ -214,10 +218,16 @@ def fetch_user_feed_page(
 
     with httpx.Client(timeout=60, follow_redirects=True) as client:
         r = client.get(
-            f"https://www.instagram.com/api/v1/feed/user/{user_id}/",
+            f"https://i.instagram.com/api/v1/feed/user/{user_id}/",
             headers=headers,
             params=params,
         )
+        if r.status_code != 200:
+            r = client.get(
+                f"https://www.instagram.com/api/v1/feed/user/{user_id}/",
+                headers=headers,
+                params=params,
+            )
         if r.status_code != 200:
             raise RuntimeError(f"Instagram feed HTTP {r.status_code}")
         data = r.json()
@@ -366,10 +376,16 @@ def fetch_all_profile_posts(
             if max_id:
                 params["max_id"] = max_id
             r = client.get(
-                f"https://www.instagram.com/api/v1/feed/user/{user_id}/",
+                f"https://i.instagram.com/api/v1/feed/user/{user_id}/",
                 headers=headers,
                 params=params,
             )
+            if r.status_code != 200:
+                r = client.get(
+                    f"https://www.instagram.com/api/v1/feed/user/{user_id}/",
+                    headers=headers,
+                    params=params,
+                )
             if r.status_code != 200:
                 raise RuntimeError(f"Instagram feed HTTP {r.status_code}")
             data = r.json()
