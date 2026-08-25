@@ -798,11 +798,7 @@ export function EventsListBlock({ config: c }) {
               className={cn("min-w-0", "lg:col-span-5")}
               data-testid="home-events-instagram"
             >
-              <InstagramSidebarWidget
-                profileUrl={instaUrl}
-                title={c.instagramTitle || "AIA Legnano"}
-                subtitle={c.instagramSubtitle || "Foto, aggiornamenti e vita della sezione su Instagram."}
-              />
+              <InstagramSidebarWidget profileUrl={instaUrl} />
             </div>
           )}
         </div>
