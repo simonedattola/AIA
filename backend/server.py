@@ -1,7 +1,13 @@
 """FastAPI entrypoint for AIA Legnano platform."""
+
 from fastapi import FastAPI, APIRouter, HTTPException
 from fastapi.openapi.utils import get_openapi
-from fastapi.responses import PlainTextResponse, JSONResponse, RedirectResponse, Response
+from fastapi.responses import (
+    PlainTextResponse,
+    JSONResponse,
+    RedirectResponse,
+    Response,
+)
 from fastapi.staticfiles import StaticFiles
 from starlette.middleware.cors import CORSMiddleware
 from dotenv import load_dotenv
@@ -119,6 +125,32 @@ app.include_router(admin_router)
 app.include_router(portal_router)
 
 
+@app.get("/sitemap.xml", include_in_schema=False)
+async def sitemap_xml():
+    """Sitemap dinamica: pagine, news e profili associati pubblici."""
+    from app.sitemap import collect_sitemap_urls, render_sitemap_xml
+
+    urls = await collect_sitemap_urls(get_db())
+    xml = render_sitemap_xml(urls)
+    return Response(
+        content=xml,
+        media_type="application/xml; charset=utf-8",
+        headers={"Cache-Control": "public, max-age=3600"},
+    )
+
+
+@app.get("/robots.txt", response_class=PlainTextResponse, include_in_schema=False)
+async def robots_txt():
+    """robots.txt con riferimento alla sitemap pubblica."""
+    from app.sitemap import render_robots_txt
+
+    return PlainTextResponse(
+        content=render_robots_txt(),
+        media_type="text/plain; charset=utf-8",
+        headers={"Cache-Control": "public, max-age=3600"},
+    )
+
+
 @app.get("/metrics", response_class=PlainTextResponse, include_in_schema=False)
 async def metrics():
     """Minimal Prometheus-style metrics for uptime scrapers (Datadog/New Relic/etc.)."""
@@ -160,6 +192,7 @@ if uses_streamed_uploads():
 
         ctype = mimetypes.guess_type(name)[0] or "application/octet-stream"
         return Response(content=data, media_type=ctype)
+
 else:
     UPLOAD_DIR.mkdir(parents=True, exist_ok=True)
     app.mount("/api/uploads", StaticFiles(directory=str(UPLOAD_DIR)), name="uploads")

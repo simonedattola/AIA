@@ -9,6 +9,14 @@
       "destination": "https://aia-production-00a9.up.railway.app/api/:path*"
     },
     {
+      "source": "/sitemap.xml",
+      "destination": "https://aia-production-00a9.up.railway.app/sitemap.xml"
+    },
+    {
+      "source": "/robots.txt",
+      "destination": "https://aia-production-00a9.up.railway.app/robots.txt"
+    },
+    {
       "source": "/docs",
       "destination": "https://aia-production-00a9.up.railway.app/docs"
     },
