@@ -1,5 +1,5 @@
 /* Public renderers for all CMS block types. Each takes `config` and renders a section. */
-import { memo, useEffect, useState, useRef } from "react";
+import { memo, useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import * as Icons from "lucide-react";
 import {
@@ -659,8 +659,6 @@ export function EventsListBlock({ config: c }) {
     const n = new Date();
     return new Date(n.getFullYear(), n.getMonth(), 1);
   });
-  const eventsColRef = useRef(null);
-  const gridRef = useRef(null);
   const { settings } = useSite();
   const instaUrl = (settings || {}).instagramUrl || "";
   const showCalendar = c.showCalendar === true;
@@ -687,32 +685,6 @@ export function EventsListBlock({ config: c }) {
       .finally(() => setLoading(false));
   }, [c.limit, c.upcomingOnly, eventLimit]);
 
-  // Allinea solo il calendario all'altezza eventi (il widget Instagram ha altezza propria ~embed).
-  useEffect(() => {
-    if (!showCalendar) return undefined;
-    const el = eventsColRef.current;
-    if (!el || typeof ResizeObserver === "undefined") return undefined;
-
-    const syncHeight = () => {
-      const wide = window.matchMedia("(min-width: 1024px)").matches;
-      if (!wide) {
-        gridRef.current?.style.removeProperty("--events-col-h");
-        return;
-      }
-      const h = Math.round(el.getBoundingClientRect().height);
-      gridRef.current?.style.setProperty("--events-col-h", `${h}px`);
-    };
-
-    syncHeight();
-    const ro = new ResizeObserver(syncHeight);
-    ro.observe(el);
-    window.addEventListener("resize", syncHeight);
-    return () => {
-      ro.disconnect();
-      window.removeEventListener("resize", syncHeight);
-    };
-  }, [loading, items.length, c.ctaLabel, c.ctaHref, showCalendar]);
-
   const shiftViewMonth = (delta) => {
     setViewMonth((prev) => {
       const base = prev instanceof Date ? prev : new Date();
@@ -735,7 +707,6 @@ export function EventsListBlock({ config: c }) {
         {(c.title || c.eyebrow) && <span className="gold-divider mt-6 block" />}
 
         <div
-          ref={gridRef}
           className={cn(
             "grid grid-cols-1 gap-8 lg:gap-10 mt-10 lg:items-start",
             showCalendar && showInstagram && "lg:grid-cols-12",
@@ -744,7 +715,6 @@ export function EventsListBlock({ config: c }) {
           )}
         >
           <div
-            ref={eventsColRef}
             className={cn(
               showInstagram && !showCalendar && "lg:col-span-8",
               showCalendar && !showInstagram && "min-w-0",
@@ -776,11 +746,7 @@ export function EventsListBlock({ config: c }) {
 
           {showCalendar && (
             <div
-              className={cn(
-                "min-w-0 hidden lg:block",
-                showInstagram && "lg:col-span-4",
-                "lg:max-h-[var(--events-col-h)] lg:overflow-y-auto"
-              )}
+              className={cn("min-w-0 hidden lg:block", showInstagram && "lg:col-span-4")}
               data-testid="events-list-calendar"
             >
               <EventsMonthCalendar
