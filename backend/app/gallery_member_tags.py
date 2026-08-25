@@ -36,8 +36,47 @@ def member_ids_for_article(article: dict[str, Any], members: list[dict]) -> list
 async def load_members_for_match(db) -> list[dict]:
     return await db.members.find(
         {},
-        {"_id": 0, "id": 1, "firstName": 1, "lastName": 1},
+        {"_id": 0, "id": 1, "firstName": 1, "lastName": 1, "slug": 1},
     ).to_list(500)
+
+
+async def ensure_article_related_member_tags(db) -> int:
+    """Backfill relatedMemberIds da citazioni nome+cognome in tutti gli articoli."""
+    from .article_member_match import apply_auto_related_members
+
+    members = await load_members_for_match(db)
+    if not members:
+        return 0
+
+    articles = await db.articles.find(
+        {},
+        {
+            "_id": 0,
+            "id": 1,
+            "title": 1,
+            "excerpt": 1,
+            "bodyHtml": 1,
+            "relatedMemberIds": 1,
+        },
+    ).to_list(5000)
+
+    updated = 0
+    for art in articles:
+        aid = art.get("id")
+        if not aid:
+            continue
+        merged = apply_auto_related_members(art, members)
+        if merged == (art.get("relatedMemberIds") or []):
+            continue
+        await db.articles.update_one(
+            {"id": aid},
+            {"$set": {"relatedMemberIds": merged}},
+        )
+        updated += 1
+
+    if updated:
+        logger.info("Articoli: tag associati aggiornati su %s documenti", updated)
+    return updated
 
 
 async def sync_gallery_member_tags_for_article(

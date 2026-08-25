@@ -441,6 +441,8 @@ async def admin_get_article(article_id: str, admin=Depends(require_admin)):
 @router.post("/articles")
 async def admin_create_article(payload: ArticleCreate, admin=Depends(require_admin)):
     from ..article_categories import ensure_category_exists
+    from ..article_member_match import apply_auto_related_members
+    from ..gallery_member_tags import load_members_for_match
 
     db = get_db()
     category = await ensure_category_exists(db, payload.category)
@@ -451,6 +453,16 @@ async def admin_create_article(payload: ArticleCreate, admin=Depends(require_adm
     while await db.articles.find_one({"slug": slug}, {"_id": 0, "id": 1}):
         i += 1
         slug = f"{base}-{i}"
+    members = await load_members_for_match(db)
+    related_ids = apply_auto_related_members(
+        {
+            "title": payload.title,
+            "excerpt": payload.excerpt,
+            "bodyHtml": payload.bodyHtml,
+            "relatedMemberIds": payload.relatedMemberIds or [],
+        },
+        members,
+    )
     art = Article(
         slug=slug,
         title=payload.title,
@@ -461,7 +473,7 @@ async def admin_create_article(payload: ArticleCreate, admin=Depends(require_adm
         coverInGallery=payload.coverInGallery,
         bodyInGallery=payload.bodyInGallery,
         authorName=payload.authorName,
-        relatedMemberIds=payload.relatedMemberIds or [],
+        relatedMemberIds=related_ids,
         tags=payload.tags or [],
         portalOnly=payload.portalOnly,
         status=payload.status,
@@ -480,7 +492,9 @@ async def admin_update_article(
     article_id: str, payload: Article, admin=Depends(require_admin)
 ):
     from ..article_categories import ensure_category_exists
+    from ..article_member_match import apply_auto_related_members
     from ..article_sanitize import sanitize_article_html
+    from ..gallery_member_tags import load_members_for_match
 
     db = get_db()
     existing = await db.articles.find_one(
@@ -495,6 +509,16 @@ async def admin_update_article(
     legacy = bool(payload.legacyWpId or existing.get("legacyWpId"))
     payload.bodyHtml = sanitize_article_html(payload.bodyHtml, legacy=legacy)
     payload.updatedAt = datetime.now(timezone.utc).isoformat()
+    members = await load_members_for_match(db)
+    payload.relatedMemberIds = apply_auto_related_members(
+        {
+            "title": payload.title,
+            "excerpt": payload.excerpt,
+            "bodyHtml": payload.bodyHtml,
+            "relatedMemberIds": payload.relatedMemberIds or [],
+        },
+        members,
+    )
     doc = payload.model_dump()
     await db.articles.update_one({"id": article_id}, {"$set": doc})
     from ..gallery import sync_article_gallery

@@ -1722,6 +1722,14 @@ async def ensure_gallery_member_tags() -> int:
     return await _ensure(db)
 
 
+async def ensure_article_related_member_tags() -> int:
+    """relatedMemberIds automatici da citazioni nome+cognome negli articoli."""
+    from .gallery_member_tags import ensure_article_related_member_tags as _ensure
+
+    db = get_db()
+    return await _ensure(db)
+
+
 async def ensure_gallery_backfill_from_articles() -> int:
     """Import iniziale galleria da articoli; metadati ad ogni avvio, rigenerazione solo una volta."""
     from .gallery import backfill_gallery_from_articles, ensure_gallery_metadata
@@ -1878,6 +1886,9 @@ async def run_all():
     n_tags = await ensure_gallery_member_tags()
     if n_tags:
         logger.info("Galleria: tag associati su %s immagini", n_tags)
+    n_art_tags = await ensure_article_related_member_tags()
+    if n_art_tags:
+        logger.info("Articoli: tag associati aggiornati su %s documenti", n_art_tags)
     await ensure_instagram_gallery_deduped()
     await ensure_instagram_gallery_sync()
     await seed_events()
