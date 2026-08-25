@@ -28,6 +28,11 @@
 - Sync archivio completo: richiede `INSTAGRAM_SESSION_ID` (vedi `backend/.env.example` e admin sync galleria). Admin cache: `POST /api/admin/instagram/widget-cache`.
 - Frontend: `InstagramSidebarWidget` griglia 3×3; non fare fallback a `fetchGallery()`.
 
+### Lista Arbitri (`/arbitri`)
+
+- `GET /api/public/members` must stay slim (projection + `public_member`); do **not** call `refresh_member_category` per row (N+1 on designations → multi-second latency in prod). Category is refreshed on sync/import and on single-member profile.
+- `useCmsPage` must not block page render on `/api/public/stats`.
+
 ### Standard commands
 
 - Backend: see `README.md` / `backend/requirements.txt` (`uvicorn` from `backend/`).

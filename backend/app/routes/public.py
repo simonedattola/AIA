@@ -262,22 +262,38 @@ async def list_members(
             {"firstName": {"$regex": q, "$options": "i"}},
             {"lastName": {"$regex": q, "$options": "i"}},
         ]
-    from ..member_category import refresh_member_category
-    from ..member_roles import can_have_max_category
 
+    # Solo campi utili a griglia/organigramma (niente bio/password/note).
+    # La categoria massima è già aggiornata in sync/import: non ricalcolare qui (N+1).
+    projection = {
+        "_id": 0,
+        "id": 1,
+        "slug": 1,
+        "firstName": 1,
+        "lastName": 1,
+        "photoUrl": 1,
+        "role": 1,
+        "memberRole": 1,
+        "kind": 1,
+        "category": 1,
+        "observerType": 1,
+        "boardTitle": 1,
+        "organigrammaKind": 1,
+        "isPresident": 1,
+        "yearStart": 1,
+    }
     items = (
-        await db.members.find(query, {"_id": 0})
+        await db.members.find(query, projection)
         .sort([("lastName", 1), ("firstName", 1)])
         .limit(limit)
         .to_list(limit)
     )
+    out = []
     for item in items:
         normalize_member(item)
-        if can_have_max_category(item):
-            await refresh_member_category(db, item, persist=True)
-        resolve_media_fields(item)
-        public_member(item)
-    return items
+        resolve_media_fields(item, fields=("photoUrl",))
+        out.append(public_member(item))
+    return out
 
 
 @router.get("/members/{slug}")
