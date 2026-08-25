@@ -89,7 +89,6 @@ export default function AdminLoginPage() {
                 required
                 type="email"
                 autoComplete="username"
-                placeholder="es. legnano@aia-figc.it"
                 value={form.email}
                 onChange={(e) => setForm({ ...form, email: e.target.value })}
                 className="w-full pl-10 pr-3 py-2.5 border border-slate-300 rounded-md focus:border-navy-600 focus:ring-2 focus:ring-navy-600/20 focus:outline-none"
@@ -129,6 +128,11 @@ export default function AdminLoginPage() {
             {loading ? "Accesso in corso…" : "Accedi"}
           </Button>
         </form>
+        <p className="text-center text-sm text-slate-500 mt-6">
+          <Link to="/" className="text-navy-600 hover:underline" data-testid="admin-login-back-home">
+            ← Torna al sito
+          </Link>
+        </p>
       </div>
     </div>
   );

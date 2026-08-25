@@ -64,7 +64,6 @@ export default function AdminForgotPasswordPage() {
                   required
                   type="email"
                   autoComplete="username"
-                  placeholder="es. legnano@aia-figc.it"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
                   className="w-full pl-10 pr-3 py-2.5 border border-slate-300 rounded-md focus:border-navy-600 focus:ring-2 focus:ring-navy-600/20 focus:outline-none"
