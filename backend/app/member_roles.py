@@ -214,6 +214,10 @@ def has_organigramma_board_title(doc: dict | None) -> bool:
 
 def normalize_member(doc: dict) -> dict:
     """Allinea documento DB al modello ruoli unificato (in-place)."""
+    from .person_names import apply_title_case_to_person
+
+    apply_title_case_to_person(doc)
+
     code = aia_code_of(doc)
     if code:
         doc["role"] = code

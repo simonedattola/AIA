@@ -37,3 +37,20 @@ def format_person_name(
 
 def format_person_name_parts(first: str | None, last: str | None) -> tuple[str, str]:
     return _title_word(first or ""), _title_word(last or "")
+
+
+def apply_title_case_to_person(doc: dict) -> bool:
+    """Normalizza firstName/lastName in «Nome Cognome». Ritorna True se ha modificato."""
+    first, last = format_person_name_parts(doc.get("firstName"), doc.get("lastName"))
+    changed = False
+    if first and doc.get("firstName") != first:
+        doc["firstName"] = first
+        changed = True
+    if last and doc.get("lastName") != last:
+        doc["lastName"] = last
+        changed = True
+    display = format_person_name(first, last)
+    if display and doc.get("displayName") != display:
+        doc["displayName"] = display
+        changed = True
+    return changed

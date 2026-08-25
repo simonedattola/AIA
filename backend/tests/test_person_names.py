@@ -1,4 +1,8 @@
-from app.person_names import format_person_name, format_person_name_parts
+from app.person_names import (
+    apply_title_case_to_person,
+    format_person_name,
+    format_person_name_parts,
+)
 
 
 def test_all_caps_to_title():
@@ -32,3 +36,12 @@ def test_curly_apostrophe_normalized():
     # U+2019 RIGHT SINGLE QUOTATION MARK
     assert format_person_name("MATTEO", "DELL\u2019ACQUA") == "Matteo Dell'Acqua"
     assert format_person_name("NICOLO\u2019", "D\u2019AZZEO") == "Nicolo' D'Azzeo"
+
+
+def test_apply_title_case_to_person_mutates_all_caps():
+    doc = {"firstName": "NICOLO'", "lastName": "D'AZZEO"}
+    assert apply_title_case_to_person(doc) is True
+    assert doc["firstName"] == "Nicolo'"
+    assert doc["lastName"] == "D'Azzeo"
+    assert doc["displayName"] == "Nicolo' D'Azzeo"
+    assert apply_title_case_to_person(doc) is False
