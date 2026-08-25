@@ -746,7 +746,7 @@ export function EventsListBlock({ config: c }) {
           <div
             ref={eventsColRef}
             className={cn(
-              showInstagram && !showCalendar && "lg:col-span-7",
+              showInstagram && !showCalendar && "lg:col-span-8",
               showCalendar && !showInstagram && "min-w-0",
               showCalendar && showInstagram && "lg:col-span-5"
             )}
@@ -794,11 +794,15 @@ export function EventsListBlock({ config: c }) {
           )}
 
           {showInstagram && (
-            <div
-              className={cn("min-w-0", "lg:col-span-5")}
-              data-testid="home-events-instagram"
-            >
-              <InstagramSidebarWidget profileUrl={instaUrl} />
+            <div className="min-w-0 lg:col-span-4" data-testid="home-events-instagram">
+              <InstagramSidebarWidget
+                profileUrl={instaUrl}
+                title={c.instagramTitle || "AIA Legnano"}
+                subtitle={
+                  c.instagramSubtitle ||
+                  "Foto, aggiornamenti e vita della sezione su Instagram."
+                }
+              />
             </div>
           )}
         </div>
