@@ -131,6 +131,30 @@ export default function NewsDetailPage() {
           )}
 
           <ArticleProse html={article.bodyHtml} />
+
+          {Array.isArray(article.relatedMembers) && article.relatedMembers.length > 0 && (
+            <aside
+              className="mt-12 pt-8 border-t border-slate-200"
+              data-testid="news-related-members"
+            >
+              <Eyebrow as="div" className="mb-3 tracking-[0.2em]">
+                Associati citati
+              </Eyebrow>
+              <div className="flex flex-wrap gap-2">
+                {article.relatedMembers.map((m) => (
+                  <Link
+                    key={m.id || m.slug}
+                    to={`/arbitri/${m.slug}`}
+                    className="inline-flex items-center gap-1.5 rounded-full border border-navy-200 bg-navy-50 px-3 py-1.5 text-sm font-medium text-navy-800 hover:bg-navy-100 hover:border-navy-300 transition-colors"
+                    data-testid={`news-member-tag-${m.slug}`}
+                  >
+                    <UserIcon className="h-3.5 w-3.5 text-navy-500" aria-hidden />
+                    {m.name || `${m.firstName || ""} ${m.lastName || ""}`.trim()}
+                  </Link>
+                ))}
+              </div>
+            </aside>
+          )}
         </div>
       </article>
 

@@ -126,9 +126,40 @@ async def get_article(slug: str):
     if not art:
         raise HTTPException(status_code=404, detail="Articolo non trovato")
     from ..article_body import normalize_article_body_html
+    from ..article_member_match import (
+        apply_auto_related_members,
+        linkify_member_names_in_html,
+    )
+    from ..gallery_member_tags import load_members_for_match
+    from ..person_names import format_person_name
 
     art["bodyHtml"] = normalize_article_body_html(art.get("bodyHtml") or "")
-    # related: same category, 3 most recent excluding current
+    members = await load_members_for_match(db)
+    related_ids = apply_auto_related_members(art, members)
+    by_id = {m["id"]: m for m in members if m.get("id")}
+    related_members = []
+    for mid in related_ids:
+        m = by_id.get(mid)
+        if not m or not (m.get("slug") or "").strip():
+            continue
+        related_members.append(
+            {
+                "id": mid,
+                "slug": m["slug"],
+                "firstName": m.get("firstName") or "",
+                "lastName": m.get("lastName") or "",
+                "name": format_person_name(m.get("firstName"), m.get("lastName")),
+            }
+        )
+    if related_ids != (art.get("relatedMemberIds") or []):
+        # Lazy persist so next profile/gallery sync sees the tags
+        await db.articles.update_one(
+            {"id": art["id"]},
+            {"$set": {"relatedMemberIds": related_ids}},
+        )
+        art["relatedMemberIds"] = related_ids
+    art["bodyHtml"] = linkify_member_names_in_html(art.get("bodyHtml") or "", members)
+    art["relatedMembers"] = related_members
     resolve_media_fields(art)
     related = (
         await db.articles.find(

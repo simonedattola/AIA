@@ -211,6 +211,10 @@ export default function AdminArticleEditPage() {
                 label="Associati in questa notizia"
                 searchOnly
               />
+              <p className="text-xs text-slate-500 -mt-2" data-testid="admin-article-auto-tag-hint">
+                Al salvataggio vengono aggiunti automaticamente gli associati citati per nome e cognome
+                nel titolo, nel sommario o nel testo.
+              </p>
             </div>
 
             <div className="bg-white rounded-lg border border-slate-200 p-6 space-y-4">
