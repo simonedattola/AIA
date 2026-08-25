@@ -71,6 +71,14 @@ export function formatPersonName(firstName, lastName, fullName) {
     if (w.includes(" ")) return w.split(/\s+/).filter(Boolean).map(titleWord).join(" ");
     if (w.length === 1) return w.toUpperCase();
     if (w.includes("-")) return w.split("-").map(titleWord).join("-");
+    // Apostrofi tipografici / ASCII (D'Azzeo, Dell'Acqua, Iannò → Ianno')
+    const norm = w.replace(/[\u2019\u2018`]/g, "'");
+    if (norm.includes("'")) {
+      return norm
+        .split("'")
+        .map((part) => (part ? titleWord(part) : ""))
+        .join("'");
+    }
     return w.charAt(0).toUpperCase() + w.slice(1).toLowerCase();
   };
   if (fullName && !firstName && !lastName) {

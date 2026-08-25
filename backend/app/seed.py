@@ -1880,11 +1880,46 @@ async def ensure_osservatori_page(db=None):
         logger.info("Puliti boardTitle Benemerito generici: %s", cleared.modified_count)
 
 
+async def ensure_member_names_titlecase() -> int:
+    """Riscrive firstName/lastName associati in «Nome Cognome» (non tutto maiuscolo)."""
+    from datetime import datetime, timezone
+
+    from .db import get_db
+    from .person_names import apply_title_case_to_person
+
+    db = get_db()
+    updated = 0
+    cursor = db.members.find(
+        {},
+        {"_id": 0, "id": 1, "firstName": 1, "lastName": 1, "displayName": 1},
+    )
+    async for raw in cursor:
+        doc = dict(raw)
+        if not apply_title_case_to_person(doc):
+            continue
+        await db.members.update_one(
+            {"id": doc["id"]},
+            {
+                "$set": {
+                    "firstName": doc.get("firstName") or "",
+                    "lastName": doc.get("lastName") or "",
+                    "displayName": doc.get("displayName") or "",
+                    "updatedAt": datetime.now(timezone.utc).isoformat(),
+                }
+            },
+        )
+        updated += 1
+    if updated:
+        logger.info("Anagrafica: normalizzati %s nomi in Title Case", updated)
+    return updated
+
+
 async def run_all():
     await seed_admin()
     await seed_settings()
     await purge_demo_members()
     await ensure_legacy_seed_flags()
+    await ensure_member_names_titlecase()
     n_purge = await ensure_purge_designations_2022_23()
     if n_purge:
         logger.info("Purgate %s designazioni stagione 2022-23", n_purge)

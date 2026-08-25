@@ -24,7 +24,7 @@ import MemberPresenzePanel from "../../components/admin/MemberPresenzePanel";
 import MemberFileImport from "../../components/admin/MemberFileImport";
 import { AdminEmptyState, AdminPageHeader } from "../../components/admin/admin-ui";
 import { Button } from "@/design-system";
-
+import { formatPersonName } from "../../lib/format";
 const empty = () => ({
   firstName: "",
   lastName: "",
@@ -126,8 +126,8 @@ export default function AdminMembersPage() {
       const yearStart = yearStartFromSeniority(editing.seniorityYears);
       const draft = {
         ...editing,
-        firstName: editing.firstName.trim(),
-        lastName: editing.lastName.trim(),
+        firstName: formatPersonName(editing.firstName.trim(), ""),
+        lastName: formatPersonName("", editing.lastName.trim()),
         role: code,
         memberRole,
         organigrammaKind,
@@ -287,7 +287,7 @@ export default function AdminMembersPage() {
                         </div>
                       )}
                       <div className="min-w-0 flex-1">
-                        <div className="font-medium text-navy-700 break-words">{m.firstName} {m.lastName}</div>
+                        <div className="font-medium text-navy-700 break-words">{formatPersonName(m.firstName, m.lastName)}</div>
                         <div className="text-sm text-slate-600 mt-0.5 break-words">{memberRoleLabel(m)}</div>
                         {m.boardTitle && <div className="text-xs text-slate-500 mt-0.5 break-words">{m.boardTitle}</div>}
                         <div className="text-xs text-slate-500 mt-1 flex flex-wrap gap-x-3 gap-y-0.5">
@@ -340,7 +340,7 @@ export default function AdminMembersPage() {
                               </div>
                             )}
                             <div className="min-w-0">
-                              <div className="font-medium text-navy-700 truncate">{m.firstName} {m.lastName}</div>
+                              <div className="font-medium text-navy-700 truncate">{formatPersonName(m.firstName, m.lastName)}</div>
                               {m.email && <div className="text-xs text-slate-400 truncate">{m.email}</div>}
                             </div>
                           </div>
