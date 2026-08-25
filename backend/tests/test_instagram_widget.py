@@ -55,7 +55,7 @@ def test_fetch_instagram_widget_sync_structure():
     assert data["profile"]["username"] == "aia_legnano"
     assert len(data["posts"]) == 1
     assert data["posts"][0]["permalink"].endswith("/p/AbC123/")
-    assert data["posts"][0]["imageUrl"].endswith("/p/AbC123/media/?size=l")
+    assert "/api/public/instagram/media/AbC123" in data["posts"][0]["imageUrl"]
 
 
 def test_fetch_instagram_widget_retries_after_401():

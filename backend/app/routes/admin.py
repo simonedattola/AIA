@@ -1686,9 +1686,7 @@ async def admin_upsert_instagram_widget_cache(
         or {}
     )
     username = parse_instagram_username(
-        payload.get("username")
-        or settings.get("instagramUrl")
-        or "aia_legnano"
+        payload.get("username") or settings.get("instagramUrl") or "aia_legnano"
     )
     posts = []
     for raw in posts_in[:24]:
@@ -1745,9 +1743,7 @@ async def admin_refresh_instagram_widget_cache(admin=Depends(require_admin)):
     )
     username = parse_instagram_username(settings.get("instagramUrl") or "aia_legnano")
     try:
-        data = await asyncio.to_thread(
-            fetch_instagram_widget_sync, username, limit=12
-        )
+        data = await asyncio.to_thread(fetch_instagram_widget_sync, username, limit=12)
     except Exception as exc:
         raise HTTPException(502, f"Feed Instagram non disponibile: {exc}") from exc
     await save_widget_cache(db, username, data)

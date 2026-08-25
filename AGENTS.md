@@ -23,8 +23,9 @@
 ### Instagram widget (home)
 
 - Endpoint: `GET /api/public/instagram/widget?limit=9` — solo post Instagram (mai foto galleria sito).
+- Thumbnails: `GET /api/public/instagram/media/{shortcode}?size=l` (proxy + cache disco in `uploads/instagram-thumbs/`). Non usare hotlink `instagram.com/.../media/` nel browser.
 - Fetch usa UA mobile Instagram + host `i.instagram.com` (meno 401 da IP Railway). Fallback: cache Mongo `site_settings.id=instagram-widget-cache`, poi gallery `source:instagram`.
-- Sync archivio completo: richiede `INSTAGRAM_SESSION_ID` (vedi `backend/.env.example` e admin sync galleria).
+- Sync archivio completo: richiede `INSTAGRAM_SESSION_ID` (vedi `backend/.env.example` e admin sync galleria). Admin cache: `POST /api/admin/instagram/widget-cache`.
 - Frontend: `InstagramSidebarWidget` griglia 3×3; non fare fallback a `fetchGallery()`.
 
 ### Standard commands

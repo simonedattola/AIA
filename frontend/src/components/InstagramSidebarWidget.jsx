@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import { Instagram, ExternalLink, Layers, Play } from "lucide-react";
 import { Button, CardTitle, Eyebrow } from "@/design-system";
 import { fetchInstagramWidget } from "../lib/api";
+import { mediaUrl } from "../lib/media";
 import { parseInstagramUsername } from "../lib/instagram-embed";
 
 const POSTS_VISIBLE = 9; // griglia 3×3
@@ -25,7 +26,7 @@ function PostTile({ post, profileUrl }) {
       data-testid="instagram-sidebar-post"
     >
       <img
-        src={post.imageUrl}
+        src={mediaUrl(post.imageUrl)}
         alt={post.caption || "Post Instagram"}
         className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-105"
         loading="lazy"

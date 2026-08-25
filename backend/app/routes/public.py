@@ -678,6 +678,51 @@ async def get_instagram_widget(limit: int = 12):
     return data
 
 
+@router.get("/instagram/media/{shortcode}")
+async def get_instagram_media_proxy(shortcode: str, size: str = "l"):
+    """Proxy thumbnail Instagram (evita hotlink rotto nel browser)."""
+    import asyncio
+    import re
+    from pathlib import Path
+
+    from fastapi.responses import Response
+
+    from ..instagram_widget import fetch_instagram_media_bytes
+    from ..paths import UPLOAD_DIR
+
+    if not re.fullmatch(r"[A-Za-z0-9_-]{5,64}", shortcode or ""):
+        raise HTTPException(400, "shortcode non valido")
+    sz = size if size in {"t", "m", "l"} else "l"
+    cache_dir = Path(UPLOAD_DIR) / "instagram-thumbs"
+    cache_dir.mkdir(parents=True, exist_ok=True)
+    cache_file = cache_dir / f"{shortcode}-{sz}.jpg"
+
+    if cache_file.is_file() and cache_file.stat().st_size > 0:
+        return Response(
+            content=cache_file.read_bytes(),
+            media_type="image/jpeg",
+            headers={"Cache-Control": "public, max-age=86400"},
+        )
+
+    try:
+        data, ctype = await asyncio.to_thread(
+            fetch_instagram_media_bytes, shortcode, size=sz
+        )
+    except Exception as exc:
+        raise HTTPException(502, f"Media Instagram non disponibile: {exc}") from exc
+
+    try:
+        cache_file.write_bytes(data)
+    except OSError:
+        pass
+
+    return Response(
+        content=data,
+        media_type=ctype or "image/jpeg",
+        headers={"Cache-Control": "public, max-age=86400"},
+    )
+
+
 @router.post("/forms/corso-arbitri", status_code=201)
 async def submit_lead(payload: LeadCreate, background: BackgroundTasks):
     db = get_db()

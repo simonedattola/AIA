@@ -53,11 +53,39 @@ def _ig_headers(*, mobile: bool = True, session_id: str = "") -> dict[str, str]:
 
 
 def stable_instagram_media_url(shortcode: str, *, size: str = "l") -> str:
-    """URL thumbnail stabile (non scade come i link CDN firmati)."""
+    """URL thumbnail via proxy locale (Instagram /media/ non è affidabile nel browser)."""
     code = (shortcode or "").strip()
     if not code:
         return ""
-    return f"https://www.instagram.com/p/{code}/media/?size={size}"
+    safe = "".join(ch for ch in code if ch.isalnum() or ch in "_-")
+    if not safe:
+        return ""
+    sz = size if size in {"t", "m", "l"} else "l"
+    return f"/api/public/instagram/media/{safe}?size={sz}"
+
+
+def fetch_instagram_media_bytes(
+    shortcode: str, *, size: str = "l"
+) -> tuple[bytes, str]:
+    """Scarica thumbnail post (JPEG) da Instagram lato server."""
+    code = "".join(ch for ch in (shortcode or "") if ch.isalnum() or ch in "_-")
+    if not code:
+        raise ValueError("shortcode non valido")
+    sz = size if size in {"t", "m", "l"} else "l"
+    url = f"https://www.instagram.com/p/{code}/media/?size={sz}"
+    headers = {
+        "User-Agent": _IG_BROWSER_UA,
+        "Accept": "image/avif,image/webp,image/apng,image/*,*/*;q=0.8",
+        "Referer": "https://www.instagram.com/",
+    }
+    with httpx.Client(timeout=30, follow_redirects=True) as client:
+        r = client.get(url, headers=headers)
+        if r.status_code != 200:
+            raise RuntimeError(f"Instagram media HTTP {r.status_code}")
+        ctype = (r.headers.get("content-type") or "image/jpeg").split(";")[0].strip()
+        if not ctype.startswith("image/"):
+            raise RuntimeError("Instagram media non-image")
+        return r.content, ctype
 
 
 def _thumbnail_from_item(item: dict[str, Any]) -> str:
@@ -167,7 +195,9 @@ def fetch_instagram_widget_sync(
                     last_error = RuntimeError("Instagram feed non-JSON")
                     continue
                 data = r.json()
-                if not isinstance(data, dict) or not (data.get("items") or data.get("user")):
+                if not isinstance(data, dict) or not (
+                    data.get("items") or data.get("user")
+                ):
                     last_error = RuntimeError("Instagram feed vuoto/inesatto")
                     continue
                 parsed = _parse_feed_response(data, user, limit=limit)
@@ -179,9 +209,7 @@ def fetch_instagram_widget_sync(
                 last_error = exc
                 continue
 
-    raise RuntimeError(
-        f"Instagram feed non disponibile ({last_error or 'unknown'})"
-    )
+    raise RuntimeError(f"Instagram feed non disponibile ({last_error or 'unknown'})")
 
 
 async def gallery_instagram_posts(db, *, limit: int = 12) -> list[dict[str, Any]]:
@@ -228,17 +256,22 @@ async def load_widget_cache(db) -> dict[str, Any] | None:
     posts = doc.get("posts") or []
     if not posts:
         return None
+    normalized: list[dict[str, Any]] = []
+    for post in posts:
+        p = dict(post)
+        code = (p.get("shortcode") or "").strip()
+        if code:
+            p["imageUrl"] = stable_instagram_media_url(code)
+        normalized.append(p)
     return {
         "profile": doc.get("profile") or {},
-        "posts": posts,
+        "posts": normalized,
         "cachedAt": doc.get("updatedAt"),
         "fromCache": True,
     }
 
 
-async def save_widget_cache(
-    db, username: str, payload: dict[str, Any]
-) -> None:
+async def save_widget_cache(db, username: str, payload: dict[str, Any]) -> None:
     posts = payload.get("posts") or []
     if not posts:
         return
