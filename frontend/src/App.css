@@ -15,7 +15,9 @@
 .aia-ig-profile-embed iframe {
   display: block;
   width: 100%;
-  min-height: 480px;
+  height: 640px;
+  min-height: 560px;
+  max-width: 100%;
   background: linear-gradient(180deg, #fafafa 0%, #fff 100%);
 }
 
