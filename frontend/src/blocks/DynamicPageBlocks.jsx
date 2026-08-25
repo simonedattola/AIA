@@ -375,7 +375,7 @@ export function EventsCalendarBlock({ config: c }) {
             )}
           </div>
           {showCalendar && (
-            <div className="lg:col-span-6">
+            <div className="hidden lg:block lg:col-span-6" data-testid="events-calendar-aside">
               <EventsMonthCalendar
                 events={items}
                 month={viewMonth}

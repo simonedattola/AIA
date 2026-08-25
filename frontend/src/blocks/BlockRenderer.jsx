@@ -777,7 +777,7 @@ export function EventsListBlock({ config: c }) {
           {showCalendar && (
             <div
               className={cn(
-                "min-w-0",
+                "min-w-0 hidden lg:block",
                 showInstagram && "lg:col-span-4",
                 "lg:max-h-[var(--events-col-h)] lg:overflow-y-auto"
               )}
