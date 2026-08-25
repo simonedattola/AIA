@@ -11,7 +11,7 @@ function parseInstagramHandle(url) {
 
 /**
  * Widget Instagram per sidebar home (profilo embed ufficiale + header gradiente).
- * Layout collaudato: riempie l'altezza della colonna eventi.
+ * L'iframe del profilo richiede ~560–640px: non comprimere sotto quel minimo.
  */
 export default function InstagramSidebarWidget({
   profileUrl = "",
@@ -26,13 +26,13 @@ export default function InstagramSidebarWidget({
 
   return (
     <div
-      className={`bg-white rounded-lg shadow-sm overflow-hidden border border-slate-200 flex flex-col h-full min-h-0 ${className}`.trim()}
+      className={`bg-white rounded-lg shadow-sm border border-slate-200 flex flex-col overflow-hidden ${className}`.trim()}
       data-testid="instagram-profile-widget"
     >
-      <div className="p-5 bg-gradient-to-br from-[#833AB4] via-[#E1306C] to-[#F77737] text-white shrink-0">
+      <div className="p-4 sm:p-5 bg-gradient-to-br from-[#833AB4] via-[#E1306C] to-[#F77737] text-white shrink-0">
         <div className="flex items-center gap-3">
-          <div className="h-12 w-12 rounded-full bg-white/20 flex items-center justify-center backdrop-blur-sm">
-            <Instagram className="h-6 w-6" aria-hidden />
+          <div className="h-11 w-11 sm:h-12 sm:w-12 rounded-full bg-white/20 flex items-center justify-center backdrop-blur-sm shrink-0">
+            <Instagram className="h-5 w-5 sm:h-6 sm:w-6" aria-hidden />
           </div>
           <div className="min-w-0">
             <Eyebrow className="text-[10px] tracking-[0.2em] text-white/90">Instagram</Eyebrow>
@@ -42,26 +42,26 @@ export default function InstagramSidebarWidget({
             {displayHandle && <p className="text-sm text-white/90 truncate">{displayHandle}</p>}
           </div>
         </div>
-        {subtitle && <p className="text-sm text-white/90 mt-3 leading-relaxed line-clamp-2">{subtitle}</p>}
+        {subtitle && <p className="text-sm text-white/90 mt-2 leading-relaxed line-clamp-2">{subtitle}</p>}
       </div>
       {embedSrc ? (
-        <div className="bg-slate-50 border-t border-slate-100 flex-1 min-h-[240px] flex flex-col">
+        <div className="aia-ig-profile-embed bg-slate-50 border-t border-slate-100 shrink-0">
           <iframe
             title="Profilo Instagram AIA Legnano"
             src={embedSrc}
-            className="w-full flex-1 border-0 min-h-[240px]"
-            scrolling="no"
+            className="w-full border-0 block"
+            style={{ height: "640px", minHeight: "560px" }}
             loading="lazy"
-            allowTransparency
+            allow="encrypted-media; clipboard-write"
           />
         </div>
       ) : (
-        <div className="p-6 text-sm text-slate-600 bg-slate-50 border-t border-slate-100 flex-1">
+        <div className="p-6 text-sm text-slate-600 bg-slate-50 border-t border-slate-100">
           Inserisci l&apos;URL del profilo Instagram in Admin → Impostazioni → Contatti.
         </div>
       )}
       {href && (
-        <div className="p-4 border-t border-slate-200 bg-white shrink-0 mt-auto">
+        <div className="p-4 border-t border-slate-200 bg-white shrink-0">
           <Button
             href={href}
             target="_blank"

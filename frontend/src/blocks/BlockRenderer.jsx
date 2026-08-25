@@ -687,7 +687,9 @@ export function EventsListBlock({ config: c }) {
       .finally(() => setLoading(false));
   }, [c.limit, c.upcomingOnly, eventLimit]);
 
+  // Allinea solo il calendario all'altezza eventi (il widget Instagram ha altezza propria ~embed).
   useEffect(() => {
+    if (!showCalendar) return undefined;
     const el = eventsColRef.current;
     if (!el || typeof ResizeObserver === "undefined") return undefined;
 
@@ -709,7 +711,7 @@ export function EventsListBlock({ config: c }) {
       ro.disconnect();
       window.removeEventListener("resize", syncHeight);
     };
-  }, [loading, items.length, c.ctaLabel, c.ctaHref, showCalendar, showInstagram]);
+  }, [loading, items.length, c.ctaLabel, c.ctaHref, showCalendar]);
 
   const shiftViewMonth = (delta) => {
     setViewMonth((prev) => {
@@ -724,8 +726,6 @@ export function EventsListBlock({ config: c }) {
     const [y, m] = eventDateKey(event.date).split("-");
     setViewMonth(new Date(Number(y), Number(m) - 1, 1));
   };
-
-  const syncableSide = showInstagram || showCalendar;
 
   return (
     <section className="site-section bg-background" data-testid="events-list-block">
@@ -779,7 +779,7 @@ export function EventsListBlock({ config: c }) {
               className={cn(
                 "min-w-0",
                 showInstagram && "lg:col-span-4",
-                syncableSide && "lg:max-h-[var(--events-col-h)] lg:overflow-y-auto"
+                "lg:max-h-[var(--events-col-h)] lg:overflow-y-auto"
               )}
               data-testid="events-list-calendar"
             >
@@ -795,18 +795,13 @@ export function EventsListBlock({ config: c }) {
 
           {showInstagram && (
             <div
-              className={cn(
-                "min-w-0 flex flex-col",
-                "lg:col-span-5",
-                syncableSide && "lg:h-[var(--events-col-h)]"
-              )}
+              className={cn("min-w-0", "lg:col-span-5")}
               data-testid="home-events-instagram"
             >
               <InstagramSidebarWidget
                 profileUrl={instaUrl}
                 title={c.instagramTitle || "AIA Legnano"}
                 subtitle={c.instagramSubtitle || "Foto, aggiornamenti e vita della sezione su Instagram."}
-                className="h-full"
               />
             </div>
           )}
