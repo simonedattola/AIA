@@ -7,10 +7,22 @@ export function useCmsPage(slug) {
 
   useEffect(() => {
     setPage(undefined);
-    Promise.all([fetchPage(slug).catch(() => null), fetchStats().catch(() => null)]).then(([p, s]) => {
-      setPage(p);
-      setStats(s);
-    });
+    setStats(null);
+    let cancelled = false;
+    // Non bloccare il render della pagina su /stats (può richiedere secondi).
+    fetchPage(slug)
+      .catch(() => null)
+      .then((p) => {
+        if (!cancelled) setPage(p);
+      });
+    fetchStats()
+      .catch(() => null)
+      .then((s) => {
+        if (!cancelled) setStats(s);
+      });
+    return () => {
+      cancelled = true;
+    };
   }, [slug]);
 
   return { page, stats, loading: page === undefined };
