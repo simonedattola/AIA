@@ -9,6 +9,7 @@ import {
   resolveInstagramEmbedInput,
 } from "../lib/instagram-embed";
 import { SECTION_LOGO } from "../lib/brand";
+import { mediaUrl } from "../lib/media";
 import { formatIgCount } from "./instagram-widget-utils";
 
 function loadInstagramEmbedScript() {
@@ -91,7 +92,7 @@ function InstagramPostTile({ post, profileUrl, fill = false }) {
       data-testid="instagram-post-tile"
     >
       <img
-        src={post.imageUrl}
+        src={mediaUrl(post.imageUrl)}
         alt={post.caption || "Post Instagram"}
         className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-105"
         loading="lazy"
