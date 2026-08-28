@@ -264,6 +264,7 @@ class FullScrapeResult:
     hubs_crawled: int = 0
     lombardia_scraped: int = 0
     other_hubs_scraped: int = 0
+    national_by_hub: dict[str, int] = field(default_factory=dict)
 
 
 def _source_priority(source: str) -> int:
@@ -365,20 +366,27 @@ def _run_full_scrape(
 
     national = _national_hub_slugs()
     if national:
-        nat = scrape_designazioni_hubs(
+        from .scrapers.aia_national import NATIONAL_HUBS, scrape_national_hubs
+
+        allowed = {h.slug for h in NATIONAL_HUBS if h.slug in national}
+        hubs_to_scrape = tuple(h for h in NATIONAL_HUBS if h.slug in allowed)
+        nat = scrape_national_hubs(
             filter_section=section_name,
             max_des_pages_per_hub=max_des_pages,
-            skip_slugs=frozenset({"lombardia"}),
-            only_slugs=national,
+            hubs=hubs_to_scrape,
         )
         out.items.extend(nat.items)
         out.pages_fetched += nat.pages_fetched
         out.errors.extend(nat.errors)
         out.other_hubs_scraped += len(nat.items)
+        for row in nat.items:
+            slug = (row.source or "").replace("aia-figc-", "")
+            out.national_by_hub[slug] = out.national_by_hub.get(slug, 0) + 1
         logger.info(
-            "Hub nazionali %s: %d righe Legnano",
-            ",".join(sorted(national)),
+            "Hub nazionali %s: %d righe Legnano (%s)",
+            ",".join(sorted(allowed)),
             len(nat.items),
+            ", ".join(f"{k}={v}" for k, v in sorted(out.national_by_hub.items())),
         )
 
     if crawl_all_hubs:
@@ -570,6 +578,7 @@ async def sync_from_aia_lombardia(
                     "lombardiaScraped": scrape.lombardia_scraped,
                     "otherHubsScraped": scrape.other_hubs_scraped,
                     "nationalScraped": scrape.other_hubs_scraped,
+                    "nationalByHub": scrape.national_by_hub,
                     "trigger": trigger,
                     "crawlAllHubs": crawl_all_hubs,
                     "filterSection": section_name,
@@ -602,6 +611,7 @@ async def sync_from_aia_lombardia(
         "categoriesUpdated": categories_updated,
         "scraped": len(scrape.items),
         "nationalScraped": scrape.other_hubs_scraped,
+        "nationalByHub": scrape.national_by_hub,
         "hubsCrawled": scrape.hubs_crawled,
         "lombardiaScraped": scrape.lombardia_scraped,
         "otherHubsScraped": scrape.other_hubs_scraped,

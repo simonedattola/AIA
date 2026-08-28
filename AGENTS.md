@@ -33,6 +33,13 @@
 - `GET /api/public/members` must stay slim (projection + `public_member`); do **not** call `refresh_member_category` per row (N+1 on designations → multi-second latency in prod). Category is refreshed on sync/import and on single-member profile.
 - `useCmsPage` must not block page render on `/api/public/stats`.
 
+### Sync designazioni AIA FIGC
+
+- Scheduler: `designations_scheduler.py` (default every 12h). Manual: `POST /api/admin/designations/sync-aia`.
+- Lombardia sezione Legnano (`gare=3-270`) + hub nazionali CAN: `canc`, `cand`, `can5elite`, `can5`, `canbs` via `scrape_national_hubs` / `NATIONAL_HUBS` (not `/designazioni/can/` Serie A).
+- Env: `DESIGNATIONS_NATIONAL_HUBS=canc,cand,can5elite,can5,canbs` (empty/false disables national crawl).
+- Only rows with `refereeSection` containing `Legnano` are kept.
+
 ### Standard commands
 
 - Backend: see `README.md` / `backend/requirements.txt` (`uvicorn` from `backend/`).
