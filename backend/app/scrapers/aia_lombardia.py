@@ -217,6 +217,67 @@ def _extract_links(html: str, base_url: str, pattern: str) -> list[str]:
     return links
 
 
+def _extract_gir_urls_from_html(html: str, base_url: str) -> list[str]:
+    """gir.asp da anchor + regex (tabelle categoria CAN spesso usano link relativi)."""
+    base = base_url.rstrip("/") + "/"
+    found: list[str] = []
+    seen: set[str] = set()
+    for u in _extract_links(html, base, "gir.asp"):
+        if u not in seen:
+            seen.add(u)
+            found.append(u)
+    for m in re.finditer(r"gir\.asp\?gare=([^\"'&\s<>]+)", html, re.I):
+        u = urljoin(base, f"gir.asp?gare={m.group(1)}")
+        if u not in seen:
+            seen.add(u)
+            found.append(u)
+    return found
+
+
+def _discover_regional_suffixes_from_html(html: str, prefix: str = "3-0") -> list[str]:
+    """Suffissi campionato CRA (es. SEC, C5J) da HTML quando i link gir.asp non sono in hub root."""
+    suffixes: list[str] = []
+    seen: set[str] = set()
+    pat = re.compile(
+        rf"gare={re.escape(prefix)}-([A-Za-z0-9]+(?:-[A-Za-z0-9]+)*)", re.I
+    )
+    for m in pat.finditer(html or ""):
+        suf = m.group(1)
+        if suf not in seen:
+            seen.add(suf)
+            suffixes.append(suf)
+    return suffixes
+
+
+def _discover_gir_urls_from_hub_html(
+    client: httpx.Client,
+    base_url: str,
+    html: str,
+    fetch_html,
+) -> list[str]:
+    """
+    Hub nazionali (cand/canc/…) e pagine sezione: gir.asp diretti + sotto-link
+    da default.asp?gare= (categorie COPPA ITALIA SERIE D, …).
+    """
+    base = base_url.rstrip("/") + "/"
+    all_gir: list[str] = []
+    seen: set[str] = set()
+
+    def _add_from_page(page_html: str) -> None:
+        for u in _extract_gir_urls_from_html(page_html, base):
+            if u not in seen:
+                seen.add(u)
+                all_gir.append(u)
+
+    _add_from_page(html)
+    for cat_url in _discover_section_index_urls(html, base):
+        try:
+            _add_from_page(fetch_html(client, cat_url))
+        except Exception as e:
+            logger.debug("category page %s: %s", cat_url, e)
+    return all_gir
+
+
 def _gare_from_url(url: str) -> str:
     m = GARE_RE.search(url)
     return m.group(1) if m else ""
@@ -265,8 +326,10 @@ def discover_gir_urls_for_section(
     """
     base = base_url.rstrip("/") + "/"
     regional_html = fetch_html(client, base)
-    regional_girs = _extract_links(regional_html, base, "gir.asp")
+    regional_girs = _extract_gir_urls_from_html(regional_html, base)
     suffixes = _regional_gir_suffixes(regional_girs)
+    if not suffixes:
+        suffixes = _discover_regional_suffixes_from_html(regional_html, "3-0")
     found: list[str] = []
     seen: set[str] = set()
     for suf in suffixes:
@@ -337,9 +400,11 @@ class AiaLombardiaScraper:
     def discover_gir_urls(self, client: httpx.Client) -> list[str]:
         if self.section_gare:
             html = self.fetch(client, self.section_index_url)
-            links = _extract_links(html, self.base_url, "gir.asp")
-            if links:
-                return links
+            found = _discover_gir_urls_from_hub_html(
+                client, self.base_url, html, self.fetch
+            )
+            if found:
+                return found
             derived = discover_gir_urls_for_section(
                 client,
                 self.base_url,
@@ -350,11 +415,13 @@ class AiaLombardiaScraper:
                 return derived
 
         html = self.fetch(client, self.base_url)
-        links = _extract_links(html, self.base_url, "gir.asp")
-        if links:
-            return links
+        found = _discover_gir_urls_from_hub_html(
+            client, self.base_url, html, self.fetch
+        )
+        if found:
+            return found
 
-        # Lombardia (e altri CRA): i gir.asp sono nelle pagine default.asp di ogni sezione.
+        # Lombardia CRA: gir.asp nelle pagine default.asp di ogni sezione.
         section_urls = _discover_section_index_urls(html, self.base_url)
         if not section_urls and "lombardia" in self.base_url.lower():
             section_urls = [s["url"] for s in self.list_lombardia_sections(client)]
@@ -364,7 +431,9 @@ class AiaLombardiaScraper:
         for sec_url in section_urls:
             try:
                 sec_html = self.fetch(client, sec_url)
-                for u in _extract_links(sec_html, self.base_url, "gir.asp"):
+                for u in _discover_gir_urls_from_hub_html(
+                    client, self.base_url, sec_html, self.fetch
+                ):
                     if u not in seen:
                         seen.add(u)
                         all_gir.append(u)
@@ -373,7 +442,7 @@ class AiaLombardiaScraper:
         if all_gir:
             return all_gir
 
-        return _extract_links(html, self.base_url, "gir.asp")
+        return _extract_gir_urls_from_html(html, self.base_url)
 
     def discover_des_urls(self, client: httpx.Client, gir_url: str) -> list[str]:
         html = self.fetch(client, gir_url)
