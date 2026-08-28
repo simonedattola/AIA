@@ -37,9 +37,7 @@ class TestNationalHubGirDiscovery:
             return cat_html
 
         base = "https://www.aia-figc.it/designazioni/cand/"
-        urls = _discover_gir_urls_from_hub_html(
-            FakeClient(), base, hub_html, fetch
-        )
+        urls = _discover_gir_urls_from_hub_html(FakeClient(), base, hub_html, fetch)
         assert len(urls) == 1
         assert "91-0-CII-19" in urls[0]
         assert any("default.asp?gare=91-0-CII" in u for u in fetched)
