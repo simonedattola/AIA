@@ -148,20 +148,20 @@ Le designazioni possono essere importate automaticamente dal portale ufficiale:
 }
 ```
 
-### Sync automatico (ogni 12 ore)
+### Sync automatico (ogni 6 ore)
 
 Con il backend avviato, le designazioni degli arbitri **sezione Legnano** vengono importate automaticamente da AIA FIGC:
 
-- **Prima esecuzione:** ~90 secondi dopo l’avvio (dopo il seed)
-- **Poi:** ogni **12 ore** (configurabile)
+- **Prima esecuzione:** ~90 secondi dopo l’avvio se l’ultimo sync è in ritardo (catch-up)
+- **Poi:** ogni **6 ore** (configurabile)
+- **Manuale (admin):** avvio in background; lo stato si aggiorna su `GET /api/admin/designations/sync-status` (il crawl AIA dura 1–3 minuti e non deve restare appeso al POST)
 
 Variabili in `backend/.env`:
 
 | Variabile | Default | Descrizione |
 |-----------|---------|-------------|
 | `DESIGNATIONS_AUTO_SYNC` | `true` | Abilita/disabilita il job |
-| `DESIGNATIONS_SYNC_INTERVAL_HOURS` | `12` | Intervallo tra due sync |
-| `DESIGNATIONS_SYNC_ON_STARTUP` | `true` | Sync anche all’avvio |
+| `DESIGNATIONS_SYNC_INTERVAL_HOURS` | `6` | Intervallo tra due sync |
 | `DESIGNATIONS_LEGNANO_GARE` | `3-270` | Codice sezione AIA Legnano |
 | `DESIGNATIONS_FILTER_SECTION` | `Legnano` | Solo nominativi di quella sezione |
 

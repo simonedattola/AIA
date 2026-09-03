@@ -73,7 +73,7 @@ Portal UI lives in the main React app (`frontend/`); there is no separate Next.j
    Admin creates/edits article → `POST/PUT /api/admin/articles` → Mongo `articles` → public site reads `/api/public/...`.
 
 2. **Designations sync**  
-   Scheduler (or `POST /api/admin/designations/sync-aia`) crawls AIA FIGC → parse → upsert `members` + `designations` (filtered to Legnano by config).
+   Scheduler every 6h (or `POST /api/admin/designations/sync-aia` background job) crawls AIA FIGC → parse → upsert `members` + `designations` (filtered to Legnano by config). Poll `GET /api/admin/designations/sync-status`.
 
 3. **Member portal**  
    Login with meccanografico → JWT → `/api/portal/*` (presenze, messaggi, gallery upload, profile photo).

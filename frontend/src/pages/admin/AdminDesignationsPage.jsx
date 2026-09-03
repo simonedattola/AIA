@@ -117,11 +117,53 @@ export default function AdminDesignationsPage() {
     adminMembers({ memberRole: "assistente" }).then((b) => setMembers([...a, ...b]))
   );
 
+  const applySyncStatus = (st) => {
+    setSyncStatus(st);
+    if (st?.running) {
+      setSyncing(true);
+      setSyncMsg("Sincronizzazione AIA in corso (può richiedere 1–3 minuti)…");
+      return;
+    }
+    setSyncing(false);
+    const attempt = st?.lastAttempt;
+    if (attempt?.status === "failed") {
+      setSyncMsg(attempt.error || "Sincronizzazione fallita.");
+    }
+  };
+
   useEffect(() => {
     load();
     loadMembers();
-    adminDesignationsSyncStatus().then(setSyncStatus).catch(() => {});
+    adminDesignationsSyncStatus().then(applySyncStatus).catch(() => {});
   }, []);
+
+  useEffect(() => {
+    if (!syncing) return undefined;
+    const id = setInterval(() => {
+      adminDesignationsSyncStatus()
+        .then((st) => {
+          applySyncStatus(st);
+          if (!st?.running && st?.at) {
+            const inserted = st.inserted != null ? st.inserted : 0;
+            const pages = st.pagesFetched != null ? st.pagesFetched : 0;
+            const attempt = st.lastAttempt;
+            if (attempt?.status === "failed") {
+              return;
+            }
+            setSyncMsg(
+              `Importate ${inserted} designazioni (${pages} pagine AIA)` +
+              (st.membersCreated ? ` · ${st.membersCreated} nuovi associati` : "") +
+              (st.updated ? ` · ${st.updated} aggiornate` : "") +
+              "."
+            );
+            loadMembers();
+            load();
+          }
+        })
+        .catch(() => {});
+    }, 2500);
+    return () => clearInterval(id);
+  }, [syncing]);
 
   useEffect(() => {
     if (searchParams.get("new") === "1") {
@@ -138,34 +180,22 @@ export default function AdminDesignationsPage() {
       "Importare le designazioni da AIA FIGC (Sezione Legnano)?\n\nLe designazioni importate in precedenza verranno sostituite. Quelle inserite manualmente restano invariate."
     )) return;
     setSyncing(true);
-    setSyncMsg("");
+    setSyncMsg("Sincronizzazione AIA avviata…");
     try {
       const res = await adminSyncDesignationsAia({
         filterSection: "Legnano",
         replaceExisting: true,
       });
       if (res.ok === false) {
+        setSyncing(false);
         setSyncMsg(res.error || "Nessuna designazione importata.");
         return;
       }
-      setSyncMsg(
-        `Importate ${res.inserted} designazioni (${res.pagesFetched} pagine AIA)` +
-        (res.membersCreated ? ` · ${res.membersCreated} nuovi associati` : "") +
-        (res.updated ? ` · ${res.updated} aggiornate` : "") +
-        (res.removed ? ` · ${res.removed} rimosse (non più su AIA)` : "") +
-        (res.membersBackfilled ? ` · ${res.membersBackfilled} collegamenti aggiornati` : "") +
-        "."
-      );
-      if (res.errors?.length) {
-        setSyncMsg((m) => `${m} ${res.errors.length} avvisi.`);
-      }
-      adminDesignationsSyncStatus().then(setSyncStatus);
-      await loadMembers();
-      load();
+      setSyncMsg(res.message || "Sincronizzazione in corso…");
+      adminDesignationsSyncStatus().then(applySyncStatus).catch(() => {});
     } catch (e) {
-      setSyncMsg(e?.response?.data?.detail || "Sincronizzazione fallita.");
-    } finally {
       setSyncing(false);
+      setSyncMsg(e?.response?.data?.detail || "Sincronizzazione fallita.");
     }
   };
 
@@ -262,6 +292,8 @@ export default function AdminDesignationsPage() {
               {syncStatus.inserted != null && ` · ${syncStatus.inserted} designazioni`}
               {syncStatus.membersCreated > 0 && ` · ${syncStatus.membersCreated} associati creati`}
               {syncStatus.membersBackfilled > 0 && ` · ${syncStatus.membersBackfilled} collegati`}
+              {syncStatus.intervalHours != null && ` · ogni ${syncStatus.intervalHours} ore`}
+              {syncStatus.running && " · in corso"}
             </p>
           )}
         </div>

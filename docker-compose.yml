@@ -32,6 +32,7 @@ services:
       DESIGNATIONS_CRAWL_ALL_HUBS: ${DESIGNATIONS_CRAWL_ALL_HUBS:-false}
       DESIGNATIONS_NATIONAL_HUBS: ${DESIGNATIONS_NATIONAL_HUBS:-canc,cand,can5elite,can5,canbs}
       DESIGNATIONS_FILTER_SECTION: ${DESIGNATIONS_FILTER_SECTION:-Legnano}
+      DESIGNATIONS_SYNC_INTERVAL_HOURS: ${DESIGNATIONS_SYNC_INTERVAL_HOURS:-6}
       # Cookie sessionid Instagram (import galleria): Admin o scripts/import_instagram_gallery.py
       INSTAGRAM_SESSION_ID: ${INSTAGRAM_SESSION_ID:-}
     volumes:
