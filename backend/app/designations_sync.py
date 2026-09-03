@@ -592,7 +592,7 @@ async def sync_from_aia_lombardia(
                     "pagesFetched": scrape.pages_fetched,
                     "errors": scrape.errors[:20],
                     "nextSyncHours": float(
-                        os.environ.get("DESIGNATIONS_SYNC_INTERVAL_HOURS", "12")
+                        os.environ.get("DESIGNATIONS_SYNC_INTERVAL_HOURS", "6")
                     ),
                 }
             }

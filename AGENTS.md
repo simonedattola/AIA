@@ -35,7 +35,7 @@
 
 ### Sync designazioni AIA FIGC
 
-- Scheduler: `designations_scheduler.py` (default every 12h). Manual: `POST /api/admin/designations/sync-aia`.
+- Scheduler: `designations_scheduler.py` (default every 6h, catch-up if last success is overdue). Manual: `POST /api/admin/designations/sync-aia` starts a **background** job (poll `GET /api/admin/designations/sync-status`); do not await the full AIA crawl on that POST (Vercel proxy timeout).
 - Lombardia sezione Legnano (`gare=3-270`) + hub nazionali CAN: `canc`, `cand`, `can5elite`, `can5`, `canbs` via `scrape_national_hubs` / `NATIONAL_HUBS` (not `/designazioni/can/` Serie A).
 - Env: `DESIGNATIONS_NATIONAL_HUBS=canc,cand,can5elite,can5,canbs` (empty/false disables national crawl).
 - Only rows with `refereeSection` containing `Legnano` are kept.

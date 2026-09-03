@@ -132,7 +132,7 @@ export const adminCreateDesignation = (data) => api.post("/admin/designations", 
 export const adminUpdateDesignation = (id, data) => api.put(`/admin/designations/${id}`, data).then((r) => r.data);
 export const adminDeleteDesignation = (id) => api.delete(`/admin/designations/${id}`).then((r) => r.data);
 export const adminSyncDesignationsAia = (data = {}) =>
-  api.post("/admin/designations/sync-aia", data, { timeout: 300000 }).then((r) => r.data);
+  api.post("/admin/designations/sync-aia", data, { timeout: 30000 }).then((r) => r.data);
 export const adminDesignationsSyncStatus = () =>
   api.get("/admin/designations/sync-status").then((r) => r.data);
 export const adminDesignationsImportTemplate = () =>

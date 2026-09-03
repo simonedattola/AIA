@@ -43,7 +43,6 @@ from ..models import (
     GalleryImageCreate,
     GalleryImageUpdate,
 )
-from ..designations_sync import sync_from_aia_lombardia
 from ..designations_import import import_designations_from_file, IMPORT_TEMPLATE_CSV
 from ..designations_import_extract import SUPPORTED_EXTENSIONS
 from ..members_import import (
@@ -996,18 +995,33 @@ async def admin_sync_designations_aia(
     payload: DesignationSyncRequest = DesignationSyncRequest(),
     admin=Depends(require_admin),
 ):
-    """Scrape designazioni from AIA FIGC Lombardia (Legnano section by default) and import."""
-    try:
-        return await sync_from_aia_lombardia(
-            section_gare=payload.sectionGare,
-            filter_section=payload.filterSection,
-            replace_existing=payload.replaceExisting,
-            max_des_pages=payload.maxDesPages,
-            trigger="manual",
-        )
-    except Exception as e:
-        logger.exception("Designations sync failed")
-        raise HTTPException(500, f"Sincronizzazione fallita: {e}") from e
+    """Avvia sync AIA in background (evita timeout proxy Vercel sul crawl lungo)."""
+    from ..designations_scheduler import (
+        interval_hours,
+        is_sync_running,
+        start_sync_background,
+        sync_runtime_status,
+    )
+
+    _ = payload  # filtri restano quelli di produzione (Legnano)
+    if is_sync_running():
+        return {
+            "ok": True,
+            "started": False,
+            "running": True,
+            "message": "Sincronizzazione già in corso.",
+            "intervalHours": interval_hours(),
+            **sync_runtime_status(),
+        }
+    started = start_sync_background("manual")
+    return {
+        "ok": True,
+        "started": started,
+        "running": True,
+        "message": "Sincronizzazione avviata. Attendere il completamento (1–3 minuti).",
+        "intervalHours": interval_hours(),
+        **sync_runtime_status(),
+    }
 
 
 @router.get("/designations/import-template")
@@ -1050,11 +1064,28 @@ async def admin_import_designations_file(
 
 @router.get("/designations/sync-status")
 async def admin_designations_sync_status(admin=Depends(require_admin)):
+    from ..designations_scheduler import (
+        interval_hours,
+        seconds_until_due,
+        sync_runtime_status,
+    )
+
     db = get_db()
     settings = await db.site_settings.find_one(
-        {"id": "site-settings"}, {"_id": 0, "lastDesignationsSync": 1}
+        {"id": "site-settings"},
+        {"_id": 0, "lastDesignationsSync": 1, "lastDesignationsSyncAttempt": 1},
     )
-    return settings.get("lastDesignationsSync") if settings else {}
+    last = (settings or {}).get("lastDesignationsSync") or {}
+    attempt = (settings or {}).get("lastDesignationsSyncAttempt") or {}
+    runtime = sync_runtime_status()
+    wait = seconds_until_due(last.get("at"))
+    return {
+        **last,
+        **runtime,
+        "lastAttempt": attempt,
+        "secondsUntilNext": wait,
+        "intervalHours": runtime.get("intervalHours") or interval_hours(),
+    }
 
 
 # ---- Leads ----
