@@ -1065,26 +1065,43 @@ async def admin_import_designations_file(
 @router.get("/designations/sync-status")
 async def admin_designations_sync_status(admin=Depends(require_admin)):
     from ..designations_scheduler import (
+        ensure_scheduler_alive,
         interval_hours,
+        maybe_run_overdue_sync,
         seconds_until_due,
         sync_runtime_status,
     )
 
+    ensure_scheduler_alive()
+    # Same catch-up path as /health: if overdue, kick a background sync.
+    overdue = await maybe_run_overdue_sync(trigger="status-check")
+
     db = get_db()
     settings = await db.site_settings.find_one(
         {"id": "site-settings"},
-        {"_id": 0, "lastDesignationsSync": 1, "lastDesignationsSyncAttempt": 1},
+        {
+            "_id": 0,
+            "lastDesignationsSync": 1,
+            "lastDesignationsSyncAttempt": 1,
+            "designationsSchedulerHeartbeat": 1,
+        },
     )
     last = (settings or {}).get("lastDesignationsSync") or {}
     attempt = (settings or {}).get("lastDesignationsSyncAttempt") or {}
+    heartbeat = (settings or {}).get("designationsSchedulerHeartbeat") or {}
     runtime = sync_runtime_status()
     wait = seconds_until_due(last.get("at"))
     return {
         **last,
         **runtime,
         "lastAttempt": attempt,
+        "heartbeat": heartbeat,
         "secondsUntilNext": wait,
         "intervalHours": runtime.get("intervalHours") or interval_hours(),
+        "watchdog": {
+            "started": bool(overdue.get("started")),
+            "reason": overdue.get("reason"),
+        },
     }
 
 
