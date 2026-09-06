@@ -293,7 +293,13 @@ export default function AdminDesignationsPage() {
               {syncStatus.membersCreated > 0 && ` · ${syncStatus.membersCreated} associati creati`}
               {syncStatus.membersBackfilled > 0 && ` · ${syncStatus.membersBackfilled} collegati`}
               {syncStatus.intervalHours != null && ` · ogni ${syncStatus.intervalHours} ore`}
+              {syncStatus.trigger && ` · via ${syncStatus.trigger}`}
               {syncStatus.running && " · in corso"}
+              {syncStatus.autoSyncEnabled === false
+                ? " · auto-sync DISATTIVATO"
+                : syncStatus.schedulerAlive === false
+                  ? " · scheduler non attivo (si riavvia al prossimo health check)"
+                  : " · auto-sync attivo"}
             </p>
           )}
         </div>

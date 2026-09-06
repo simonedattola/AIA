@@ -1,4 +1,11 @@
-"""Background scheduler: sync Legnano designations from AIA FIGC every N hours."""
+"""Background scheduler: sync Legnano designations from AIA FIGC every N hours.
+
+Reliability notes (Railway / long-lived web process):
+- The asyncio loop must never die on a transient Mongo/network error.
+- Railway restarts wipe in-memory timers; catch-up uses last success in Mongo.
+- Health checks call ``ensure_scheduler_alive`` + overdue watchdog so a dead
+  task or missed interval still triggers sync without waiting for admin.
+"""
 
 from __future__ import annotations
 
@@ -19,6 +26,8 @@ _running = False
 _pending = False
 _started_at: str | None = None
 _trigger: str | None = None
+_last_heartbeat_at: str | None = None
+_last_loop_error: str | None = None
 
 
 def _env_bool(key: str, default: str = "true") -> bool:
@@ -79,12 +88,20 @@ def is_sync_running() -> bool:
     return _pending or _running or _lock.locked()
 
 
+def is_scheduler_alive() -> bool:
+    return _task is not None and not _task.done()
+
+
 def sync_runtime_status() -> dict:
     return {
         "running": is_sync_running(),
         "startedAt": _started_at,
         "trigger": _trigger,
         "intervalHours": interval_hours(),
+        "schedulerAlive": is_scheduler_alive(),
+        "autoSyncEnabled": _env_bool("DESIGNATIONS_AUTO_SYNC", "true"),
+        "lastHeartbeatAt": _last_heartbeat_at,
+        "lastLoopError": _last_loop_error,
     }
 
 
@@ -107,6 +124,26 @@ async def _mark_attempt(trigger: str, *, status: str, error: str | None = None) 
     )
 
 
+async def _write_heartbeat(*, note: str = "") -> None:
+    global _last_heartbeat_at
+    from .db import get_db
+    from .designations_sync import _now
+
+    _last_heartbeat_at = _now()
+    db = get_db()
+    doc = {
+        "at": _last_heartbeat_at,
+        "schedulerAlive": True,
+        "intervalHours": interval_hours(),
+        "note": note,
+    }
+    await db.site_settings.update_one(
+        {"id": "site-settings"},
+        {"$set": {"designationsSchedulerHeartbeat": doc}},
+        upsert=True,
+    )
+
+
 async def _last_success_at() -> str | None:
     from .db import get_db
 
@@ -125,6 +162,9 @@ async def run_auto_sync(trigger: str = "scheduled") -> dict | None:
     """Run one sync cycle (Legnano section, Legnano referees only)."""
     global _running, _started_at, _trigger
     if not _env_bool("DESIGNATIONS_AUTO_SYNC", "true") and trigger != "manual":
+        logger.warning(
+            "Skipping auto-sync (%s): DESIGNATIONS_AUTO_SYNC is disabled", trigger
+        )
         return None
 
     if _lock.locked():
@@ -186,40 +226,109 @@ def start_sync_background(trigger: str = "manual") -> bool:
     return True
 
 
+async def maybe_run_overdue_sync(trigger: str = "watchdog") -> dict:
+    """
+    If last success is overdue and nothing is running, start a background sync.
+    Safe to call from health checks (non-blocking).
+    """
+    ensure_scheduler_alive()
+    if not _env_bool("DESIGNATIONS_AUTO_SYNC", "true"):
+        return {
+            "started": False,
+            "reason": "auto_sync_disabled",
+            **sync_runtime_status(),
+        }
+    if is_sync_running():
+        return {"started": False, "reason": "already_running", **sync_runtime_status()}
+    try:
+        last_at = await _last_success_at()
+        wait = seconds_until_due(last_at)
+    except Exception as exc:
+        logger.exception("Overdue check failed")
+        return {
+            "started": False,
+            "reason": "check_failed",
+            "error": str(exc)[:200],
+            **sync_runtime_status(),
+        }
+    if wait > 0:
+        return {
+            "started": False,
+            "reason": "not_due",
+            "secondsUntilNext": wait,
+            "lastSuccessAt": last_at,
+            **sync_runtime_status(),
+        }
+    started = start_sync_background(trigger)
+    logger.info(
+        "Overdue designations sync %s (trigger=%s, lastSuccess=%s)",
+        "started" if started else "skipped",
+        trigger,
+        last_at or "never",
+    )
+    return {
+        "started": started,
+        "reason": "overdue" if started else "start_failed",
+        "lastSuccessAt": last_at,
+        **sync_runtime_status(),
+    }
+
+
 async def _scheduler_loop() -> None:
+    global _last_loop_error
     interval = _interval_seconds()
     delay = _startup_delay_seconds()
     logger.info(
-        "Designations auto-sync: first check in %.0fs, then every %.1f h (catch-up if overdue)",
+        "Designations auto-sync: first check in %.0fs, then every %.1f h "
+        "(catch-up if overdue; loop errors are recovered)",
         delay,
         interval / 3600,
     )
     await asyncio.sleep(delay)
 
     while True:
-        last_at = await _last_success_at()
-        wait = seconds_until_due(last_at, interval_sec=interval)
-        if wait > 0:
-            logger.info(
-                "Designations sync next in %.0fs (last success=%s)",
-                wait,
-                last_at or "never",
+        try:
+            await _write_heartbeat(note="loop")
+            _last_loop_error = None
+            last_at = await _last_success_at()
+            wait = seconds_until_due(last_at, interval_sec=interval)
+            if wait > 0:
+                logger.info(
+                    "Designations sync next in %.0fs (last success=%s)",
+                    wait,
+                    last_at or "never",
+                )
+                await asyncio.sleep(min(wait, 60.0))
+                continue
+            trigger = "startup" if last_at is None else "scheduled"
+            await run_auto_sync(trigger=trigger)
+            await asyncio.sleep(30.0)
+        except asyncio.CancelledError:
+            raise
+        except Exception as exc:
+            _last_loop_error = str(exc)[:500]
+            logger.exception(
+                "Designations scheduler loop error; retrying in 60s: %s", exc
             )
-            await asyncio.sleep(min(wait, 300.0))
-            continue
-        trigger = "startup" if last_at is None else "scheduled"
-        await run_auto_sync(trigger=trigger)
-        await asyncio.sleep(30.0)
+            try:
+                await asyncio.sleep(60.0)
+            except asyncio.CancelledError:
+                raise
 
 
-def start_designations_scheduler() -> None:
-    """Start background task (idempotent)."""
+def ensure_scheduler_alive() -> bool:
+    """Restart the loop task if it crashed. Returns True if a task is running."""
     global _task
     if not _env_bool("DESIGNATIONS_AUTO_SYNC", "true"):
-        logger.info("Designations auto-sync disabled (DESIGNATIONS_AUTO_SYNC=false)")
-        return
+        return False
     if _task is not None and not _task.done():
-        return
+        return True
+    if _task is not None and _task.done():
+        exc = _task.exception() if not _task.cancelled() else None
+        logger.error(
+            "Designations scheduler task was dead (exc=%s); restarting",
+            exc,
+        )
     _task = asyncio.create_task(_scheduler_loop(), name="designations-sync-scheduler")
     logger.info(
         "Designations scheduler started (interval=%s h, section=%s, filter=%s)",
@@ -227,6 +336,15 @@ def start_designations_scheduler() -> None:
         os.environ.get("DESIGNATIONS_LEGNANO_GARE", "3-270"),
         os.environ.get("DESIGNATIONS_FILTER_SECTION", "Legnano"),
     )
+    return True
+
+
+def start_designations_scheduler() -> None:
+    """Start background task (idempotent)."""
+    if not _env_bool("DESIGNATIONS_AUTO_SYNC", "true"):
+        logger.info("Designations auto-sync disabled (DESIGNATIONS_AUTO_SYNC=false)")
+        return
+    ensure_scheduler_alive()
 
 
 def stop_designations_scheduler() -> None:

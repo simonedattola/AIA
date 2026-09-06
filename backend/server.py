@@ -86,12 +86,17 @@ async def health():
     """
     Liveness/readiness probe with dependency status.
 
+    Also keeps the designations auto-sync scheduler alive and starts an overdue
+    sync in the background when the last success is older than the interval
+    (Railway restarts / dead asyncio tasks must not skip AIA sync).
+
     - **Returns:** `{status, timestamp, services}` — HTTP 200 when healthy,
       HTTP 503 when the database is unreachable.
     """
     timestamp = datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
     db_status = "disconnected"
     overall = "unhealthy"
+    designations_watchdog: dict = {"ok": False}
 
     try:
         db = get_db()
@@ -107,12 +112,30 @@ async def health():
             error=str(exc),
         )
 
+    if overall == "healthy":
+        try:
+            from app.designations_scheduler import maybe_run_overdue_sync
+
+            designations_watchdog = await maybe_run_overdue_sync(trigger="health")
+            designations_watchdog = {
+                "ok": True,
+                "started": bool(designations_watchdog.get("started")),
+                "reason": designations_watchdog.get("reason"),
+                "schedulerAlive": designations_watchdog.get("schedulerAlive"),
+                "autoSyncEnabled": designations_watchdog.get("autoSyncEnabled"),
+                "secondsUntilNext": designations_watchdog.get("secondsUntilNext"),
+            }
+        except Exception as exc:
+            logger.exception("Designations health watchdog failed")
+            designations_watchdog = {"ok": False, "error": str(exc)[:200]}
+
     payload = {
         "status": overall,
         "timestamp": timestamp,
         "services": {
             "database": db_status,
             "cache": "N/A",
+            "designationsScheduler": designations_watchdog,
         },
     }
     code = 200 if overall == "healthy" else 503
