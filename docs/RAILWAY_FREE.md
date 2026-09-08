@@ -2,18 +2,40 @@
 
 Sul piano **Free** Railway dà ~**$1 di credito/mese**. Dopo la prova, i deploy falliscono quasi sempre per uno di questi motivi.
 
-## Fix #1 (il più comune) — abilita Serverless
+## Fix #1 (il più comune) — Serverless “fantasma” (UI ON ma deploy rifiuta)
 
-Errore tipico nei log:
+Errore tipico:
 
 > `Free plan deployments must be serverless. Please go to your service settings and turn on the serverless flag.`
 
-1. Railway → progetto → servizio **backend**
-2. **Settings → Deploy → Serverless** → **Enable Serverless** (ON)
-3. Non usare “Redeploy” su un deploy vecchio (tiene lo snapshot senza flag).
-4. Apri la command palette (`Ctrl/Cmd+K`) → **Deploy latest commit**
+Anche se il toggle è già **ON**, dopo la scadenza della trial Railway a volte **non salva** il flag sul servizio. Fai esattamente questa sequenza:
 
-Aspetta il build. Se fallisce ancora, prova **fuori dalle peak hours** Free (di solito 08:00–20:00 fuso della regione del servizio) oppure ricrea il servizio con Serverless già ON.
+### A — Resync del flag (funziona nella maggior parte dei casi)
+
+1. Servizio → **Settings → Deploy → Serverless**
+2. Metti Serverless su **OFF** e salva (se la UI lo permette)
+3. Prova un deploy (può fallire: ok)
+4. Rimetti Serverless su **ON** e salva
+5. **Non** cliccare Redeploy sul deploy rosso vecchio
+6. `Ctrl/Cmd + K` → cerca **Deploy latest commit** → invio  
+   (oppure: Settings → Source → **Disconnect** / **Reconnect** repo, poi Deploy)
+
+### B — Se A fallisce ancora: servizio nuovo (pulito)
+
+Il vecchio servizio può restare “incastrato”. Crea un servizio nuovo:
+
+1. Stesso progetto Railway → **New → GitHub Repo** → `simonedattola/AIA`
+2. **Root Directory:** `backend`
+3. Builder: Dockerfile
+4. **Subito** Settings → Deploy → **Serverless ON**
+5. Copia le variabili d’ambiente dal servizio vecchio
+6. Deploy → Generate domain
+7. Aggiorna `frontend/vercel.json` con il **nuovo** URL `*.up.railway.app`
+8. (Opzionale) elimina il servizio vecchio rotto
+
+### C — Peak hours Free
+
+Sul Free i deploy possono essere bloccati in fascia di punta (spesso ~08–20 ora della regione del servizio). Riprova più tardi la notte se A/B falliscono senza log di build.
 
 ## Fix #2 — Root Directory e Dockerfile
 
