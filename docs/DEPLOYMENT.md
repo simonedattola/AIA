@@ -8,7 +8,7 @@ How to run AIA Legnano in **development**, **staging**, and **production**.
 |-------------|----------|---------|----------|
 | Development | CRA on `:3000` | uvicorn on `:8000` | Local Mongo / Compose |
 | Staging | Docker image / stack | Docker image / stack | Managed or Compose Mongo |
-| Production | Vercel (GitHub) | Custom host (Railway / Render / ECS) | MongoDB Atlas (recommended) |
+| Production | Vercel (GitHub) | **Render Free** (o Railway / Fly / ECS) | MongoDB Atlas M0 (recommended) |
 
 ---
 
@@ -90,8 +90,9 @@ Build command (CRA): `npm run build` (or `yarn build`). Output: `build/`.
 
 | Option | When |
 |--------|------|
-| **A** Railway / Render / Fly.io / similar | Fast bootstrap, single service |
-| **B** AWS ECS (or EC2) + Atlas | Scale, VPC, tighter ops control |
+| **A** **Render Free** (see [`FREE_HOSTING.md`](FREE_HOSTING.md)) | €0; sleep after idle → use cron on `/api/health` |
+| **B** Railway Hobby / Fly.io | Always-on, small monthly cost |
+| **C** AWS ECS (or EC2) + Atlas | Scale, VPC, tighter ops control |
 
 Expose HTTPS (reverse proxy / platform TLS). Process example:
 
@@ -144,7 +145,7 @@ Document the live API base URL here once provisioned (Task 7.2):
 | Slot | URL |
 |------|-----|
 | Production frontend | `https://www.aia-legnano.it` (Vercel) |
-| Production API (Railway) | `https://aia-production-00a9.up.railway.app` → custom `https://api.aia-legnano.it` |
+| Production API | Render `https://….onrender.com` (vedi [`FREE_HOSTING.md`](FREE_HOSTING.md)); opz. `https://api.aia-legnano.it` |
 | Staging / preview Vercel | `https://aia-virid.vercel.app` |
 | Local API | `http://localhost:8000` |
 

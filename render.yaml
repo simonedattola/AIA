@@ -1,0 +1,47 @@
+# Render Blueprint — backend FastAPI (piano Free)
+# Dashboard: New → Blueprint → collega il repo GitHub → applica questo file.
+# Dopo il primo deploy: copia l'URL https://….onrender.com e aggiorna
+# frontend/vercel.json (rewrites /api → nuovo host). Vedi docs/FREE_HOSTING.md.
+
+services:
+  - type: web
+    name: aia-backend
+    runtime: docker
+    plan: free
+    rootDir: backend
+    dockerfilePath: ./Dockerfile
+    dockerContext: .
+    healthCheckPath: /api/health
+    # Free: sleep dopo ~15 min idle. Usa un cron esterno su /api/health (vedi docs).
+    envVars:
+      - key: DESIGNATIONS_AUTO_SYNC
+        value: "true"
+      - key: DESIGNATIONS_SYNC_INTERVAL_HOURS
+        value: "6"
+      - key: DESIGNATIONS_LEGNANO_GARE
+        value: "3-270"
+      - key: DESIGNATIONS_FILTER_SECTION
+        value: "Legnano"
+      - key: PORTAL_FRONTEND_URL
+        value: "https://www.aia-legnano.it"
+      - key: CORS_ORIGINS
+        value: "https://www.aia-legnano.it,https://aia-legnano.it,https://aia-virid.vercel.app"
+      # Segreti: impostali in Dashboard (non committare valori reali)
+      - key: MONGO_URL
+        sync: false
+      - key: DB_NAME
+        sync: false
+      - key: JWT_SECRET
+        sync: false
+      - key: ADMIN_EMAIL
+        sync: false
+      - key: ADMIN_PASSWORD
+        sync: false
+      - key: RESEND_API_KEY
+        sync: false
+      - key: SENDER_EMAIL
+        sync: false
+      - key: NOTIFY_EMAIL
+        sync: false
+      - key: INSTAGRAM_SESSION_ID
+        sync: false
