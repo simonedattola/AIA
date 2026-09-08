@@ -1,10 +1,13 @@
 # Railway: deploy from this directory (set Root Directory = backend)
+# Free plan ($1/mo): enable Settings → Deploy → Serverless, then
+# "Deploy latest commit" (see docs/RAILWAY_FREE.md).
 [build]
 builder = "DOCKERFILE"
 dockerfilePath = "Dockerfile"
 
 [deploy]
 healthcheckPath = "/api/health"
-healthcheckTimeout = 120
+# Cold start after Serverless sleep can exceed 60s.
+healthcheckTimeout = 300
 restartPolicyType = "ON_FAILURE"
 restartPolicyMaxRetries = 5

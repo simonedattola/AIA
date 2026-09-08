@@ -286,9 +286,20 @@ async def _scheduler_loop() -> None:
     )
     await asyncio.sleep(delay)
 
+    # Heartbeat Mongo only around syncs (not every minute): on Railway Free
+    # Serverless, frequent outbound DB traffic prevents sleep and burns the $1 credit.
+    heartbeat_every = float(
+        os.environ.get("DESIGNATIONS_HEARTBEAT_INTERVAL_SEC", "1800")
+    )
+    last_hb_mono = 0.0
+
     while True:
         try:
-            await _write_heartbeat(note="loop")
+            loop = asyncio.get_running_loop()
+            now_mono = loop.time()
+            if now_mono - last_hb_mono >= max(300.0, heartbeat_every):
+                await _write_heartbeat(note="loop")
+                last_hb_mono = now_mono
             _last_loop_error = None
             last_at = await _last_success_at()
             wait = seconds_until_due(last_at, interval_sec=interval)
@@ -298,9 +309,12 @@ async def _scheduler_loop() -> None:
                     wait,
                     last_at or "never",
                 )
-                await asyncio.sleep(min(wait, 60.0))
+                # Chunked sleep without Mongo chatter (sleep-friendly for Serverless).
+                await asyncio.sleep(min(wait, 300.0))
                 continue
             trigger = "startup" if last_at is None else "scheduled"
+            await _write_heartbeat(note="sync")
+            last_hb_mono = asyncio.get_running_loop().time()
             await run_auto_sync(trigger=trigger)
             await asyncio.sleep(30.0)
         except asyncio.CancelledError:

@@ -16,7 +16,7 @@
 
 - Guida cutover: `docs/CUSTOM_DOMAIN.md`
 - Frontend Vercel proxy `/api` → Railway (`frontend/vercel.json`). In Production Vercel lascia `REACT_APP_BACKEND_URL` **vuoto**.
-- Backend Railway attuale: `https://aia-production-00a9.up.railway.app`
+- Backend Railway: se Free ($1/mese) e deploy fallisce → **`docs/RAILWAY_FREE.md`** (Serverless ON + Deploy latest commit). Host tipico `*.up.railway.app`.
 - Dopo DNS: `PORTAL_FRONTEND_URL=https://www.aia-legnano.it`, `CORS_ORIGINS` con dominio reale, `PUBLIC_API_URL=https://api.aia-legnano.it` (opzionale)
 - Smoke test: `./scripts/verify_go_live.sh https://www.aia-legnano.it`
 
