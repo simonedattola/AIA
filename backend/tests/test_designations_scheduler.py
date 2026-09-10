@@ -144,6 +144,7 @@ def test_force_release_replaces_locked_asyncio_lock():
     assert is_sync_running() is False
     assert sched._lock is not lock
 
+
 @pytest.mark.asyncio
 async def test_start_sync_background_force_when_stuck(monkeypatch):
     monkeypatch.setenv("DESIGNATIONS_SYNC_STALE_SEC", "600")
@@ -173,9 +174,7 @@ async def test_maybe_run_overdue_starts_when_due(monkeypatch):
             "app.designations_scheduler.start_sync_background", return_value=True
         ) as start,
     ):
-        out = await maybe_run_overdue_sync(
-            trigger="watchdog", await_completion=False
-        )
+        out = await maybe_run_overdue_sync(trigger="watchdog", await_completion=False)
     assert out["started"] is True
     assert out["reason"] == "overdue"
     start.assert_called_once_with("watchdog", force=False)
@@ -195,9 +194,7 @@ async def test_maybe_run_overdue_skips_when_not_due(monkeypatch):
             "app.designations_scheduler.start_sync_background", return_value=True
         ) as start,
     ):
-        out = await maybe_run_overdue_sync(
-            trigger="watchdog", await_completion=False
-        )
+        out = await maybe_run_overdue_sync(trigger="watchdog", await_completion=False)
     assert out["started"] is False
     assert out["reason"] == "not_due"
     start.assert_not_called()
