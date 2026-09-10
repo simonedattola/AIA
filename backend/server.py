@@ -175,6 +175,9 @@ async def cron_designations_sync(
         await_completion=True,
         force=force,
     )
+    sync_result = (
+        result.get("result") if isinstance(result.get("result"), dict) else None
+    )
     return {
         "ok": True,
         "started": bool(result.get("started")),
@@ -184,6 +187,14 @@ async def cron_designations_sync(
         "staleRecovery": result.get("staleRecovery"),
         "running": result.get("running"),
         "schedulerAlive": result.get("schedulerAlive"),
+        "syncOk": (
+            None if sync_result is None else bool(sync_result.get("ok") is not False)
+        ),
+        "syncError": (sync_result or {}).get("error") if sync_result else None,
+        "inserted": (sync_result or {}).get("inserted") if sync_result else None,
+        "pagesFetched": (
+            (sync_result or {}).get("pagesFetched") if sync_result else None
+        ),
     }
 
 

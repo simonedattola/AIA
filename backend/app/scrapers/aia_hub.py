@@ -177,12 +177,20 @@ def scrape_lombardia_all_sections(
     filter_section: Optional[str] = "Legnano",
     max_des_pages: Optional[int] = None,
     request_delay: float = 0.35,
+    section_gare: Optional[str] = None,
 ) -> ScrapeResult:
     """Solo Lombardia — sezione CRA (es. Legnano gare=3-270)."""
-    with httpx.Client(headers=DEFAULT_HEADERS, timeout=30.0) as client:
-        section_gare = resolve_lombardia_section_gare(filter_section, client)
+    import os
+
+    gare = (section_gare or os.environ.get("DESIGNATIONS_LEGNANO_GARE") or "").strip()
+    if not gare and filter_section:
+        # Discovery hits the Lombardia index; Cloudflare often blocks datacenter IPs.
+        with httpx.Client(headers=DEFAULT_HEADERS, timeout=30.0) as client:
+            gare = resolve_lombardia_section_gare(filter_section, client)
+    if not gare:
+        gare = "3-270" if (filter_section or "").lower().find("legnano") >= 0 else ""
     scraper = AiaLombardiaScraper(
-        section_gare=section_gare,
+        section_gare=gare,
         base_url="https://www.aia-figc.it/designazioni/lombardia/",
         request_delay=request_delay,
         source="aia-figc-lombardia",
