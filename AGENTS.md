@@ -15,9 +15,11 @@
 ### Produzione / dominio www.aia-legnano.it
 
 - Guida cutover: `docs/CUSTOM_DOMAIN.md`
-- Frontend Vercel proxy `/api` → Railway (`frontend/vercel.json`). In Production Vercel lascia `REACT_APP_BACKEND_URL` **vuoto**.
-- Backend Railway attuale: `https://aia-production-00a9.up.railway.app`
-- Dopo DNS: `PORTAL_FRONTEND_URL=https://www.aia-legnano.it`, `CORS_ORIGINS` con dominio reale, `PUBLIC_API_URL=https://api.aia-legnano.it` (opzionale)
+- **Hosting gratis (post-Railway):** `docs/FREE_HOSTING.md` — backend su **Render Free** + cron keep-alive; frontend Vercel; DB Atlas M0.
+- Frontend Vercel proxy `/api` → backend (`frontend/vercel.json`). In Production Vercel lascia `REACT_APP_BACKEND_URL` **vuoto**.
+- Backend: aggiorna i rewrite in `vercel.json` all’URL Render (`*.onrender.com`). Vecchio Railway `aia-production-00a9.up.railway.app` non è più attivo.
+- Blueprint: `render.yaml` (root). Health: `/api/health`.
+- Dopo DNS: `PORTAL_FRONTEND_URL=https://www.aia-legnano.it`, `CORS_ORIGINS` con dominio reale, `PUBLIC_API_URL` opzionale
 - Smoke test: `./scripts/verify_go_live.sh https://www.aia-legnano.it`
 
 ### Instagram widget (home)
