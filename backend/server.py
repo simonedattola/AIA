@@ -1,6 +1,6 @@
 """FastAPI entrypoint for AIA Legnano platform."""
 
-from fastapi import FastAPI, APIRouter, HTTPException
+from fastapi import FastAPI, APIRouter, Header, HTTPException
 from fastapi.openapi.utils import get_openapi
 from fastapi.responses import (
     PlainTextResponse,
@@ -86,9 +86,13 @@ async def health():
     """
     Liveness/readiness probe with dependency status.
 
-    Also keeps the designations auto-sync scheduler alive and starts an overdue
-    sync in the background when the last success is older than the interval
-    (Railway restarts / dead asyncio tasks must not skip AIA sync).
+    Also keeps the designations auto-sync scheduler alive and, when overdue,
+    runs sync while holding the HTTP request open (Railway Free Serverless
+    otherwise freezes fire-and-forget tasks after the response).
+
+    Set ``DESIGNATIONS_SYNC_AWAIT_ON_HEALTH=false`` to only kick a background
+    task (not recommended on Serverless). Prefer
+    ``GET /api/cron/designations-sync`` for external cron.
 
     - **Returns:** `{status, timestamp, services}` — HTTP 200 when healthy,
       HTTP 503 when the database is unreachable.
@@ -120,10 +124,13 @@ async def health():
             designations_watchdog = {
                 "ok": True,
                 "started": bool(designations_watchdog.get("started")),
+                "completed": designations_watchdog.get("completed"),
                 "reason": designations_watchdog.get("reason"),
                 "schedulerAlive": designations_watchdog.get("schedulerAlive"),
                 "autoSyncEnabled": designations_watchdog.get("autoSyncEnabled"),
                 "secondsUntilNext": designations_watchdog.get("secondsUntilNext"),
+                "stale": designations_watchdog.get("stale"),
+                "running": designations_watchdog.get("running"),
             }
         except Exception as exc:
             logger.exception("Designations health watchdog failed")
@@ -140,6 +147,44 @@ async def health():
     }
     code = 200 if overall == "healthy" else 503
     return JSONResponse(content=payload, status_code=code)
+
+
+@api_router.get("/cron/designations-sync")
+@api_router.post("/cron/designations-sync")
+async def cron_designations_sync(
+    force: bool = False,
+    x_cron_secret: str | None = Header(default=None, alias="X-Cron-Secret"),
+):
+    """
+    Cron-friendly designations sync: awaits completion so Railway Serverless
+    stays awake for the full AIA crawl.
+
+    Optional auth: set ``CRON_SECRET`` and send header ``X-Cron-Secret``.
+    Use from cron-job.org / UptimeRobot every 10–30 minutes.
+    """
+    expected = (os.environ.get("CRON_SECRET") or "").strip()
+    if expected:
+        provided = (x_cron_secret or "").strip()
+        if provided != expected:
+            raise HTTPException(status_code=401, detail="Invalid cron secret")
+
+    from app.designations_scheduler import maybe_run_overdue_sync
+
+    result = await maybe_run_overdue_sync(
+        trigger="cron",
+        await_completion=True,
+        force=force,
+    )
+    return {
+        "ok": True,
+        "started": bool(result.get("started")),
+        "completed": bool(result.get("completed")),
+        "reason": result.get("reason"),
+        "lastSuccessAt": result.get("lastSuccessAt"),
+        "staleRecovery": result.get("staleRecovery"),
+        "running": result.get("running"),
+        "schedulerAlive": result.get("schedulerAlive"),
+    }
 
 
 app.include_router(api_router)

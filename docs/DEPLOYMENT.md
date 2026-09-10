@@ -132,7 +132,8 @@ See [`BACKUP.md`](BACKUP.md) for dump/restore and bucket migration notes.
 
 ```bash
 curl -sS "$PUBLIC_API_URL/api/" 
-# Prefer /api/health when monitoring PR is merged
+# Prefer /api/health for liveness; for AIA designations sync on Railway Free
+# Serverless use /api/cron/designations-sync (awaits completion) every ~10 min.
 ```
 
 ---

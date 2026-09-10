@@ -6,7 +6,7 @@ import shutil
 from pathlib import Path
 from datetime import datetime, timezone
 from typing import Optional
-from fastapi import APIRouter, Depends, HTTPException, UploadFile, File, Form
+from fastapi import APIRouter, Depends, HTTPException, UploadFile, File, Form, Query
 from fastapi.responses import FileResponse, Response
 from slugify import slugify
 
@@ -993,33 +993,53 @@ async def admin_delete_designation(des_id: str, admin=Depends(require_admin)):
 @router.post("/designations/sync-aia")
 async def admin_sync_designations_aia(
     payload: DesignationSyncRequest = DesignationSyncRequest(),
+    force: bool = Query(False, description="Sblocca un sync bloccato e riavvia"),
     admin=Depends(require_admin),
 ):
-    """Avvia sync AIA in background (evita timeout proxy Vercel sul crawl lungo)."""
+    """Avvia sync AIA in background (evita timeout proxy Vercel sul crawl lungo).
+
+    Con ``force=true`` sblocca un run bloccato (lock stale / Serverless freeze)
+    e riavvia la sincronizzazione.
+    """
     from ..designations_scheduler import (
+        force_release_sync_lock,
         interval_hours,
         is_sync_running,
+        is_sync_stale,
+        recover_stale_sync_lock,
         start_sync_background,
         sync_runtime_status,
     )
 
     _ = payload  # filtri restano quelli di produzione (Legnano)
+    stale_info = recover_stale_sync_lock()
     if is_sync_running():
-        return {
-            "ok": True,
-            "started": False,
-            "running": True,
-            "message": "Sincronizzazione già in corso.",
-            "intervalHours": interval_hours(),
-            **sync_runtime_status(),
-        }
-    started = start_sync_background("manual")
+        if force or is_sync_stale():
+            stale_info = force_release_sync_lock(
+                reason="manual_force" if force else "manual_stale"
+            )
+        else:
+            return {
+                "ok": True,
+                "started": False,
+                "running": True,
+                "message": "Sincronizzazione già in corso.",
+                "intervalHours": interval_hours(),
+                "staleRecovery": stale_info,
+                **sync_runtime_status(),
+            }
+    started = start_sync_background("manual", force=False)
     return {
         "ok": True,
         "started": started,
         "running": True,
-        "message": "Sincronizzazione avviata. Attendere il completamento (1–3 minuti).",
+        "message": (
+            "Sincronizzazione avviata (force). Attendere il completamento (1–3 minuti)."
+            if force or (stale_info or {}).get("recovered")
+            else "Sincronizzazione avviata. Attendere il completamento (1–3 minuti)."
+        ),
         "intervalHours": interval_hours(),
+        "staleRecovery": stale_info,
         **sync_runtime_status(),
     }
 
@@ -1067,14 +1087,15 @@ async def admin_designations_sync_status(admin=Depends(require_admin)):
     from ..designations_scheduler import (
         ensure_scheduler_alive,
         interval_hours,
-        maybe_run_overdue_sync,
+        recover_stale_sync_lock,
         seconds_until_due,
         sync_runtime_status,
     )
 
     ensure_scheduler_alive()
-    # Same catch-up path as /health: if overdue, kick a background sync.
-    overdue = await maybe_run_overdue_sync(trigger="status-check")
+    # Do not fire-and-forget sync here (Railway Serverless would freeze the task).
+    # Overdue catch-up is awaited by /api/health and /api/cron/designations-sync.
+    stale_info = recover_stale_sync_lock()
 
     db = get_db()
     settings = await db.site_settings.find_one(
@@ -1097,10 +1118,12 @@ async def admin_designations_sync_status(admin=Depends(require_admin)):
         "lastAttempt": attempt,
         "heartbeat": heartbeat,
         "secondsUntilNext": wait,
-        "intervalHours": runtime.get("intervalHours") or interval_hours(),
+        "staleRecovery": stale_info,
+        "intervalHours": interval_hours(),
+        "overdue": wait <= 0,
         "watchdog": {
-            "started": bool(overdue.get("started")),
-            "reason": overdue.get("reason"),
+            "started": False,
+            "reason": "status_check_no_start",
         },
     }
 
