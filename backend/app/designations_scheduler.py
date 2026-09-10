@@ -482,7 +482,10 @@ async def maybe_run_overdue_sync(
 
     if await_completion:
         out = await run_sync_awaited(trigger=trigger, force=force)
-        out["lastSuccessAt"] = last_at
+        try:
+            out["lastSuccessAt"] = await _last_success_at()
+        except Exception:
+            out["lastSuccessAt"] = last_at
         out["staleRecovery"] = stale or out.get("staleRecovery")
         if out.get("started"):
             out["reason"] = "overdue_awaited" if not force else "forced_awaited"
@@ -490,7 +493,7 @@ async def maybe_run_overdue_sync(
             "Overdue designations sync awaited (trigger=%s, reason=%s, lastSuccess=%s)",
             trigger,
             out.get("reason"),
-            last_at or "never",
+            out.get("lastSuccessAt") or "never",
         )
         return out
 

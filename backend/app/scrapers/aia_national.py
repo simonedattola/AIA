@@ -22,6 +22,7 @@ from .aia_lombardia import (
     _external_id,
     _normalize_role,
 )
+from .aia_http import fetch_aia_html
 
 logger = logging.getLogger(__name__)
 
@@ -242,7 +243,7 @@ def scrape_national_hubs(
 
                 base = hub.base_url
                 time.sleep(request_delay)
-                html = client.get(base, follow_redirects=True).text
+                html = fetch_aia_html(base, client=client, timeout=30.0)
                 combined.pages_fetched += 1
                 detail_ids = discover_dettaglio_ids(html)
                 if max_dettaglio_pages:
@@ -254,7 +255,7 @@ def scrape_national_hubs(
                         url = urljoin(
                             "https://www.aia-figc.it/", f"dettaglio.asp?ID={did}"
                         )
-                        dhtml = client.get(url, follow_redirects=True).text
+                        dhtml = fetch_aia_html(url, client=client, timeout=30.0)
                         combined.pages_fetched += 1
                         rows = parse_dettaglio_page(dhtml, url, did, hub)
                         combined.items.extend(rows)

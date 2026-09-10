@@ -352,12 +352,14 @@ def _run_full_scrape(
     section_name: Optional[str],
     max_des_pages: Optional[int],
     crawl_all_hubs: bool,
+    section_gare: Optional[str] = None,
 ) -> FullScrapeResult:
     out = FullScrapeResult()
 
     lomb = scrape_lombardia_all_sections(
         filter_section=section_name,
         max_des_pages=max_des_pages,
+        section_gare=section_gare,
     )
     out.items.extend(lomb.items)
     out.pages_fetched += lomb.pages_fetched
@@ -431,12 +433,18 @@ async def sync_from_aia_lombardia(
         section_name = None
 
     crawl_all_hubs = _env_bool("DESIGNATIONS_CRAWL_ALL_HUBS", "false")
+    gare = (
+        section_gare
+        if section_gare is not None
+        else os.environ.get("DESIGNATIONS_LEGNANO_GARE", "3-270")
+    )
 
     scrape: FullScrapeResult = await asyncio.to_thread(
         _run_full_scrape,
         section_name,
         max_des_pages,
         crawl_all_hubs,
+        gare,
     )
 
     db = get_db()

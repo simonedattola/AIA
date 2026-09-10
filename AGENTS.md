@@ -40,6 +40,7 @@
 - Env: keep `DESIGNATIONS_AUTO_SYNC` unset or `true` on Railway (manual still works if false). `DESIGNATIONS_SYNC_INTERVAL_HOURS=6`.
 - Lombardia sezione Legnano (`gare=3-270`) + hub nazionali CAN: `canc`, `cand`, `can5elite`, `can5`, `canbs` (not `/designazioni/can/` Serie A).
 - Only rows with `refereeSection` containing `Legnano` are kept.
+- Cloudflare on `aia-figc.it` often blocks Railway datacenter IPs: scrapers use `AIA_FETCH_MODE=auto` (direct, then Google Translate proxy). Force with `AIA_FETCH_MODE=translate`.
 
 ### Standard commands
 

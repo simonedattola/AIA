@@ -22,17 +22,11 @@ from bs4 import BeautifulSoup
 logger = logging.getLogger(__name__)
 
 BASE_URL = "https://www.aia-figc.it/designazioni/lombardia/"
-# Browser-like UA: custom bots are often blocked by Cloudflare on aia-figc.it.
-DEFAULT_HEADERS = {
-    "User-Agent": (
-        "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 "
-        "(KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
-    ),
-    "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
-    "Accept-Language": "it-IT,it;q=0.9,en-US;q=0.8,en;q=0.7",
-    "Cache-Control": "no-cache",
-    "Pragma": "no-cache",
-}
+from .aia_http import DEFAULT_HEADERS as HTTP_DEFAULT_HEADERS
+from .aia_http import fetch_aia_html
+
+# Keep module-level alias used across scrapers / tests.
+DEFAULT_HEADERS = HTTP_DEFAULT_HEADERS
 
 DATE_RE = re.compile(r"(\d{1,2})/(\d{1,2})/(\d{4})")
 GARE_RE = re.compile(r"gare=([^&\"']+)", re.I)
@@ -398,22 +392,8 @@ class AiaLombardiaScraper:
 
     def fetch(self, client: httpx.Client, url: str) -> str:
         time.sleep(self.request_delay)
-        r = client.get(url, follow_redirects=True)
-        r.raise_for_status()
-        r.encoding = r.encoding or "utf-8"
-        text = r.text or ""
-        low = text[:2000].lower()
-        if (
-            "just a moment" in low
-            or "cf-browser-verification" in low
-            or "cdn-cgi/challenge" in low
-            or ("cloudflare" in low and "attention required" in low)
-        ):
-            raise RuntimeError(
-                "AIA FIGC ha restituito una pagina Cloudflare challenge "
-                f"(IP del server probabilmente bloccato). url={url}"
-            )
-        return text
+        # client kept for API compatibility; fetch_aia_html handles CF fallback.
+        return fetch_aia_html(url, client=client, timeout=float(self.timeout))
 
     def discover_gir_urls(self, client: httpx.Client) -> list[str]:
         if self.section_gare:
@@ -530,9 +510,8 @@ class AiaLombardiaScraper:
     def list_lombardia_sections(client: httpx.Client) -> list[dict]:
         """Parse Lombardia hub for section links (Sezioni table)."""
         url = BASE_URL
-        r = client.get(url, headers=DEFAULT_HEADERS, timeout=30.0)
-        r.raise_for_status()
-        soup = BeautifulSoup(r.text, "html.parser")
+        html = fetch_aia_html(url, client=client, timeout=30.0)
+        soup = BeautifulSoup(html, "html.parser")
         sections = []
         for a in soup.find_all("a", href=True):
             href = a["href"]
