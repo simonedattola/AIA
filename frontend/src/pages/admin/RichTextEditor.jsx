@@ -3,10 +3,10 @@ import StarterKit from "@tiptap/starter-kit";
 import Link from "@tiptap/extension-link";
 import Image from "@tiptap/extension-image";
 import Placeholder from "@tiptap/extension-placeholder";
-import { useEffect } from "react";
+import { useEffect, useRef, useState } from "react";
 import {
   Bold, Italic, List, ListOrdered, Quote, Heading2, Heading3, Heading4,
-  Link as LinkIcon, Image as ImageIcon, Undo2, Redo2, Minus,
+  Link as LinkIcon, Image as ImageIcon, Undo2, Redo2, Minus, Loader2,
 } from "lucide-react";
 import { adminUpload } from "../../lib/api";
 import { mediaUrl } from "../../lib/media";
@@ -36,6 +36,9 @@ const ToolBtn = ({ onClick, active, disabled, title, children, testid }) => (
 );
 
 export default function RichTextEditor({ value, onChange, placeholder = "Scrivi qui il contenuto…" }) {
+  const fileInputRef = useRef(null);
+  const [uploading, setUploading] = useState(false);
+
   const editor = useEditor({
     extensions: [
       StarterKit.configure({ heading: { levels: [1, 2, 3, 4] } }),
@@ -72,31 +75,56 @@ export default function RichTextEditor({ value, onChange, placeholder = "Scrivi 
     editor.chain().focus().extendMarkRange("link").setLink({ href: url }).run();
   };
 
-  const addImage = async () => {
-    const choice = window.prompt("Inserisci URL immagine, oppure scrivi 'upload' per caricare un file:");
-    if (!choice) return;
-    if (choice.toLowerCase() === "upload") {
-      const input = document.createElement("input");
-      input.type = "file";
-      input.accept = "image/*";
-      input.onchange = async () => {
-        const f = input.files?.[0];
-        if (!f) return;
+  const openImagePicker = () => {
+    if (uploading) return;
+    fileInputRef.current?.click();
+  };
+
+  const onImageFiles = async (e) => {
+    const files = [...(e.target.files || [])].filter((f) => f.type.startsWith("image/"));
+    e.target.value = "";
+    if (!files.length) return;
+
+    setUploading(true);
+    const urls = [];
+    const errors = [];
+    try {
+      for (const file of files) {
         try {
-          const res = await adminUpload(f);
-          editor.chain().focus().setImage({ src: res.url }).run();
-        } catch (e) {
-          alert("Errore upload: " + (e?.response?.data?.detail || e.message));
+          const res = await adminUpload(file);
+          if (res?.url) urls.push(res.url);
+        } catch (err) {
+          errors.push(file.name);
         }
-      };
-      input.click();
-    } else {
-      editor.chain().focus().setImage({ src: choice }).run();
+      }
+      if (urls.length) {
+        // Consecutive bare <img> nodes → carosello sul sito pubblico (≥2)
+        const html = urls.map((src) => `<img src="${src}">`).join("");
+        editor.chain().focus().insertContent(html).run();
+      }
+      if (errors.length) {
+        alert(
+          urls.length
+            ? `Caricate ${urls.length} immagini. Non riuscite: ${errors.join(", ")}`
+            : `Upload fallito: ${errors.join(", ")}`
+        );
+      }
+    } finally {
+      setUploading(false);
     }
   };
 
   return (
     <div className="border border-slate-300 rounded-md bg-white overflow-hidden" data-testid="rich-text-editor">
+      <input
+        ref={fileInputRef}
+        type="file"
+        accept="image/*"
+        multiple
+        className="hidden"
+        onChange={onImageFiles}
+        data-testid="editor-image-input"
+      />
       <div className="flex flex-wrap items-center gap-1 px-3 py-2 border-b border-slate-200 bg-slate-50 sticky top-0 z-10">
         <ToolBtn onClick={() => editor.chain().focus().toggleHeading({ level: 1 }).run()} active={editor.isActive("heading", { level: 1 })} title="Titolo" testid="editor-h1"><Heading2 className="h-4 w-4"/></ToolBtn>
         <ToolBtn onClick={() => editor.chain().focus().toggleHeading({ level: 2 }).run()} active={editor.isActive("heading", { level: 2 })} title="Heading 2" testid="editor-h2"><Heading2 className="h-4 w-4 scale-90"/></ToolBtn>
@@ -112,11 +140,23 @@ export default function RichTextEditor({ value, onChange, placeholder = "Scrivi 
         <ToolBtn onClick={() => editor.chain().focus().setHorizontalRule().run()} title="Linea orizzontale" testid="editor-hr"><Minus className="h-4 w-4"/></ToolBtn>
         <div className="w-px h-6 bg-slate-300 mx-1" />
         <ToolBtn onClick={addLink} active={editor.isActive("link")} title="Link" testid="editor-link"><LinkIcon className="h-4 w-4"/></ToolBtn>
-        <ToolBtn onClick={addImage} title="Immagine" testid="editor-image"><ImageIcon className="h-4 w-4"/></ToolBtn>
+        <ToolBtn
+          onClick={openImagePicker}
+          disabled={uploading}
+          title="Carica immagini (anche più di una)"
+          testid="editor-image"
+        >
+          {uploading ? <Loader2 className="h-4 w-4 animate-spin" /> : <ImageIcon className="h-4 w-4" />}
+        </ToolBtn>
         <div className="w-px h-6 bg-slate-300 mx-1" />
         <ToolBtn onClick={() => editor.chain().focus().undo().run()} disabled={!editor.can().undo()} title="Annulla" testid="editor-undo"><Undo2 className="h-4 w-4"/></ToolBtn>
         <ToolBtn onClick={() => editor.chain().focus().redo().run()} disabled={!editor.can().redo()} title="Ripristina" testid="editor-redo"><Redo2 className="h-4 w-4"/></ToolBtn>
       </div>
+      {uploading && (
+        <p className="px-3 py-1.5 text-xs text-navy-700 bg-navy-50 border-b border-navy-100" data-testid="editor-image-uploading">
+          Caricamento immagini in corso…
+        </p>
+      )}
       <EditorContent editor={editor} />
     </div>
   );

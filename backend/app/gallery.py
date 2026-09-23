@@ -409,8 +409,9 @@ async def sync_article_gallery(db, article: dict[str, Any]) -> None:
     state = build_dedup_state_from_existing(others)
 
     candidates = collect_article_gallery_candidates(article)
+    # Nessun tetto per-articolo: tutte le foto candidate (dedup qualità)
     selected = await select_curated_candidates(
-        candidates, state, max_total=MAX_PER_ARTICLE_SYNC
+        candidates, state, max_total=max(len(candidates), 1)
     )
 
     base_order = await db.gallery_images.count_documents({})
@@ -425,9 +426,6 @@ async def sync_article_gallery(db, article: dict[str, Any]) -> None:
     from .gallery_member_tags import sync_gallery_member_tags_for_article
 
     await sync_gallery_member_tags_for_article(db, article)
-
-
-MAX_PER_ARTICLE_SYNC = 3
 
 
 async def sync_article_cover_gallery(db, article: dict[str, Any]) -> None:

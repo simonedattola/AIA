@@ -1,6 +1,8 @@
-import { useEffect, useState, useRef, useLayoutEffect, useCallback } from "react";
+import { useEffect, useMemo, useState, useRef, useLayoutEffect, useCallback } from "react";
 import { createPortal } from "react-dom";
 import { adminMembers } from "../../lib/api";
+import { matchesRoleFilter, normalizeMember } from "../../lib/memberRoles";
+import { RoleGroupPicker } from "./RoleGroupPicker";
 
 function memberHaystack(m) {
   return `${m.firstName} ${m.lastName} ${m.category || ""} ${m.meccanografico || ""} ${m.slug || ""}`.toLowerCase();
@@ -18,27 +20,32 @@ function filterMembers(members, q, { excludeIds = [], limit = 8, requireQuery = 
     .slice(0, limit);
 }
 
-/** Multi-select associati. Con searchOnly: solo barra di ricerca + risultati al volo. */
+/** Multi-select associati. Con searchOnly: solo barra di ricerca + risultati al volo.
+ *  Con withRoleFilter: chip ruoli (come eventi) per filtrare / aggiungere gruppi. */
 export function MemberMultiSelect({
   value = [],
   onChange,
   label = "Associati collegati",
   hint = "",
   searchOnly = false,
+  withRoleFilter = false,
   members: membersProp,
 }) {
   const [members, setMembers] = useState([]);
   const [q, setQ] = useState("");
+  const [roleGroups, setRoleGroups] = useState([]);
 
   useEffect(() => {
     if (membersProp) {
-      setMembers(membersProp);
+      setMembers(membersProp.map(normalizeMember));
       return;
     }
-    adminMembers().then(setMembers).catch(() => {});
+    adminMembers()
+      .then((list) => setMembers((Array.isArray(list) ? list : []).map(normalizeMember)))
+      .catch(() => {});
   }, [membersProp]);
 
-  const selected = Array.isArray(value) ? value : [];
+  const selected = useMemo(() => (Array.isArray(value) ? value : []), [value]);
   const toggle = (id) => {
     if (selected.includes(id)) onChange(selected.filter((x) => x !== id));
     else onChange([...selected, id]);
@@ -49,21 +56,61 @@ export function MemberMultiSelect({
     setQ("");
   };
 
-  const filtered = filterMembers(members, q, { requireQuery: searchOnly });
+  const roleFilteredMembers = useMemo(() => {
+    if (!withRoleFilter || !roleGroups.length) return members;
+    return members.filter((m) => roleGroups.some((g) => matchesRoleFilter(m, g)));
+  }, [members, roleGroups, withRoleFilter]);
+
+  const filtered = filterMembers(roleFilteredMembers, q, {
+    requireQuery: searchOnly && !roleGroups.length,
+    limit: searchOnly ? 12 : 200,
+  });
   const searchResults = searchOnly
-    ? filtered.filter((m) => !selected.includes(m.id)).slice(0, 8)
+    ? filtered.filter((m) => !selected.includes(m.id)).slice(0, 12)
     : filtered;
+
+  const matchingUnselected = useMemo(() => {
+    if (!withRoleFilter || !roleGroups.length) return [];
+    return roleFilteredMembers.filter((m) => !selected.includes(m.id));
+  }, [withRoleFilter, roleGroups, roleFilteredMembers, selected]);
+
+  const addAllMatching = () => {
+    if (!matchingUnselected.length) return;
+    const ids = matchingUnselected.map((m) => m.id);
+    onChange([...selected, ...ids.filter((id) => !selected.includes(id))]);
+  };
 
   const inputCls = searchOnly
     ? "w-full px-2 py-1.5 border border-slate-300 rounded-md text-xs focus:border-navy-600 focus:outline-none"
     : "w-full px-3 py-2 border border-slate-300 rounded-md text-sm mb-2 focus:border-navy-600 focus:outline-none";
 
   return (
-    <div>
+    <div data-testid="member-multi-select">
       <span className={`block font-medium text-slate-700 ${searchOnly ? "text-xs mb-1" : "text-sm mb-1.5"}`}>
         {label}
       </span>
       {hint && !searchOnly && <p className="text-xs text-slate-500 mb-2">{hint}</p>}
+      {withRoleFilter && (
+        <div className="mb-2 space-y-2">
+          <RoleGroupPicker
+            value={roleGroups}
+            onChange={setRoleGroups}
+            label="Filtra per ruolo"
+            hint="Come negli eventi: scegli i gruppi, poi cerca o aggiungi tutti"
+          />
+          {roleGroups.length > 0 && (
+            <button
+              type="button"
+              onClick={addAllMatching}
+              disabled={!matchingUnselected.length}
+              className="text-xs font-medium text-navy-700 hover:text-navy-900 disabled:opacity-40 disabled:cursor-not-allowed"
+              data-testid="member-add-all-roles"
+            >
+              Aggiungi tutti i filtrati ({matchingUnselected.length})
+            </button>
+          )}
+        </div>
+      )}
       {selected.length > 0 && (
         <div className={`flex flex-wrap gap-1.5 ${searchOnly ? "mb-1.5" : "mb-2"}`}>
           {selected.map((id) => {
@@ -86,11 +133,11 @@ export function MemberMultiSelect({
         type="search"
         value={q}
         onChange={(e) => setQ(e.target.value)}
-        placeholder="Cerca associato…"
+        placeholder={roleGroups.length ? "Cerca nei filtrati…" : "Cerca associato…"}
         className={inputCls}
       />
       {searchOnly ? (
-        q.trim() && (
+        (q.trim() || roleGroups.length > 0) && (
           <div className="mt-1.5 border border-slate-200 rounded-md divide-y divide-slate-100 overflow-hidden bg-white shadow-sm max-h-48 overflow-y-auto">
             {searchResults.length === 0 ? (
               <p className="px-2 py-1.5 text-xs text-slate-500">Nessun risultato</p>
