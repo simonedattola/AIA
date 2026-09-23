@@ -45,7 +45,7 @@ export function MemberMultiSelect({
       .catch(() => {});
   }, [membersProp]);
 
-  const selected = Array.isArray(value) ? value : [];
+  const selected = useMemo(() => (Array.isArray(value) ? value : []), [value]);
   const toggle = (id) => {
     if (selected.includes(id)) onChange(selected.filter((x) => x !== id));
     else onChange([...selected, id]);
