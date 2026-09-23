@@ -461,7 +461,7 @@ async def list_designations(
         )
     items = (
         await db.designations.find(query, {"_id": 0})
-        .sort("matchDate", 1)
+        .sort("matchDate", -1)
         .limit(limit)
         .to_list(limit)
     )

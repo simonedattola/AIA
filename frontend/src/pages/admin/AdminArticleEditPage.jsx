@@ -210,6 +210,7 @@ export default function AdminArticleEditPage() {
                 onChange={(ids) => setForm({ ...form, relatedMemberIds: ids })}
                 label="Associati in questa notizia"
                 searchOnly
+                withRoleFilter
               />
               <p className="text-xs text-slate-500 -mt-2" data-testid="admin-article-auto-tag-hint">
                 Al salvataggio vengono aggiunti automaticamente gli associati citati per nome e cognome
@@ -227,11 +228,8 @@ export default function AdminArticleEditPage() {
                   </button>
                 </div>
               )}
-              <Field label="URL immagine">
-                <input data-testid="admin-article-coverUrl" value={form.coverUrl} onChange={onChange("coverUrl")} className={inputCls} placeholder="https://..."/>
-              </Field>
               <label className="block">
-                <span className="block text-sm font-medium text-slate-700 mb-1.5">Oppure carica file</span>
+                <span className="block text-sm font-medium text-slate-700 mb-1.5">Carica file</span>
                 <div className="relative">
                   <input type="file" accept="image/*" onChange={uploadCover} className="hidden" id="cover-upload" data-testid="admin-article-cover-upload"/>
                   <label htmlFor="cover-upload" className="cursor-pointer block">
@@ -241,6 +239,16 @@ export default function AdminArticleEditPage() {
                   </label>
                 </div>
               </label>
+              <details className="text-sm">
+                <summary className="cursor-pointer text-slate-500 hover:text-slate-700">Oppure inserisci URL</summary>
+                <input
+                  data-testid="admin-article-coverUrl"
+                  value={form.coverUrl}
+                  onChange={onChange("coverUrl")}
+                  className={`${inputCls} mt-2`}
+                  placeholder="https://..."
+                />
+              </details>
               <label className="flex items-start gap-2 pt-2 border-t border-slate-100">
                 <input
                   type="checkbox"

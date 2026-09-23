@@ -21,9 +21,10 @@ MIN_HEIGHT = 360
 MIN_PIXELS = MIN_WIDTH * MIN_HEIGHT
 MIN_BYTES = 12_000
 MAX_ASPECT_RATIO = 3.2
-MAX_BODY_PER_ARTICLE = 2
+# Nessun tetto pratico sulle foto del corpo articolo (prima era 2–3).
+MAX_BODY_PER_ARTICLE = 200
 MAX_COVER_PER_ARTICLE = 1
-MAX_GALLERY_TOTAL = 96
+MAX_GALLERY_TOTAL = 500
 PHASH_DISTANCE_THRESHOLD = 10
 SKIP_URL_RE = re.compile(
     r"(favicon|icon|logo|avatar|emoji|spacer|1x1|pixel\.|badge|spinner|gravatar|"

@@ -186,7 +186,7 @@ async def dashboard(admin=Depends(require_admin)):
     des_q = designations_page_query(settings.get("lastDesignationsSync"))
     public_designations = (
         await db.designations.find(des_q, {"_id": 0})
-        .sort("matchDate", 1)
+        .sort("matchDate", -1)
         .limit(80)
         .to_list(80)
     )
