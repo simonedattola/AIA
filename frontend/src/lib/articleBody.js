@@ -90,6 +90,9 @@ export function parseArticleBody(html) {
   };
 
   for (const node of [...body.childNodes]) {
+    if (node.nodeType === Node.TEXT_NODE && !(node.textContent || "").trim()) {
+      continue;
+    }
     if (isImageOnlyElement(node)) {
       flushBuffer();
       imageRun.push(node);
