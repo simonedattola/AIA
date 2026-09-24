@@ -924,7 +924,9 @@ async def portal_media_download(image_id: str, auth=Depends(require_member)):
                         502, f"Impossibile scaricare l'immagine: {exc}"
                     ) from exc
                 data = r.content
-                ctype = r.headers.get("content-type", "image/jpeg").split(";")[0].strip()
+                ctype = (
+                    r.headers.get("content-type", "image/jpeg").split(";")[0].strip()
+                )
                 if not basename:
                     basename = (
                         resolved.rstrip("/").split("/")[-1].split("?")[0] or "foto.jpg"
