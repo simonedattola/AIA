@@ -70,6 +70,45 @@ export const portalComunicazioneRisposta = (id, testo) =>
 export const portalNews = () => portalComunicazioni();
 export const portalPremi = () => portalApi.get("/premi").then((r) => r.data);
 export const portalMedia = () => portalApi.get("/media").then((r) => r.data);
+
+/** Scarica una foto taggata come file (Content-Disposition: attachment). */
+export async function portalMediaDownload(imageId, fallbackName = "foto-aia-legnano.jpg") {
+  try {
+    const res = await portalApi.get(`/media/${encodeURIComponent(imageId)}/download`, {
+      responseType: "blob",
+    });
+    const cd = res.headers?.["content-disposition"] || "";
+    const match = /filename\*?=(?:UTF-8''|")?([^";]+)/i.exec(cd);
+    const rawName = match ? decodeURIComponent(match[1].replace(/"/g, "").trim()) : "";
+    const filename = rawName || fallbackName;
+    const blob = res.data;
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = filename;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    URL.revokeObjectURL(url);
+    return filename;
+  } catch (err) {
+    const data = err?.response?.data;
+    if (data instanceof Blob) {
+      try {
+        const text = await data.text();
+        const parsed = JSON.parse(text);
+        const detail = parsed?.detail;
+        const e = new Error(typeof detail === "string" ? detail : "Download non riuscito");
+        e.response = { data: { detail: e.message } };
+        throw e;
+      } catch (inner) {
+        if (inner?.response) throw inner;
+      }
+    }
+    throw err;
+  }
+}
+
 export const portalGalleryMine = () => portalApi.get("/gallery/mine").then((r) => r.data);
 export const portalGalleryCategories = () =>
   portalApi.get("/gallery/categories").then((r) => r.data);

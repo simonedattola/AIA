@@ -862,6 +862,101 @@ async def portal_media(auth=Depends(require_member)):
     return items
 
 
+@router.get("/media/{image_id}/download")
+async def portal_media_download(image_id: str, auth=Depends(require_member)):
+    """Forza il download della foto in cui l'associato è taggato."""
+    import mimetypes
+    import re
+
+    import httpx
+    from fastapi.responses import Response
+
+    from ..media_urls import public_api_base, resolve_media_url, upload_basename
+
+    db = get_db()
+    mid = auth["memberId"]
+    doc = await db.gallery_images.find_one(
+        {"id": image_id, "status": "approved", "memberIds": mid},
+        {"_id": 0},
+    )
+    if not doc:
+        raise HTTPException(404, "Immagine non trovata")
+
+    src = (doc.get("url") or doc.get("path") or doc.get("sourceUrl") or "").strip()
+    if not src:
+        raise HTTPException(404, "File non disponibile")
+
+    data: bytes | None = None
+    ctype = "application/octet-stream"
+    basename = upload_basename(src) or ""
+
+    for candidate in (src, doc.get("path") or "", doc.get("sourceUrl") or ""):
+        name = upload_basename(candidate) or ""
+        if not name:
+            continue
+        raw = upload_storage.read_bytes(name)
+        if raw is not None:
+            data = raw
+            basename = name
+            ctype = mimetypes.guess_type(name)[0] or "image/jpeg"
+            break
+
+    if data is None:
+        resolved = resolve_media_url(src)
+        base = public_api_base()
+        if base and resolved.startswith(base) and "/api/uploads/" in resolved:
+            name = resolved.split("/api/uploads/")[-1].strip("/")
+            raw = upload_storage.read_bytes(name) if name else None
+            if raw is not None:
+                data = raw
+                basename = name
+                ctype = mimetypes.guess_type(name)[0] or "image/jpeg"
+
+    if data is None:
+        resolved = resolve_media_url(src)
+        if resolved.startswith("http://") or resolved.startswith("https://"):
+            async with httpx.AsyncClient(timeout=30.0, follow_redirects=True) as client:
+                try:
+                    r = await client.get(resolved)
+                    r.raise_for_status()
+                except httpx.HTTPError as exc:
+                    raise HTTPException(
+                        502, f"Impossibile scaricare l'immagine: {exc}"
+                    ) from exc
+                data = r.content
+                ctype = (
+                    r.headers.get("content-type", "image/jpeg").split(";")[0].strip()
+                )
+                if not basename:
+                    basename = (
+                        resolved.rstrip("/").split("/")[-1].split("?")[0] or "foto.jpg"
+                    )
+
+    if data is None:
+        raise HTTPException(404, "File non trovato")
+
+    caption = (doc.get("caption") or "").strip()
+    photo_date = (doc.get("photoDate") or "").strip()[:10]
+    ext = ""
+    if "." in basename:
+        ext = "." + basename.rsplit(".", 1)[-1].lower()
+    if not ext or len(ext) > 5:
+        ext = ".jpg" if "jpeg" in ctype or "jpg" in ctype else ".bin"
+    safe_caption = re.sub(r"[^\w\-]+", "-", caption, flags=re.UNICODE).strip("-")[:40]
+    download_name = (
+        f"aia-legnano-{safe_caption or photo_date or image_id[:8]}{ext}"
+    ).lower()
+
+    return Response(
+        content=data,
+        media_type=ctype,
+        headers={
+            "Content-Disposition": f'attachment; filename="{download_name}"',
+            "Cache-Control": "private, no-store",
+        },
+    )
+
+
 # ---- Messaggi interni (chat dirette + gruppi) ----
 @router.get("/messaggi/conversazioni")
 async def portal_conversazioni(auth=Depends(require_member)):
