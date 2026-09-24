@@ -1,7 +1,13 @@
 import { useEffect, useState } from "react";
 import { fetchCategories } from "../../lib/api";
-import { portalMedia, portalGalleryMine, portalGalleryUpload, portalGalleryCategories } from "../../lib/portal-api";
-import { Download, Upload, Clock, CheckCircle, XCircle, ImagePlus } from "lucide-react";
+import {
+  portalMedia,
+  portalMediaDownload,
+  portalGalleryMine,
+  portalGalleryUpload,
+  portalGalleryCategories,
+} from "../../lib/portal-api";
+import { Download, Upload, Clock, CheckCircle, XCircle, ImagePlus, Loader2 } from "lucide-react";
 import MediaImage from "../../components/MediaImage";
 import { Button } from "@/design-system";
 import { PortalEmptyState, PortalPageHeader } from "../../components/portal/portal-ui";
@@ -22,6 +28,8 @@ export default function PortalMediaPage() {
   const [categories, setCategories] = useState([]);
   const [uploading, setUploading] = useState(false);
   const [msg, setMsg] = useState("");
+  const [downloadMsg, setDownloadMsg] = useState("");
+  const [downloadingId, setDownloadingId] = useState("");
 
   const load = () => {
     portalMedia().then(setTaggedPhotos).catch(() => setTaggedPhotos([]));
@@ -59,6 +67,20 @@ export default function PortalMediaPage() {
     }
   };
 
+  const onDownload = async (img) => {
+    if (!img?.id || downloadingId) return;
+    setDownloadingId(img.id);
+    setDownloadMsg("");
+    try {
+      const fallback = `aia-legnano-${(img.photoDate || img.id || "foto").toString().slice(0, 12)}.jpg`;
+      await portalMediaDownload(img.id, fallback);
+    } catch (err) {
+      setDownloadMsg(err?.response?.data?.detail || "Download non riuscito. Riprova.");
+    } finally {
+      setDownloadingId("");
+    }
+  };
+
   return (
     <div data-testid="portal-media-page">
       <PortalPageHeader
@@ -84,6 +106,7 @@ export default function PortalMediaPage() {
           <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3">
             {taggedPhotos.map((img) => {
               const url = img.url || img.src;
+              const busy = downloadingId === img.id;
               return (
                 <div key={img.id} className="bg-white rounded-lg border border-slate-200 overflow-hidden group">
                   {url && (
@@ -96,16 +119,26 @@ export default function PortalMediaPage() {
                       {img.caption && <span className="text-xs text-slate-600 truncate block">{img.caption}</span>}
                       {img.photoDate && <span className="text-[10px] text-slate-400">{img.photoDate}</span>}
                     </div>
-                    {url && (
-                      <a href={url} download className="shrink-0 p-1.5 text-navy-600 hover:bg-navy-50 rounded" title="Scarica">
-                        <Download className="h-4 w-4" />
-                      </a>
+                    {img.id && (
+                      <button
+                        type="button"
+                        onClick={() => onDownload(img)}
+                        disabled={busy}
+                        className="shrink-0 p-1.5 text-navy-600 hover:bg-navy-50 rounded disabled:opacity-50"
+                        title="Scarica"
+                        data-testid={`portal-media-download-${img.id}`}
+                      >
+                        {busy ? <Loader2 className="h-4 w-4 animate-spin" /> : <Download className="h-4 w-4" />}
+                      </button>
                     )}
                   </div>
                 </div>
               );
             })}
           </div>
+        )}
+        {downloadMsg && (
+          <p className="mt-3 text-sm text-red-700" data-testid="portal-media-download-msg">{downloadMsg}</p>
         )}
       </section>
 
