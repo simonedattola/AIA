@@ -179,7 +179,12 @@ def scrape_lombardia_all_sections(
     request_delay: float = 0.35,
     section_gare: Optional[str] = None,
 ) -> ScrapeResult:
-    """Solo Lombardia — sezione CRA (es. Legnano gare=3-270)."""
+    """
+    Lombardia: sezione (es. Legnano 3-270-*) + CRA regionale (3-0-*, es. Prima Cat).
+
+    Filtro ``filter_section`` tiene solo gli ufficiali della sezione richiesta.
+    Non include altre regioni.
+    """
     import os
 
     gare = (section_gare or os.environ.get("DESIGNATIONS_LEGNANO_GARE") or "").strip()

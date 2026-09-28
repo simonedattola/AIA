@@ -31,7 +31,11 @@ _TRANSLATE_HOST_RE = re.compile(
     r"https?://www-aia-+figc-it\.translate\.goog",
     re.I,
 )
-_X_TR_PARAM_RE = re.compile(r"([?&])_x_tr_[^=&]+=[^&\"'\s>]*")
+# Match &_x_tr_… and HTML-entity &amp;_x_tr_… (Translate often emits the latter).
+_X_TR_PARAM_RE = re.compile(
+    r"([?&]|&amp;)_x_tr_[^=&\"'\s>]+=[^&\"'\s>]*",
+    re.I,
+)
 
 
 def fetch_mode() -> str:
@@ -56,11 +60,30 @@ def _is_challenge(html: str, status_code: int) -> bool:
 def unwrap_translate_html(html: str) -> str:
     """Rewrite translate.goog links back to www.aia-figc.it and drop _x_tr_ params."""
     text = _TRANSLATE_HOST_RE.sub("https://www.aia-figc.it", html or "")
-    text = _X_TR_PARAM_RE.sub(r"\1", text)
-    text = re.sub(r"\?&", "?", text)
-    text = re.sub(r"\?([\"'\s>])", r"\1", text)
+    # Drop translate tracking params; keep the separator only when another query follows.
+    text = _X_TR_PARAM_RE.sub("", text)
+    text = re.sub(r"\?&+", "?", text)
     text = re.sub(r"&&+", "&", text)
+    text = re.sub(r"\?([\"'\s>])", r"\1", text)
+    text = re.sub(r"&([\"'\s>])", r"\1", text)
     return text
+
+
+def strip_translate_query(url: str) -> str:
+    """Remove leftover Google Translate ``_x_tr_*`` query params from a URL."""
+    if not url or "_x_tr_" not in url.lower():
+        return url
+    from urllib.parse import parse_qsl, urlencode, urlsplit, urlunsplit
+
+    parts = urlsplit(url)
+    kept = [
+        (k, v)
+        for k, v in parse_qsl(parts.query, keep_blank_values=True)
+        if not k.lower().startswith("_x_tr_")
+    ]
+    return urlunsplit(
+        (parts.scheme, parts.netloc, parts.path, urlencode(kept), parts.fragment)
+    )
 
 
 def translate_proxy_url(url: str) -> str:

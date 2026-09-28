@@ -23,10 +23,13 @@ logger = logging.getLogger(__name__)
 
 BASE_URL = "https://www.aia-figc.it/designazioni/lombardia/"
 from .aia_http import DEFAULT_HEADERS as HTTP_DEFAULT_HEADERS
-from .aia_http import fetch_aia_html
+from .aia_http import fetch_aia_html, strip_translate_query
 
 # Keep module-level alias used across scrapers / tests.
 DEFAULT_HEADERS = HTTP_DEFAULT_HEADERS
+
+# Prefisso CRA Lombardia (campionati regionali: PRI, ECC, …) — non legati a una sezione.
+CRA_LOMBARDIA_PREFIX = "3-0"
 
 DATE_RE = re.compile(r"(\d{1,2})/(\d{1,2})/(\d{4})")
 GARE_RE = re.compile(r"gare=([^&\"']+)", re.I)
@@ -199,6 +202,14 @@ def parse_des_page(html: str, page_url: str, gare: str) -> list[ScrapedDesignati
     return out
 
 
+def _normalize_designazioni_url(url: str) -> str:
+    """URL assoluto senza parametri Translate; chiave stabile per dedupe."""
+    clean = strip_translate_query((url or "").strip())
+    # Drop fragment / trailing junk separators left by bad unwraps.
+    clean = clean.split("#", 1)[0].rstrip("?&")
+    return clean
+
+
 def _extract_links(html: str, base_url: str, pattern: str) -> list[str]:
     """Return absolute URLs matching asp file pattern (gir.asp or des.asp)."""
     soup = BeautifulSoup(html, "html.parser")
@@ -210,7 +221,7 @@ def _extract_links(html: str, base_url: str, pattern: str) -> list[str]:
             continue
         if "gare=" not in href.lower():
             continue
-        full = urljoin(base_url, href)
+        full = _normalize_designazioni_url(urljoin(base_url, href))
         if full not in seen:
             seen.add(full)
             links.append(full)
@@ -227,11 +238,67 @@ def _extract_gir_urls_from_html(html: str, base_url: str) -> list[str]:
             seen.add(u)
             found.append(u)
     for m in re.finditer(r"gir\.asp\?gare=([^\"'&\s<>]+)", html, re.I):
-        u = urljoin(base, f"gir.asp?gare={m.group(1)}")
+        u = _normalize_designazioni_url(urljoin(base, f"gir.asp?gare={m.group(1)}"))
         if u not in seen:
             seen.add(u)
             found.append(u)
     return found
+
+
+def _dedupe_gir_urls(urls: Iterable[str]) -> list[str]:
+    """Dedup per codice gare (preferisce URL senza query extra)."""
+    by_gare: dict[str, str] = {}
+    order: list[str] = []
+    for raw in urls:
+        u = _normalize_designazioni_url(raw)
+        gare = _gare_from_url(u)
+        key = gare or u
+        if key not in by_gare:
+            by_gare[key] = u
+            order.append(key)
+        elif len(u) < len(by_gare[key]):
+            by_gare[key] = u
+    return [by_gare[k] for k in order]
+
+
+def discover_cra_regional_gir_urls(
+    client: httpx.Client,
+    base_url: str,
+    fetch_html,
+    *,
+    prefix: str = CRA_LOMBARDIA_PREFIX,
+) -> list[str]:
+    """
+    Gironi CRA regionale (es. 3-0-PRI Prima Categoria) dalla home Lombardia.
+
+    Questi campionati NON compaiono su default.asp?gare=3-270 (sezione):
+    solo sul hub CRA con prefisso 3-0-*.
+    """
+    base = base_url.rstrip("/") + "/"
+    html = fetch_html(client, base)
+    pref = f"{prefix}-"
+    found: list[str] = []
+    for u in _extract_gir_urls_from_html(html, base):
+        gare = _gare_from_url(u)
+        if gare.startswith(pref):
+            found.append(u)
+    found = _dedupe_gir_urls(found)
+    if found:
+        logger.info("Gironi CRA %s: %d da hub", prefix, len(found))
+        return found
+
+    # Fallback: suffissi da HTML anche senza anchor gir.asp completi
+    derived: list[str] = []
+    for suf in _discover_regional_suffixes_from_html(html, prefix):
+        gir_url = f"{base}gir.asp?gare={prefix}-{suf}"
+        try:
+            gir_html = fetch_html(client, gir_url)
+            if _extract_links(gir_html, base, "des.asp"):
+                derived.append(gir_url)
+        except Exception as e:
+            logger.debug("CRA gir skip %s: %s", gir_url, e)
+    logger.info("Gironi CRA %s: %d da suffissi", prefix, len(derived))
+    return derived
 
 
 def _discover_regional_suffixes_from_html(html: str, prefix: str = "3-0") -> list[str]:
@@ -361,7 +428,7 @@ def _discover_section_index_urls(html: str, base_url: str) -> list[str]:
         href = a["href"]
         if "default.asp" not in href.lower() or "gare=" not in href.lower():
             continue
-        full = urljoin(base_url, href)
+        full = _normalize_designazioni_url(urljoin(base_url, href))
         if full not in seen:
             seen.add(full)
             urls.append(full)
@@ -396,32 +463,49 @@ class AiaLombardiaScraper:
         return fetch_aia_html(url, client=client, timeout=float(self.timeout))
 
     def discover_gir_urls(self, client: httpx.Client) -> list[str]:
+        is_lombardia = "lombardia" in self.base_url.lower()
+        collected: list[str] = []
+
         if self.section_gare:
             html = self.fetch(client, self.section_index_url)
             found = _discover_gir_urls_from_hub_html(
                 client, self.base_url, html, self.fetch
             )
-            if found:
-                return found
-            derived = discover_gir_urls_for_section(
-                client,
-                self.base_url,
-                self.section_gare,
-                self.fetch,
-            )
-            if derived:
-                return derived
+            if not found:
+                found = discover_gir_urls_for_section(
+                    client,
+                    self.base_url,
+                    self.section_gare,
+                    self.fetch,
+                )
+            collected.extend(found)
+            # Prima Cat / Eccellenza / … vivono solo sul CRA 3-0-*, non su 3-270-*.
+            if is_lombardia:
+                collected.extend(
+                    discover_cra_regional_gir_urls(client, self.base_url, self.fetch)
+                )
+            return _dedupe_gir_urls(collected)
 
         html = self.fetch(client, self.base_url)
         found = _discover_gir_urls_from_hub_html(
             client, self.base_url, html, self.fetch
         )
         if found:
-            return found
+            # Hub nazionali / CRA: evita di espandere tutte le sezioni regionali.
+            if is_lombardia:
+                # Solo 3-0-* (non i default.asp delle 25 sezioni).
+                cra_only = [
+                    u
+                    for u in found
+                    if _gare_from_url(u).startswith(CRA_LOMBARDIA_PREFIX + "-")
+                ]
+                if cra_only:
+                    return _dedupe_gir_urls(cra_only)
+            return _dedupe_gir_urls(found)
 
         # Lombardia CRA: gir.asp nelle pagine default.asp di ogni sezione.
         section_urls = _discover_section_index_urls(html, self.base_url)
-        if not section_urls and "lombardia" in self.base_url.lower():
+        if not section_urls and is_lombardia:
             section_urls = [s["url"] for s in self.list_lombardia_sections(client)]
 
         all_gir: list[str] = []
@@ -438,9 +522,9 @@ class AiaLombardiaScraper:
             except Exception as e:
                 logger.warning("gir discovery %s: %s", sec_url, e)
         if all_gir:
-            return all_gir
+            return _dedupe_gir_urls(all_gir)
 
-        return _extract_gir_urls_from_html(html, self.base_url)
+        return _dedupe_gir_urls(_extract_gir_urls_from_html(html, self.base_url))
 
     def discover_des_urls(self, client: httpx.Client, gir_url: str) -> list[str]:
         html = self.fetch(client, gir_url)
@@ -518,12 +602,14 @@ class AiaLombardiaScraper:
             if "default.asp" not in href.lower() or "gare=3-" not in href.lower():
                 continue
             label = _clean_text(a.get_text())
-            gare = _gare_from_url(urljoin(BASE_URL, href))
+            full = _normalize_designazioni_url(urljoin(BASE_URL, href))
+            gare = _gare_from_url(full)
             if not gare or not label:
                 continue
-            sections.append(
-                {"label": label, "gare": gare, "url": urljoin(BASE_URL, href)}
-            )
+            # Skip CRA root codes like 3-0 (no section)
+            if gare == "3-0" or gare.startswith("3-0-"):
+                continue
+            sections.append({"label": label, "gare": gare, "url": full})
         # dedupe by gare
         by_gare: dict[str, dict] = {}
         for s in sections:
