@@ -1003,6 +1003,39 @@ async def admin_purge_duplicate_designations(admin=Depends(require_admin)):
     return {"ok": True, "duplicatesRemoved": removed}
 
 
+@router.post("/designations/purge-before")
+async def admin_purge_designations_before(
+    day: str = Query(
+        "2026-09-01",
+        description="Elimina designazioni con data gara precedente a YYYY-MM-DD",
+    ),
+    admin=Depends(require_admin),
+):
+    """Elimina designazioni (tutte le fonti) anteriori al giorno indicato."""
+    from datetime import date as date_cls
+
+    from ..designation_filters import designations_before_clause
+    from ..member_category import refresh_arbitri_categories
+
+    raw = (day or "").strip()[:10]
+    try:
+        date_cls.fromisoformat(raw)
+    except ValueError as exc:
+        raise HTTPException(400, "Data non valida (atteso YYYY-MM-DD)") from exc
+    db = get_db()
+    clause = designations_before_clause(raw)
+    before = await db.designations.count_documents(clause)
+    res = await db.designations.delete_many(clause)
+    categories_updated = await refresh_arbitri_categories(db)
+    return {
+        "ok": True,
+        "keepFrom": raw,
+        "matched": before,
+        "deleted": res.deleted_count,
+        "categoriesUpdated": categories_updated,
+    }
+
+
 @router.post("/designations/sync-aia")
 async def admin_sync_designations_aia(
     payload: DesignationSyncRequest = DesignationSyncRequest(),

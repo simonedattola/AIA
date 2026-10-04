@@ -60,6 +60,30 @@ def match_date_in_season_clause(season: str) -> dict | None:
     return {"matchDate": {"$gte": start, "$lte": end}}
 
 
+# Stagione 2026-27: tieni solo designazioni dal 1 settembre 2026 in poi.
+DEFAULT_DESIGNATIONS_KEEP_FROM = "2026-09-01"
+
+
+def designations_keep_from_day() -> str:
+    """Giorno da cui conservare le designazioni (YYYY-MM-DD)."""
+    import os
+
+    raw = (
+        os.environ.get("DESIGNATIONS_KEEP_FROM") or DEFAULT_DESIGNATIONS_KEEP_FROM
+    ).strip()
+    try:
+        date.fromisoformat(raw[:10])
+        return raw[:10]
+    except ValueError:
+        return DEFAULT_DESIGNATIONS_KEEP_FROM
+
+
+def designations_before_clause(day: str | None = None) -> dict:
+    """Mongo: designazioni con matchDate strettamente precedente a ``day``."""
+    cutoff = (day or designations_keep_from_day())[:10]
+    return {"matchDate": {"$lt": iso_day_start(date.fromisoformat(cutoff))}}
+
+
 def event_date_in_season_clause(season: str | None = None) -> dict | None:
     """Filtro Mongo per campo evento ``date`` (YYYY-MM-DD) nella stagione calcistica."""
     label = season or current_season_label()
