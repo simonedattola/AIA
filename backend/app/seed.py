@@ -125,6 +125,26 @@ async def ensure_purge_designations_2022_23() -> int:
     return int(res.deleted_count)
 
 
+async def ensure_purge_designations_before_2026_09_01() -> int:
+    """Elimina designazioni anteriori al 1/9/2026 (stagione 26-27), una sola volta."""
+    flag = "purge_designations_before_2026_09_01"
+    if await _seed_flag(flag):
+        return 0
+    from .designation_filters import designations_before_clause
+
+    db = get_db()
+    clause = designations_before_clause("2026-09-01")
+    before = await db.designations.count_documents(clause)
+    res = await db.designations.delete_many(clause)
+    await _set_seed_flag(flag)
+    logger.info(
+        "Designazioni pre-2026-09-01: eliminate %s (trovate %s)",
+        res.deleted_count,
+        before,
+    )
+    return int(res.deleted_count)
+
+
 def _now():
     return datetime.now(timezone.utc).isoformat()
 
@@ -1923,6 +1943,9 @@ async def run_all():
     n_purge = await ensure_purge_designations_2022_23()
     if n_purge:
         logger.info("Purgate %s designazioni stagione 2022-23", n_purge)
+    n_purge_sep = await ensure_purge_designations_before_2026_09_01()
+    if n_purge_sep:
+        logger.info("Purgate %s designazioni anteriori al 1/9/2026", n_purge_sep)
     await seed_pages()
     await ensure_all_system_pages()
     await ensure_osservatori_page()
