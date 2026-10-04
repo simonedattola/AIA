@@ -990,6 +990,19 @@ async def admin_delete_designation(des_id: str, admin=Depends(require_admin)):
     return {"ok": True}
 
 
+@router.post("/designations/purge-duplicates")
+async def admin_purge_duplicate_designations(admin=Depends(require_admin)):
+    """Elimina designazioni AIA duplicate (stessa gara/ruolo/nome, date entro ±2gg).
+
+    Tiene la data più vecchia.
+    """
+    from ..designations_sync import _purge_duplicate_designations
+
+    db = get_db()
+    removed = await _purge_duplicate_designations(db)
+    return {"ok": True, "duplicatesRemoved": removed}
+
+
 @router.post("/designations/sync-aia")
 async def admin_sync_designations_aia(
     payload: DesignationSyncRequest = DesignationSyncRequest(),

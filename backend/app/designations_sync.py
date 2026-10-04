@@ -8,7 +8,7 @@ import os
 import re
 import unicodedata
 from dataclasses import dataclass, field
-from datetime import datetime, timezone
+from datetime import date, datetime, timezone
 from typing import Optional
 
 from slugify import slugify
@@ -275,21 +275,23 @@ def _source_priority(source: str) -> int:
     return 2
 
 
-def _dedupe_scraped_rows(rows: list) -> list:
-    """Evita duplicati tra hub (stessa gara/ruolo/nome); preferisce Lombardia."""
-    best: dict[str, object] = {}
-    for r in rows:
-        eid = r.external_id
-        if eid not in best or _source_priority(r.source) < _source_priority(
-            best[eid].source
-        ):
-            best[eid] = r
-    return list(best.values())
+# Stessa gara pubblicata con date sfasate di 1–2 giorni (tipico AIA hub/CRA).
+NEAR_DATE_DEDUP_DAYS = 2
 
 
-def _designation_match_key(doc: dict) -> str:
-    """Chiave logica per dedup DB (anche con externalId legacy)."""
-    md = (doc.get("matchDate") or "")[:10]
+def _parse_match_day(value: str | None) -> date | None:
+    """Estrae ``date`` da ISO / YYYY-MM-DD, oppure None."""
+    raw = (value or "").strip()
+    if not raw:
+        return None
+    day = raw[:10]
+    try:
+        return date.fromisoformat(day)
+    except ValueError:
+        return None
+
+
+def _home_away_role_name(doc: dict) -> tuple[str, str, str, str]:
     home = _normalize_name(doc.get("matchHome") or "")
     away = _normalize_name(doc.get("matchAway") or "")
     if (not home or not away) and doc.get("matchLabel") and " - " in doc["matchLabel"]:
@@ -298,11 +300,93 @@ def _designation_match_key(doc: dict) -> str:
         away = away or _normalize_name(parts[1])
     role = _clean_text(doc.get("role") or "").lower()
     name = _normalize_name(doc.get("memberName") or "")
-    return f"{md}|{home}|{away}|{role}|{name}"
+    return home, away, role, name
+
+
+def _designation_identity_key(doc: dict) -> str:
+    """Chiave senza data: stessa gara/ruolo/arbitro (date possono differire di 1–2 gg)."""
+    home, away, role, name = _home_away_role_name(doc)
+    return f"{home}|{away}|{role}|{name}"
+
+
+def _designation_match_key(doc: dict) -> str:
+    """Chiave logica per dedup DB (anche con externalId legacy)."""
+    md = (doc.get("matchDate") or "")[:10]
+    return f"{md}|{_designation_identity_key(doc)}"
+
+
+def _pick_near_date_keepers(
+    items: list,
+    *,
+    identity_fn,
+    date_fn,
+    sort_key_fn,
+    max_day_delta: int = NEAR_DATE_DEDUP_DAYS,
+) -> tuple[list, list]:
+    """
+    Per ogni identità gara/ruolo/nome, tiene la data più vecchia e scarta
+    le altre entro ``max_day_delta`` giorni.
+    Ritorna (keepers, duplicates_to_drop).
+    """
+    by_identity: dict[str, list] = {}
+    for item in items:
+        by_identity.setdefault(identity_fn(item), []).append(item)
+
+    keepers: list = []
+    drop: list = []
+    for group in by_identity.values():
+        group = sorted(group, key=sort_key_fn)
+        kept_dates = []
+        for item in group:
+            d = date_fn(item)
+            if d is None:
+                keepers.append(item)
+                continue
+            if any(abs((d - kd).days) <= max_day_delta for kd in kept_dates):
+                drop.append(item)
+                continue
+            kept_dates.append(d)
+            keepers.append(item)
+    return keepers, drop
+
+
+def _dedupe_scraped_rows(rows: list) -> list:
+    """Evita duplicati tra hub; collassa anche date ±2gg (tiene la più vecchia)."""
+    by_eid: dict[str, object] = {}
+    for r in rows:
+        eid = r.external_id
+        if eid not in by_eid or _source_priority(r.source) < _source_priority(
+            by_eid[eid].source
+        ):
+            by_eid[eid] = r
+    collapsed = list(by_eid.values())
+
+    def _ident(r) -> str:
+        return _designation_identity_key(
+            {
+                "matchHome": r.match_home,
+                "matchAway": r.match_away,
+                "matchLabel": r.match_label,
+                "role": r.role,
+                "memberName": r.member_name,
+            }
+        )
+
+    def _sort_key(r):
+        d = _parse_match_day(r.match_date) or date.max
+        return (d, _source_priority(r.source), r.external_id)
+
+    keepers, _dropped = _pick_near_date_keepers(
+        collapsed,
+        identity_fn=_ident,
+        date_fn=lambda r: _parse_match_day(r.match_date),
+        sort_key_fn=_sort_key,
+    )
+    return keepers
 
 
 async def _purge_duplicate_designations(db) -> int:
-    """Rimuove righe AIA duplicate (stessa gara/data/ruolo/arbitro)."""
+    """Rimuove duplicate AIA: stessa gara/ruolo/nome, anche con data ±2 giorni (tiene la prima)."""
     rows = await db.designations.find(
         {"source": {"$regex": f"^{SOURCE_PREFIX}"}},
         {
@@ -317,24 +401,77 @@ async def _purge_duplicate_designations(db) -> int:
             "role": 1,
             "memberName": 1,
         },
-    ).to_list(5000)
-    groups: dict[str, list[dict]] = {}
-    for r in rows:
-        groups.setdefault(_designation_match_key(r), []).append(r)
+    ).to_list(20000)
+
+    def _sort_key(r: dict):
+        d = _parse_match_day(r.get("matchDate")) or date.max
+        return (d, _source_priority(r.get("source", "")), r.get("id", ""))
+
+    _keepers, drop = _pick_near_date_keepers(
+        rows,
+        identity_fn=_designation_identity_key,
+        date_fn=lambda r: _parse_match_day(r.get("matchDate")),
+        sort_key_fn=_sort_key,
+    )
 
     removed = 0
-    for group in groups.values():
-        if len(group) <= 1:
-            continue
-        group.sort(
-            key=lambda x: (_source_priority(x.get("source", "")), x.get("id", ""))
-        )
-        for dup in group[1:]:
-            res = await db.designations.delete_one({"id": dup["id"]})
-            removed += res.deleted_count
+    for dup in drop:
+        res = await db.designations.delete_one({"id": dup["id"]})
+        removed += res.deleted_count
     if removed:
-        logger.info("Rimosse %s designazioni duplicate AIA", removed)
+        logger.info(
+            "Rimosse %s designazioni duplicate AIA (stessa gara, date entro %sgg)",
+            removed,
+            NEAR_DATE_DEDUP_DAYS,
+        )
     return removed
+
+
+async def _find_existing_near_date(db, doc_fields: dict) -> Optional[dict]:
+    """Trova designazione AIA già presente con stessa gara/ruolo/nome e data ±2gg."""
+    target_id = _designation_identity_key(doc_fields)
+    target_day = _parse_match_day(doc_fields.get("matchDate"))
+    member_name = (doc_fields.get("memberName") or "").strip()
+    if not target_id or not target_day or not member_name:
+        return None
+    home, away, _role, name = _home_away_role_name(doc_fields)
+    if not home or not away or not name:
+        return None
+    candidates = await db.designations.find(
+        {
+            "source": {"$regex": f"^{SOURCE_PREFIX}"},
+            "memberName": {
+                "$regex": f"^{re.escape(member_name)}$",
+                "$options": "i",
+            },
+        },
+        {
+            "_id": 0,
+            "id": 1,
+            "source": 1,
+            "matchDate": 1,
+            "matchHome": 1,
+            "matchAway": 1,
+            "matchLabel": 1,
+            "role": 1,
+            "memberName": 1,
+            "externalId": 1,
+        },
+    ).to_list(300)
+    best = None
+    best_day = None
+    for cand in candidates:
+        if _designation_identity_key(cand) != target_id:
+            continue
+        cand_day = _parse_match_day(cand.get("matchDate"))
+        if cand_day is None:
+            continue
+        if abs((cand_day - target_day).days) > NEAR_DATE_DEDUP_DAYS:
+            continue
+        if best is None or cand_day < best_day:
+            best = cand
+            best_day = cand_day
+    return best
 
 
 # Hub nazionali FIGC (non regionali): designazioni con sezione Legnano su tutti i campionati nazionali.
@@ -550,9 +687,25 @@ async def sync_from_aia_lombardia(
                 "externalId": row.external_id,
                 "source": {"$regex": f"^{SOURCE_PREFIX}"},
             },
-            {"_id": 0, "id": 1, "source": 1},
+            {"_id": 0, "id": 1, "source": 1, "matchDate": 1, "externalId": 1},
         )
+        if not existing:
+            existing = await _find_existing_near_date(db, doc_fields)
         if existing:
+            # Conserva la data più vecchia se le due sono entro ±2 giorni.
+            existing_day = _parse_match_day(existing.get("matchDate"))
+            new_day = _parse_match_day(doc_fields.get("matchDate"))
+            if (
+                existing_day
+                and new_day
+                and existing_day <= new_day
+                and (new_day - existing_day).days <= NEAR_DATE_DEDUP_DAYS
+            ):
+                doc_fields = {
+                    **doc_fields,
+                    "matchDate": existing["matchDate"],
+                    "externalId": existing.get("externalId") or row.external_id,
+                }
             await db.designations.update_one(
                 {"id": existing["id"]}, {"$set": doc_fields}
             )
