@@ -720,24 +720,6 @@ async def sync_from_aia_lombardia(
 
     duplicates_removed = await _purge_duplicate_designations(db)
 
-    from .designation_filters import (
-        designations_before_clause,
-        designations_keep_from_day,
-    )
-
-    keep_from = designations_keep_from_day()
-    stale_clause = designations_before_clause(keep_from)
-    stale_before = await db.designations.count_documents(stale_clause)
-    stale_res = await db.designations.delete_many(stale_clause)
-    stale_removed = int(stale_res.deleted_count)
-    if stale_removed:
-        logger.info(
-            "Rimosse %s designazioni anteriori a %s (trovate %s)",
-            stale_removed,
-            keep_from,
-            stale_before,
-        )
-
     backfilled = await _backfill_member_links(db)
 
     from .member_category import refresh_arbitri_categories
@@ -765,8 +747,6 @@ async def sync_from_aia_lombardia(
                     "updated": updated,
                     "removed": removed,
                     "duplicatesRemoved": duplicates_removed,
-                    "staleRemoved": stale_removed,
-                    "keepFrom": keep_from,
                     "membersCreated": members_created,
                     "membersBackfilled": backfilled,
                     "categoriesUpdated": categories_updated,
@@ -787,8 +767,6 @@ async def sync_from_aia_lombardia(
         "updated": updated,
         "removed": removed,
         "duplicatesRemoved": duplicates_removed,
-        "staleRemoved": stale_removed,
-        "keepFrom": keep_from,
         "membersCreated": members_created,
         "membersBackfilled": backfilled,
         "categoriesUpdated": categories_updated,
