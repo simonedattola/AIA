@@ -6,14 +6,10 @@ import pytest
 
 from app.designation_filters import (
     designations_before_clause,
-    designations_keep_from_day,
     match_date_in_season_clause,
     parse_season,
 )
-from app.seed import (
-    ensure_purge_designations_2022_23,
-    ensure_purge_designations_before_2026_09_01,
-)
+from app.seed import ensure_purge_designations_2022_23
 
 
 def test_parse_season_2022_23():
@@ -27,8 +23,7 @@ def test_parse_season_2022_23():
     assert clause["matchDate"]["$lte"].startswith("2023-07-31")
 
 
-def test_designations_before_september_2026():
-    assert designations_keep_from_day() == "2026-09-01"
+def test_designations_before_clause():
     clause = designations_before_clause("2026-09-01")
     assert clause["matchDate"]["$lt"].startswith("2026-09-01")
 
@@ -50,24 +45,4 @@ async def test_ensure_purge_designations_2022_23_deletes_once():
     with patch("app.seed._seed_flag", new=AsyncMock(return_value=True)):
         with patch("app.seed.get_db", return_value=db):
             n2 = await ensure_purge_designations_2022_23()
-    assert n2 == 0
-
-
-@pytest.mark.asyncio
-async def test_ensure_purge_before_2026_09_01_deletes_once():
-    db = MagicMock()
-    db.designations.count_documents = AsyncMock(return_value=12)
-    db.designations.delete_many = AsyncMock(return_value=MagicMock(deleted_count=12))
-
-    with patch("app.seed._seed_flag", new=AsyncMock(return_value=False)):
-        with patch("app.seed._set_seed_flag", new=AsyncMock()) as set_flag:
-            with patch("app.seed.get_db", return_value=db):
-                n = await ensure_purge_designations_before_2026_09_01()
-    assert n == 12
-    db.designations.delete_many.assert_awaited_once()
-    set_flag.assert_awaited_once_with("purge_designations_before_2026_09_01")
-
-    with patch("app.seed._seed_flag", new=AsyncMock(return_value=True)):
-        with patch("app.seed.get_db", return_value=db):
-            n2 = await ensure_purge_designations_before_2026_09_01()
     assert n2 == 0

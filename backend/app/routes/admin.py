@@ -1006,12 +1006,12 @@ async def admin_purge_duplicate_designations(admin=Depends(require_admin)):
 @router.post("/designations/purge-before")
 async def admin_purge_designations_before(
     day: str = Query(
-        "2026-09-01",
-        description="Elimina designazioni con data gara precedente a YYYY-MM-DD",
+        ...,
+        description="Elimina designazioni con data gara precedente a YYYY-MM-DD (manuale)",
     ),
     admin=Depends(require_admin),
 ):
-    """Elimina designazioni (tutte le fonti) anteriori al giorno indicato."""
+    """Elimina designazioni (tutte le fonti) anteriori al giorno indicato. Solo su richiesta."""
     from datetime import date as date_cls
 
     from ..designation_filters import designations_before_clause
