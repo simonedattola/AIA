@@ -104,7 +104,7 @@ async def _mark_reminder_sent(
 
 
 async def _invited_members_with_email(db, event: dict[str, Any]) -> list[dict]:
-    from ..member_roles import normalize_member
+    from .member_roles import normalize_member
 
     members = await db.members.find(
         {"email": {"$exists": True, "$ne": ""}},
@@ -231,6 +231,15 @@ async def notify_event_created(db, event: dict[str, Any]) -> int:
     return sent
 
 
+async def _notify_event_created_safe(db, event: dict[str, Any]) -> None:
+    try:
+        await notify_event_created(db, event)
+    except Exception:
+        logger.exception(
+            "Notifiche creazione evento fallite (event=%s)", event.get("id")
+        )
+
+
 def schedule_event_created_notifications(db, event: dict[str, Any]) -> None:
     """Fire-and-forget dopo creazione evento."""
-    asyncio.create_task(notify_event_created(db, event))
+    asyncio.create_task(_notify_event_created_safe(db, event))
