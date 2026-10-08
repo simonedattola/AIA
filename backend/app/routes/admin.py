@@ -604,9 +604,19 @@ async def admin_create_event(payload: Event, admin=Depends(require_admin)):
 
     doc["invitedRoleGroups"] = normalize_role_groups(doc.get("invitedRoleGroups"))
     await db.events.insert_one(doc.copy())
-    from ..event_reminders import schedule_event_created_notifications
+    # Await so Railway Serverless non spegne il processo prima dell'invio Resend.
+    from ..event_reminders import notify_event_created
 
-    schedule_event_created_notifications(db, doc)
+    try:
+        sent = await notify_event_created(db, doc)
+        doc["_emailsSent"] = sent
+    except Exception:
+        import logging
+
+        logging.getLogger(__name__).exception(
+            "Notifiche creazione evento fallite (event=%s)", doc.get("id")
+        )
+        doc["_emailsSent"] = 0
     return doc
 
 

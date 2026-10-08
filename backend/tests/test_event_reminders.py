@@ -3,8 +3,11 @@
 from datetime import datetime
 from zoneinfo import ZoneInfo
 
+import inspect
+
 from app.event_reminders import (
     EVENT_REMINDER_LEAD_HOURS,
+    _invited_members_with_email,
     event_start_datetime,
     lead_hours_label,
     normalize_event_time,
@@ -45,3 +48,11 @@ class TestLeadHours:
     def test_label(self):
         assert lead_hours_label(24) == "24 ore prima"
         assert lead_hours_label(1) == "1 ora prima"
+
+
+class TestInvitedMembersImport:
+    def test_uses_same_package_relative_import(self):
+        """Regression: ``from ..member_roles`` crashava la task email su Railway."""
+        src = inspect.getsource(_invited_members_with_email)
+        assert "from .member_roles import normalize_member" in src
+        assert "from ..member_roles" not in src
