@@ -58,8 +58,9 @@ export default function AdminSettingsPage() {
         <div className="bg-white rounded-lg border border-slate-200 p-4 sm:p-6 min-w-0 overflow-hidden">
           <h2 className="font-display font-bold text-navy-700 mb-5">Contatti</h2>
           <Field label="Indirizzo"><input value={form.address || ""} onChange={set("address")} className={inputCls} data-testid="settings-address"/></Field>
-          <Field label="Telefono"><input value={form.phone || ""} onChange={set("phone")} className={inputCls}/></Field>
-          <Field label="Email"><input type="email" value={form.email || ""} onChange={set("email")} className={inputCls}/></Field>
+          <Field label="Telefono"><input value={form.phone || ""} onChange={set("phone")} className={inputCls} data-testid="settings-phone"/></Field>
+          <Field label="Email"><input type="email" value={form.email || ""} onChange={set("email")} className={inputCls} data-testid="settings-email"/></Field>
+          <Field label="PEC"><input type="email" value={form.pecEmail || ""} onChange={set("pecEmail")} className={inputCls} data-testid="settings-pecEmail" placeholder="aia.legnano@pec.it"/></Field>
         </div>
 
         <div className="bg-white rounded-lg border border-slate-200 p-4 sm:p-6 min-w-0 overflow-hidden">

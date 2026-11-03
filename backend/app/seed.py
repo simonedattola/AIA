@@ -84,6 +84,37 @@ async def ensure_legacy_seed_flags() -> None:
         await _set_seed_flag("testimonials")
 
 
+async def ensure_contact_phone_and_pec() -> None:
+    """Sostituisce il fisso storico e aggiunge la PEC (una volta)."""
+    flag = "contact_phone_pec_2026_11"
+    if await _seed_flag(flag):
+        return
+    db = get_db()
+    doc = (
+        await db.site_settings.find_one({"id": "site-settings"}, {"_id": 0}) or {}
+    )
+    phone_digits = "".join(ch for ch in str(doc.get("phone") or "") if ch.isdigit())
+    updates: dict = {}
+    if phone_digits.endswith("0331541541") or phone_digits == "0331541541":
+        updates["phone"] = "335-655-9488"
+    elif "0331541541" in phone_digits:
+        updates["phone"] = "335-655-9488"
+    if not (doc.get("pecEmail") or "").strip():
+        updates["pecEmail"] = "aia.legnano@pec.it"
+    if updates:
+        updates["updatedAt"] = datetime.now(timezone.utc).isoformat()
+        await db.site_settings.update_one(
+            {"id": "site-settings"},
+            {"$set": updates},
+            upsert=True,
+        )
+        logger.info(
+            "Contatti aggiornati: %s",
+            ", ".join(f"{k}={v}" for k, v in updates.items() if k != "updatedAt"),
+        )
+    await _set_seed_flag(flag)
+
+
 async def purge_demo_members() -> int:
     """Rimuove associati demo noti (anche se re-inseriti dal seed legacy)."""
     db = get_db()
@@ -1919,6 +1950,7 @@ async def run_all():
     await seed_settings()
     await purge_demo_members()
     await ensure_legacy_seed_flags()
+    await ensure_contact_phone_and_pec()
     await ensure_member_names_titlecase()
     n_purge = await ensure_purge_designations_2022_23()
     if n_purge:

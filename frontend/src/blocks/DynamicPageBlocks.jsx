@@ -439,6 +439,7 @@ export function ContactSectionBlock({ config: c }) {
           <ContactInfoRow icon={<MapPin className="h-5 w-5" />} title="Indirizzo" value={s.address} />
           <ContactInfoRow icon={<Phone className="h-5 w-5" />} title="Telefono" value={s.phone} href={s.phone ? `tel:${s.phone}` : null} />
           <ContactInfoRow icon={<Mail className="h-5 w-5" />} title="Email" value={s.email} href={s.email ? `mailto:${s.email}` : null} />
+          <ContactInfoRow icon={<Mail className="h-5 w-5" />} title="PEC" value={s.pecEmail} href={s.pecEmail ? `mailto:${s.pecEmail}` : null} />
           <div className="flex items-center gap-3 pt-4">
             {s.facebookUrl && <a href={s.facebookUrl} target="_blank" rel="noopener noreferrer" className="p-2.5 rounded-full bg-navy-50 text-navy-600 hover:bg-navy-100"><Facebook className="h-5 w-5" /></a>}
             {s.instagramUrl && <a href={s.instagramUrl} target="_blank" rel="noopener noreferrer" className="p-2.5 rounded-full bg-navy-50 text-navy-600 hover:bg-navy-100"><Instagram className="h-5 w-5" /></a>}
