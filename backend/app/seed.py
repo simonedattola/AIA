@@ -90,9 +90,7 @@ async def ensure_contact_phone_and_pec() -> None:
     if await _seed_flag(flag):
         return
     db = get_db()
-    doc = (
-        await db.site_settings.find_one({"id": "site-settings"}, {"_id": 0}) or {}
-    )
+    doc = await db.site_settings.find_one({"id": "site-settings"}, {"_id": 0}) or {}
     phone_digits = "".join(ch for ch in str(doc.get("phone") or "") if ch.isdigit())
     updates: dict = {}
     if phone_digits.endswith("0331541541") or phone_digits == "0331541541":
