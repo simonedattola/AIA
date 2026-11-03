@@ -76,6 +76,15 @@ export default function SiteFooter() {
                   <a href={`mailto:${s.email}`} className="hover:text-gold-400 transition-colors">{s.email}</a>
                 </li>
               )}
+              {s.pecEmail && (
+                <li className="flex items-center gap-3">
+                  <Mail className="h-5 w-5 text-gold-400 flex-shrink-0" />
+                  <a href={`mailto:${s.pecEmail}`} className="hover:text-gold-400 transition-colors">
+                    <span className="text-slate-400 mr-1.5">PEC</span>
+                    {s.pecEmail}
+                  </a>
+                </li>
+              )}
             </ul>
           </div>
 

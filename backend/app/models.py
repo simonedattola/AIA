@@ -49,8 +49,9 @@ class SiteSettings(BaseModel):
         "Punto di riferimento per arbitri associati, aspiranti arbitri e appassionati dell'Alto Milanese."
     )
     address: str = "Via XX Settembre, Legnano (MI)"
-    phone: str = "+39 0331 000000"
+    phone: str = "335-655-9488"
     email: str = "legnano@aia-figc.it"
+    pecEmail: str = "aia.legnano@pec.it"
     facebookUrl: str = "https://www.facebook.com/aialegnano"
     instagramUrl: str = "https://www.instagram.com/aia_legnano/"
     instagramFollowers: str = ""
