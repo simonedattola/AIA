@@ -1,6 +1,8 @@
 # Dominio produzione: www.aia-legnano.it
 
-Guida per sostituire il sito WordPress su Aruba con la nuova piattaforma (Vercel + Railway + Atlas).
+Guida per sostituire il sito WordPress su Aruba con la nuova piattaforma (Vercel + backend + Atlas).
+
+Per backend **gratuito** (Render invece di Railway): vedi [`FREE_HOSTING.md`](FREE_HOSTING.md).
 
 ## Architettura live
 
@@ -8,7 +10,7 @@ Guida per sostituire il sito WordPress su Aruba con la nuova piattaforma (Vercel
 |------------|----------------|---------|
 | Sito pubblico + admin + portale | `https://www.aia-legnano.it` | **Vercel** |
 | Redirect apex | `https://aia-legnano.it` → `www` | **Vercel** |
-| API backend | `https://aia-production-00a9.up.railway.app` (poi `https://api.aia-legnano.it`) | **Railway** |
+| API backend | URL Render `https://….onrender.com` (poi opz. `https://api.aia-legnano.it`) | **Render** (ex Railway) |
 | Database | MongoDB Atlas | **Atlas** |
 | Email invio | `noreply@aia-legnano.it` | **Resend** |
 | Email ricezione sezione | `legnano@aia-figc.it` | **Aruba** (MX invariati) |
@@ -38,11 +40,11 @@ Deve rispondere JSON `healthy`, non HTML del SPA.
 
 ---
 
-## Passo 2 — Railway (backend)
+## Passo 2 — Backend (Render Free)
 
-Servizio attuale: `https://aia-production-00a9.up.railway.app` (health: `/api/health`).
+Railway non è più sul piano gratuito: usa **Render Free** — procedura completa in [`FREE_HOSTING.md`](FREE_HOSTING.md) (`render.yaml`).
 
-**Variabili Production** (Railway → Variables):
+**Variabili Production** (stesse chiavi di prima):
 
 | Variabile | Valore |
 |-----------|--------|
@@ -50,18 +52,17 @@ Servizio attuale: `https://aia-production-00a9.up.railway.app` (health: `/api/he
 | `DB_NAME` | `aia_legnano` |
 | `JWT_SECRET` | segreto forte (≥32 byte) |
 | `ADMIN_EMAIL` / `ADMIN_PASSWORD` | admin produzione |
-| `PUBLIC_API_URL` | `https://api.aia-legnano.it` (dopo DNS) oppure URL Railway finché non c’è il sottodominio |
+| `PUBLIC_API_URL` | URL Render oppure `https://api.aia-legnano.it` dopo DNS |
 | `PORTAL_FRONTEND_URL` | `https://www.aia-legnano.it` |
 | `CORS_ORIGINS` | `https://www.aia-legnano.it,https://aia-legnano.it,https://aia-virid.vercel.app` |
+| `DESIGNATIONS_AUTO_SYNC` | `true` |
 | `RESEND_API_KEY` | chiave Resend |
 | `SENDER_EMAIL` | `noreply@aia-legnano.it` |
 | `NOTIFY_EMAIL` | `legnano@aia-figc.it` |
 
-**Dominio custom API (opzionale ma consigliato):**
+Aggiorna `frontend/vercel.json` con l’URL `*.onrender.com`, poi ridistribuisci Vercel.
 
-1. Railway → Settings → Networking → Custom Domain → `api.aia-legnano.it`
-2. Copia il target CNAME indicato da Railway
-3. Aggiorna `PUBLIC_API_URL` e, se smetti di usare il proxy Vercel per chiamate dirette, `REACT_APP_BACKEND_URL`
+**Dominio custom API (opzionale):** CNAME `api` → host Render (se il piano lo consente) oppure resta sul proxy Vercel `/api`.
 
 ---
 
