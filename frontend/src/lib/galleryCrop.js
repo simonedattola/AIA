@@ -5,6 +5,7 @@ export const GALLERY_ASPECT_OPTIONS = [
 
 export const PAGE_ASPECT_OPTIONS = [
   { id: "16:9", label: "Banner 16:9", ratio: 16 / 9 },
+  { id: "16:10", label: "Copertina 16:10", ratio: 16 / 10 },
   { id: "4:3", label: "Orizzontale 4:3", ratio: 4 / 3 },
   { id: "3:4", label: "Verticale 3:4", ratio: 3 / 4 },
   { id: "4:5", label: "Verticale 4:5", ratio: 4 / 5 },
@@ -16,6 +17,7 @@ export const PAGE_ASPECT_OPTIONS = [
 export const PAGE_CROP_PRESETS = {
   hero: { defaultAspect: "16:9", aspects: ["16:9"] },
   banner: { defaultAspect: "16:9", aspects: ["16:9"] },
+  articleCover: { defaultAspect: "16:10", aspects: ["16:10"] },
   portrait: { defaultAspect: "3:4", aspects: ["3:4"] },
   portraitTall: { defaultAspect: "9:16", aspects: ["9:16"] },
   content: { defaultAspect: "4:3", aspects: ["4:3"] },
@@ -32,6 +34,7 @@ export function aspectOptionsForSlot(aspectId) {
 export function galleryAspectRatio(aspect) {
   const map = {
     "16:9": 16 / 9,
+    "16:10": 16 / 10,
     "9:16": 9 / 16,
     "4:3": 4 / 3,
     "3:4": 3 / 4,

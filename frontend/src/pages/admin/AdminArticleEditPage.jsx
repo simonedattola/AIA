@@ -1,14 +1,15 @@
 import { useEffect, useMemo, useState } from "react";
 import { useNavigate, useParams, Link } from "react-router-dom";
 import {
-  adminArticle, adminCreateArticle, adminUpdateArticle, adminUpload,
+  adminArticle, adminCreateArticle, adminUpdateArticle,
   adminArticleCategories, adminAddArticleCategory,
 } from "../../lib/api";
 import RichTextEditor from "./RichTextEditor";
 import LegacyArticleBodyEditor from "../../components/admin/LegacyArticleBodyEditor";
 import ArticleProse from "../../components/ArticleProse";
 import { MemberMultiSelect } from "../../components/admin/MemberSelect";
-import { Save, ArrowLeft, Eye, Upload, X, Plus } from "lucide-react";
+import ImageCropUploadField from "../../components/admin/ImageCropUploadField";
+import { Save, ArrowLeft, Eye, X, Plus } from "lucide-react";
 import { AdminPageHeader } from "../../components/admin/admin-ui";
 import { ADMIN_ROUTES as R } from "../../lib/appRoutes";
 import { Button } from "@/design-system";
@@ -22,14 +23,13 @@ export default function AdminArticleEditPage() {
   const [addingCategory, setAddingCategory] = useState(false);
   const [form, setForm] = useState({
     title: "", slug: "", category: "Vita sezionale", excerpt: "", bodyHtml: "",
-    coverUrl: "", bodyInGallery: false, status: "published",
+    coverUrl: "", coverUrlSource: "", bodyInGallery: false, status: "published",
     publishedAt: new Date().toISOString().slice(0, 10),
     relatedMemberIds: [],
   });
   const [error, setError] = useState("");
   const [saving, setSaving] = useState(false);
   const [preview, setPreview] = useState(false);
-  const [uploadingCover, setUploadingCover] = useState(false);
 
   useEffect(() => {
     adminArticleCategories().then((list) => {
@@ -73,20 +73,6 @@ export default function AdminArticleEditPage() {
       setError(err?.response?.data?.detail || "Impossibile aggiungere la categoria");
     } finally {
       setAddingCategory(false);
-    }
-  };
-
-  const uploadCover = async (e) => {
-    const f = e.target.files?.[0];
-    if (!f) return;
-    setUploadingCover(true);
-    try {
-      const res = await adminUpload(f);
-      setForm({ ...form, coverUrl: res.url });
-    } catch (err) {
-      setError("Upload fallito: " + (err?.response?.data?.detail || err.message));
-    } finally {
-      setUploadingCover(false);
     }
   };
 
@@ -221,32 +207,50 @@ export default function AdminArticleEditPage() {
             <div className="bg-white rounded-lg border border-slate-200 p-6 space-y-4">
               <h3 className="font-display font-semibold text-navy-700 mb-2">Immagine di copertina</h3>
               {form.coverUrl && (
-                <div className="relative">
-                  <img src={form.coverUrl} alt="" className="w-full rounded-md"/>
-                  <button onClick={() => setForm({ ...form, coverUrl: "" })} className="absolute top-2 right-2 p-1.5 bg-white rounded-full shadow-md text-red-600">
-                    <X className="h-4 w-4"/>
+                <div className="relative aspect-[16/10] overflow-hidden rounded-md bg-slate-100">
+                  <img src={form.coverUrl} alt="" className="w-full h-full object-cover" />
+                  <button
+                    type="button"
+                    onClick={() => setForm({ ...form, coverUrl: "", coverUrlSource: "" })}
+                    className="absolute top-2 right-2 p-1.5 bg-white rounded-full shadow-md text-red-600"
+                    aria-label="Rimuovi copertina"
+                  >
+                    <X className="h-4 w-4" />
                   </button>
                 </div>
               )}
-              <label className="block">
-                <span className="block text-sm font-medium text-slate-700 mb-1.5">Carica file</span>
-                <div className="relative">
-                  <input type="file" accept="image/*" onChange={uploadCover} className="hidden" id="cover-upload" data-testid="admin-article-cover-upload"/>
-                  <label htmlFor="cover-upload" className="cursor-pointer block">
-                    <Button type="button" variant="outline" className="w-full justify-center pointer-events-none" tabIndex={-1}>
-                      <Upload className="h-4 w-4"/> {uploadingCover ? "Caricamento…" : "Carica immagine"}
-                    </Button>
-                  </label>
-                </div>
-              </label>
+              <ImageCropUploadField
+                label={form.coverUrl ? "Cambia o regola l'area visibile" : "Carica e inquadra"}
+                hint="Trascina e zoom per scegliere quale parte della foto mostrare in elenco e in apertura articolo (formato 16:10)."
+                value={form.coverUrl}
+                sourceValue={form.coverUrlSource || form.coverUrl}
+                slotAspect="16:10"
+                hideThumb
+                testId="admin-article-cover-upload"
+                onChange={({ url, sourceUrl }) =>
+                  setForm({
+                    ...form,
+                    coverUrl: url,
+                    coverUrlSource: sourceUrl || form.coverUrlSource || "",
+                  })
+                }
+              />
               <details className="text-sm">
                 <summary className="cursor-pointer text-slate-500 hover:text-slate-700">Oppure inserisci URL</summary>
                 <input
                   data-testid="admin-article-coverUrl"
                   value={form.coverUrl}
-                  onChange={onChange("coverUrl")}
+                  onChange={(e) =>
+                    setForm({
+                      ...form,
+                      coverUrl: e.target.value,
+                      coverUrlSource: e.target.value
+                        ? form.coverUrlSource || e.target.value
+                        : "",
+                    })
+                  }
                   className={`${inputCls} mt-2`}
-                  placeholder="https://..."
+                  placeholder="https://... (poi usa Regola inquadratura)"
                 />
               </details>
               <label className="flex items-start gap-2 pt-2 border-t border-slate-100">

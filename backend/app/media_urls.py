@@ -133,7 +133,8 @@ def resolve_attachments(items: list | None) -> list:
 
 
 def resolve_media_fields(
-    doc: dict, fields: tuple[str, ...] = ("photoUrl", "coverUrl", "url")
+    doc: dict,
+    fields: tuple[str, ...] = ("photoUrl", "coverUrl", "coverUrlSource", "url"),
 ) -> dict:
     for key in fields:
         if key in doc and doc[key]:

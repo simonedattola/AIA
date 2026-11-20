@@ -469,6 +469,7 @@ async def admin_create_article(payload: ArticleCreate, admin=Depends(require_adm
         excerpt=payload.excerpt,
         bodyHtml=sanitize_html(payload.bodyHtml),
         coverUrl=payload.coverUrl,
+        coverUrlSource=payload.coverUrlSource or "",
         coverInGallery=payload.coverInGallery,
         bodyInGallery=payload.bodyInGallery,
         authorName=payload.authorName,

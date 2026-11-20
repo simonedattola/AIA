@@ -132,6 +132,7 @@ class Article(BaseModel):
     excerpt: str = ""
     bodyHtml: str = ""
     coverUrl: str = ""
+    coverUrlSource: str = ""  # originale per ri-ritagliare la copertina
     coverInGallery: bool = False  # copertina anche nella galleria pubblica
     bodyInGallery: bool = False  # immagini nel corpo articolo nella galleria pubblica
     authorName: str = "Redazione AIA Legnano"
@@ -154,6 +155,7 @@ class ArticleCreate(BaseModel):
     excerpt: str = ""
     bodyHtml: str = ""
     coverUrl: str = ""
+    coverUrlSource: str = ""
     coverInGallery: bool = False
     bodyInGallery: bool = False
     authorName: str = "Redazione AIA Legnano"

@@ -25,6 +25,8 @@ export default function ImageCropUploadField({
   cropPreset = "content",
   slotAspect = null,
   inputId,
+  hideThumb = false,
+  testId,
 }) {
   const [cropSession, setCropSession] = useState(null);
   const [uploading, setUploading] = useState(false);
@@ -98,18 +100,32 @@ export default function ImageCropUploadField({
         <span className="block text-sm font-medium text-slate-700 mb-1.5">{label}</span>
         <div className="space-y-2">
           <div className="flex flex-wrap items-center gap-2">
-            <input type="file" accept="image/*" onChange={onFilePick} className="hidden" id={fieldId} />
+            <input
+              type="file"
+              accept="image/*"
+              onChange={onFilePick}
+              className="hidden"
+              id={fieldId}
+              data-testid={testId || undefined}
+            />
             <label htmlFor={fieldId} className="cursor-pointer inline-flex">
               <Button type="button" variant="outline" size="xs" className="text-xs pointer-events-none" tabIndex={-1}>
                 <Upload className="h-3.5 w-3.5" /> Carica immagine
               </Button>
             </label>
             {value && (
-              <Button type="button" variant="outline" size="xs" className="text-xs" onClick={openCropFromExisting}>
+              <Button
+                type="button"
+                variant="outline"
+                size="xs"
+                className="text-xs"
+                onClick={openCropFromExisting}
+                data-testid={testId ? `${testId}-recrop` : undefined}
+              >
                 <Crop className="h-3.5 w-3.5" /> Regola inquadratura
               </Button>
             )}
-            {value && <img src={value} alt="" className="h-10 w-10 object-cover rounded border" />}
+            {value && !hideThumb && <img src={value} alt="" className="h-10 w-10 object-cover rounded border" />}
           </div>
         </div>
         {hint && <span className="block text-xs text-slate-400 mt-1">{hint}</span>}
