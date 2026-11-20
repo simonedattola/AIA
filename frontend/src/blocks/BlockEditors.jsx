@@ -5,7 +5,7 @@ import ImageCropUploadField from "../components/admin/ImageCropUploadField";
 import { adminUpload } from "../lib/api";
 import { Plus, Trash2, Upload, Crop } from "lucide-react";
 import GalleryCropModal from "../components/admin/GalleryCropModal";
-import { defaultAspectForPreset, loadImageBlobUrl } from "../lib/galleryCrop";
+import { defaultAspectForPreset, loadImageBlobUrl, preferMediaSourceUrl } from "../lib/galleryCrop";
 import { Button } from "@/design-system";
 
 const I = "w-full px-3 py-2 border border-slate-300 rounded-md focus:border-navy-600 focus:ring-2 focus:ring-navy-600/20 focus:outline-none text-sm";
@@ -336,13 +336,13 @@ function GalleryImageRow({ item, index, onUpdate, onRemove }) {
         const source = await adminUpload(cropSession.file);
         onUpdate({
           ...item,
-          url: display.url,
-          sourceUrl: source.path || source.url,
+          url: preferMediaSourceUrl(display) || display.url,
+          sourceUrl: preferMediaSourceUrl(source),
         });
       } else {
         onUpdate({
           ...item,
-          url: display.url,
+          url: preferMediaSourceUrl(display) || display.url,
           sourceUrl: item.sourceUrl || item.url,
         });
       }

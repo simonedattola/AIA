@@ -53,12 +53,36 @@ export function defaultAspectForPreset(preset) {
   return (PAGE_CROP_PRESETS[preset] || PAGE_CROP_PRESETS.content).defaultAspect;
 }
 
-/** Carica un'immagine remota come blob URL (evita problemi CORS in canvas). */
+/**
+ * Prefer absolute upload URL when available so re-crop works on hosts without
+ * a same-origin /api proxy (e.g. Vercel preview → Railway API).
+ */
+export function preferMediaSourceUrl(upload) {
+  if (!upload || typeof upload !== "object") return "";
+  return upload.url || upload.path || "";
+}
+
+/** Carica un'immagine remota come blob URL (proxy admin autenticato, evita CORS). */
 export async function loadImageBlobUrl(src) {
-  const res = await fetch(src);
-  if (!res.ok) throw new Error("Impossibile caricare l'immagine");
-  const blob = await res.blob();
-  return URL.createObjectURL(blob);
+  if (!src) throw new Error("Impossibile caricare l'immagine");
+  if (typeof src === "string" && src.startsWith("blob:")) return src;
+  // Lazy import keeps galleryCrop usable in non-admin contexts without pulling axios at module load.
+  const { adminMediaSourceBlob } = await import("./api");
+  try {
+    const blob = await adminMediaSourceBlob(src);
+    if (!blob || blob.size === 0) throw new Error("Impossibile caricare l'immagine");
+    if (blob.type && blob.type.includes("application/json")) {
+      throw new Error("Impossibile caricare l'immagine");
+    }
+    return URL.createObjectURL(blob);
+  } catch (err) {
+    const detail = err?.response?.data;
+    // blob error bodies aren't useful; surface status when available
+    if (err?.response?.status) {
+      throw new Error("Impossibile caricare l'immagine");
+    }
+    throw err instanceof Error ? err : new Error(String(detail || err));
+  }
 }
 
 function createImage(url) {

@@ -1618,11 +1618,21 @@ async def admin_create_gallery_image(
     )
 
 
+@router.get("/media/source")
+async def admin_media_source(
+    url: str = Query(..., min_length=1, description="URL o path media da proxyare"),
+    admin=Depends(require_admin),
+):
+    """Proxy autenticato di un'immagine per ritaglio admin (evita CORS / path relativi)."""
+    from ..media_proxy import proxy_media_url
+
+    return await proxy_media_url(url)
+
+
 @router.get("/gallery/{image_id}/source")
 async def admin_gallery_source_image(image_id: str, admin=Depends(require_admin)):
     """Proxy dell'immagine originale per il ritaglio in admin (evita CORS)."""
-    import httpx
-    from ..media_urls import public_api_base, resolve_media_url
+    from ..media_proxy import proxy_media_url
 
     db = get_db()
     doc = await db.gallery_images.find_one({"id": image_id}, {"_id": 0})
@@ -1632,54 +1642,15 @@ async def admin_gallery_source_image(image_id: str, admin=Depends(require_admin)
     if not src:
         raise HTTPException(404, "Sorgente non disponibile")
 
-    def _local_upload_response(path_value: str) -> FileResponse | Response | None:
-        name = path_value.rstrip("/").split("/")[-1]
-        if not name:
-            return None
-        data = upload_storage.read_bytes(name)
-        if data is None:
-            return None
-        import mimetypes
-
-        ctype = mimetypes.guess_type(name)[0] or "application/octet-stream"
-        local = upload_storage.local_path(name)
-        if local is not None:
-            return FileResponse(local)
-        return Response(content=data, media_type=ctype)
-
+    # Prefer gallery source, then display url/path fallbacks (same as before).
     for candidate in (src, doc.get("url") or "", doc.get("path") or ""):
         c = (candidate or "").strip()
-        if c.startswith("/api/uploads/"):
-            found = _local_upload_response(c)
-            if found:
-                return found
-        if "/api/uploads/" in c:
-            found = _local_upload_response(c.split("/api/uploads/")[-1])
-            if found:
-                return found
-
-    resolved = resolve_media_url(src)
-    base = public_api_base()
-
-    if base and resolved.startswith(base):
-        rel = resolved[len(base) :]
-        if rel.startswith("/api/uploads/"):
-            found = _local_upload_response(rel)
-            if found:
-                return found
-
-    if resolved.startswith("http://") or resolved.startswith("https://"):
-        async with httpx.AsyncClient(timeout=30.0, follow_redirects=True) as client:
-            try:
-                r = await client.get(resolved)
-                r.raise_for_status()
-            except httpx.HTTPError as exc:
-                raise HTTPException(
-                    502, f"Impossibile scaricare l'immagine: {exc}"
-                ) from exc
-            ctype = r.headers.get("content-type", "image/jpeg")
-            return Response(content=r.content, media_type=ctype)
-
+        if not c:
+            continue
+        try:
+            return await proxy_media_url(c)
+        except HTTPException:
+            continue
     raise HTTPException(404, "File non trovato")
 
 

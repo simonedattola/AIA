@@ -233,6 +233,12 @@ export const adminGalleryUpload = (file, opts = {}) => {
 };
 export const adminGallerySourceBlob = (id) =>
   api.get(`/admin/gallery/${id}/source`, { responseType: "blob" }).then((r) => r.data);
+
+/** Proxy autenticato per ritaglio copertine/blocchi (absolute, relative /api/uploads, CDN). */
+export const adminMediaSourceBlob = (url) =>
+  api
+    .get("/admin/media/source", { params: { url }, responseType: "blob" })
+    .then((r) => r.data);
 export const adminGalleryUpdate = (id, data) => api.put(`/admin/gallery/${id}`, data).then((r) => r.data);
 export const adminGalleryApprove = (id) => api.post(`/admin/gallery/${id}/approve`).then((r) => r.data);
 export const adminGalleryReject = (id) => api.post(`/admin/gallery/${id}/reject`).then((r) => r.data);

@@ -273,7 +273,7 @@ export default function AdminGalleryPage() {
         await adminGalleryCreate({
           url: display.url,
           path: display.path || display.url,
-          sourceUrl: source.path || source.url,
+          sourceUrl: source.url || source.path,
           aspect,
           caption: cropSession.caption || "",
           category: cropSession.category || "",

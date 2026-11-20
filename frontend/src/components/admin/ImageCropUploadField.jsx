@@ -8,6 +8,7 @@ import {
   aspectOptionsForSlot,
   defaultAspectForPreset,
   loadImageBlobUrl,
+  preferMediaSourceUrl,
 } from "../../lib/galleryCrop";
 
 const I = "w-full px-3 py-2 border border-slate-300 rounded-md focus:border-navy-600 focus:ring-2 focus:ring-navy-600/20 focus:outline-none text-sm";
@@ -77,12 +78,12 @@ export default function ImageCropUploadField({
       if (cropSession.kind === "upload") {
         const source = await adminUpload(cropSession.file);
         onChange({
-          url: display.url,
-          sourceUrl: source.path || source.url,
+          url: preferMediaSourceUrl(display) || display.url,
+          sourceUrl: preferMediaSourceUrl(source),
         });
       } else {
         onChange({
-          url: display.url,
+          url: preferMediaSourceUrl(display) || display.url,
           sourceUrl: sourceValue || value,
         });
       }
