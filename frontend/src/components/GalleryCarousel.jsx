@@ -4,10 +4,17 @@ import MediaImage from "./MediaImage";
 import { Button, Eyebrow, SectionTitle } from "@/design-system";
 
 const SLIDE_BASE =
-  "gallery-strip-item shrink-0 h-44 sm:h-52 overflow-hidden rounded-lg bg-slate-100 focus:outline-none focus-visible:ring-2 focus-visible:ring-gold-400";
+  "gallery-strip-item shrink-0 overflow-hidden rounded-lg bg-slate-100 focus:outline-none focus-visible:ring-2 focus-visible:ring-gold-400";
 
-function slideClass(aspect) {
-  return aspect === "9:16" ? `${SLIDE_BASE} aspect-[9/16]` : `${SLIDE_BASE} aspect-[16/9]`;
+/**
+ * Width-first: a shared fixed height made 9:16 slides ~100px wide on phones.
+ * Portrait keeps a readable width; landscape stays wider; strip uses items-center.
+ */
+export function gallerySlideClass(aspect) {
+  if (aspect === "9:16") {
+    return `${SLIDE_BASE} aspect-[9/16] w-[min(48vw,13.5rem)] sm:w-[min(36vw,15rem)] h-auto`;
+  }
+  return `${SLIDE_BASE} aspect-[16/9] w-[min(78vw,22rem)] sm:w-[min(70vw,26rem)] h-auto`;
 }
 
 /**
@@ -82,7 +89,7 @@ export default function GalleryCarousel({ images = [], className = "", showTitle
               key={img.id}
               type="button"
               onClick={() => setLightbox(img)}
-              className={slideClass(img.aspect)}
+              className={gallerySlideClass(img.aspect)}
             >
               <MediaImage
                 src={img.url}

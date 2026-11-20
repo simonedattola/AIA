@@ -95,23 +95,27 @@ export default function NewsDetailPage() {
     <div data-testid="news-detail-page" style={{ overflowAnchor: "none" }}>
       <article>
         {article.coverUrl ? (
-          <div className="relative h-[55vh] min-h-[400px] max-h-[640px] overflow-hidden bg-navy-900 flex flex-col">
-            <img
-              src={article.coverUrl}
-              alt={article.title}
-              className="absolute inset-0 w-full h-full object-cover opacity-80"
-            />
-            <div className="absolute inset-0 hero-overlay" />
-            <div className="relative z-10 flex flex-col flex-1 justify-between pt-6 min-[1140px]:pt-8">
-              <div className="max-w-5xl mx-auto w-full px-4 sm:px-6 lg:px-8">
+          <div className="relative bg-navy-900 overflow-hidden">
+            {/* Stesso 16:10 del ritaglio admin / card: evita ricroppature su hero alto mobile */}
+            <div className="relative aspect-[16/10] w-full overflow-hidden">
+              <img
+                src={article.coverUrl}
+                alt=""
+                aria-hidden
+                className="absolute inset-0 w-full h-full object-cover opacity-80"
+              />
+              <div className="absolute inset-0 hero-overlay" />
+            </div>
+            <div className="absolute inset-0 z-10 flex flex-col justify-between pt-6 min-[1140px]:pt-8 pointer-events-none">
+              <div className="max-w-5xl mx-auto w-full px-4 sm:px-6 lg:px-8 pointer-events-auto">
                 <PageBrandBar className="mb-4" tone="onDark" />
               </div>
-              <div className="max-w-5xl mx-auto w-full px-4 sm:px-6 lg:px-8 pb-12 lg:pb-16 text-white">
+              <div className="max-w-5xl mx-auto w-full px-4 sm:px-6 lg:px-8 pb-8 sm:pb-12 lg:pb-16 text-white pointer-events-auto">
                 <ArticleTopNav category={article.category} variant="hero" />
-                <CtaTitle className="text-white leading-tight mb-5 max-w-4xl">
+                <CtaTitle className="text-white leading-tight mb-4 sm:mb-5 max-w-4xl">
                   {article.title}
                 </CtaTitle>
-                <div className="flex items-center gap-5 text-sm text-slate-200">
+                <div className="flex flex-wrap items-center gap-x-5 gap-y-2 text-sm text-slate-200">
                   <span className="flex items-center gap-1.5">
                     <Calendar className="h-4 w-4" /> {formatDateIt(article.publishedAt)}
                   </span>
